@@ -14,6 +14,7 @@ const MIN_HISTORY_LENGTH = 50
 export function PatientHistoryForm() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [analyzing, setAnalyzing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
 
@@ -122,6 +123,18 @@ export function PatientHistoryForm() {
       // Clear draft on successful save
       clearDraft()
 
+      // If submitted (not draft), automatically trigger analysis
+      if (status === 'submitted') {
+        setAnalyzing(true)
+        try {
+          await fetch(`/api/patients/${data.patient.id}/analyze`, {
+            method: 'POST',
+          })
+        } catch {
+          // Analysis error is non-blocking, user can retry from detail page
+        }
+      }
+
       // Redirect to patient detail page
       router.push(`/dashboard/patients/${data.patient.id}`)
 
@@ -129,6 +142,7 @@ export function PatientHistoryForm() {
       setError(err.message || 'An error occurred while saving')
     } finally {
       setLoading(false)
+      setAnalyzing(false)
     }
   }
 
@@ -237,7 +251,7 @@ export function PatientHistoryForm() {
             loading={loading}
             disabled={loading}
           >
-            {loading ? 'Saving...' : 'Submit Patient History'}
+            {analyzing ? 'Analyzing...' : loading ? 'Saving...' : 'Submit & Analyze'}
           </Button>
         </div>
       </div>
