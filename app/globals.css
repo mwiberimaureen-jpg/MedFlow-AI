@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ========================================
+   Print Styles for Analysis Pages
+   ======================================== */
+
+@media print {
+  /* Hide non-printable elements */
+  aside,
+  nav,
+  button,
+  .analysis-actions,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Reset backgrounds for printer-friendly output */
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Remove shadows and borders that waste ink */
+  * {
+    box-shadow: none !important;
+  }
+
+  /* Full width layout for print */
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Ensure proper rendering of checkboxes in print */
+  .todo-checkbox {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Avoid page breaks inside todo items */
+  .todo-item {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Avoid page breaks inside sections */
+  .print\:break-inside-avoid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Show print header if present */
+  .print-header {
+    display: block !important;
+  }
+
+  /* Compact spacing for print */
+  .print\:mb-4 {
+    margin-bottom: 1rem !important;
+  }
+
+  .print\:text-2xl {
+    font-size: 1.5rem !important;
+    line-height: 2rem !important;
+  }
+
+  /* Remove animations and transitions */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    transition-duration: 0s !important;
+  }
+}
+
+/* Print-mode class for PDF export */
+.print-mode .no-print,
+.print-mode .analysis-actions,
+.print-mode button {
+  display: none !important;
+}
