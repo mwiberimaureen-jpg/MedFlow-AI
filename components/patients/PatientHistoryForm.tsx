@@ -128,19 +128,14 @@ export function PatientHistoryForm() {
       // Clear draft on successful save
       clearDraft()
 
-      // If submitted (not draft), automatically trigger analysis
+      // If submitted (not draft), fire off analysis in background (don't wait)
       if (status === 'submitted') {
-        setAnalyzing(true)
-        try {
-          await fetch(`/api/patients/${data.patient.id}/analyze`, {
-            method: 'POST',
-          })
-        } catch {
-          // Analysis error is non-blocking, user can retry from detail page
-        }
+        fetch(`/api/patients/${data.patient.id}/analyze`, {
+          method: 'POST',
+        }).catch(() => {})
       }
 
-      // Redirect to patient detail page
+      // Redirect immediately to patient detail page
       router.push(`/dashboard/patients/${data.patient.id}`)
 
     } catch (err: any) {
