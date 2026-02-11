@@ -7,22 +7,72 @@ interface OpenRouterConfig {
   model?: string
 }
 
-const SYSTEM_PROMPT = `You are a medical analysis assistant. Analyze the patient history provided and return ONLY a valid JSON response with the following structure:
+const SYSTEM_PROMPT = `You are a senior clinical analyst generating a structured medical analysis report. Analyze the patient history and return ONLY a valid JSON response with the structure below.
+
+CRITICAL RULES FOR TEST INTERPRETATION:
+- For any test where specific parameters are reported, ASSUME the full panel was done and ONLY the reported parameters are deranged. All unreported parameters are normal. NEVER ask for a "comprehensive" or "full" test when some parameters have already been provided.
+- Interpret each deranged parameter individually and explain its clinical significance.
+
+The JSON structure:
 
 {
-  "summary": "A concise clinical summary (2-3 paragraphs)",
   "risk_level": "low" | "medium" | "high",
+  "gaps_in_history": {
+    "missing_information": ["List specific missing elements: e.g. drug allergies, social history, family history, duration of symptoms, etc."],
+    "follow_up_questions": ["Specific questions to ask the patient to fill the gaps"],
+    "physical_exam_checklist": ["Specific physical exam findings to look for, relevant to the presentation"]
+  },
+  "test_interpretation": [
+    {
+      "number": 1,
+      "test_name": "Name of the test",
+      "deranged_parameters": ["List the specific abnormal values reported"],
+      "normal_parameters_assumed": "State that unreported parameters are assumed normal",
+      "interpretation": "Clinical significance of the deranged values in context of the patient"
+    }
+  ],
+  "impressions": ["Primary impression(s) based on the history and available results"],
+  "differential_diagnoses": [
+    {
+      "diagnosis": "Diagnosis name",
+      "supporting_evidence": "Evidence from the history supporting this",
+      "against_evidence": "Evidence against or missing evidence"
+    }
+  ],
+  "confirmatory_tests": [
+    {
+      "test": "Test name",
+      "rationale": "What it will confirm or rule out"
+    }
+  ],
+  "management_plan": {
+    "current_plan_analysis": "Analysis of whatever management has been described in the history (medications, interventions, etc.). If none described, state 'No current management plan documented.'",
+    "recommended_plan": [
+      {
+        "step": "Management step",
+        "rationale": "Why this is indicated, reference AMBOSS/standard guidelines where relevant"
+      }
+    ],
+    "adjustments_based_on_status": "If the patient is described as improving or deteriorating, explain how the plan should be adjusted accordingly"
+  },
+  "complications": [
+    {
+      "complication": "Possible complication",
+      "prevention_plan": "Steps to prevent or monitor for this complication"
+    }
+  ],
+  "summary": "A concise clinical summary tying everything together (2-3 paragraphs)",
   "todo_items": [
     {
-      "title": "Brief action title",
-      "description": "Detailed description of the action",
+      "title": "Brief action item title",
+      "description": "What to do",
       "priority": "low" | "medium" | "high" | "urgent",
       "category": "diagnostic" | "treatment" | "follow-up" | "referral" | "monitoring" | "lifestyle"
     }
   ]
 }
 
-Return ONLY the JSON object, no markdown code fences, no additional text.`
+Return ONLY the JSON object. No markdown code fences, no additional text.`
 
 export async function analyzePatientHistory(
   historyText: string,
@@ -55,7 +105,7 @@ export async function analyzePatientHistory(
         }
       ],
       temperature: 0.3,
-      max_tokens: 2000,
+      max_tokens: 8000,
     })
   })
 

@@ -76,8 +76,51 @@ export interface CreatePatientRequest {
   metadata?: Record<string, any>
 }
 
+export interface GapsInHistory {
+  missing_information: string[]
+  follow_up_questions: string[]
+  physical_exam_checklist: string[]
+}
+
+export interface TestInterpretation {
+  number: number
+  test_name: string
+  deranged_parameters: string[]
+  normal_parameters_assumed: string
+  interpretation: string
+}
+
+export interface DifferentialDiagnosis {
+  diagnosis: string
+  supporting_evidence: string
+  against_evidence: string
+}
+
+export interface ConfirmatoryTest {
+  test: string
+  rationale: string
+}
+
+export interface ManagementPlan {
+  current_plan_analysis: string
+  recommended_plan: { step: string; rationale: string }[]
+  adjustments_based_on_status: string
+}
+
+export interface Complication {
+  complication: string
+  prevention_plan: string
+}
+
 export interface AnalysisResponse {
-  summary: string
   risk_level: 'low' | 'medium' | 'high'
+  gaps_in_history: GapsInHistory
+  test_interpretation: TestInterpretation[]
+  impressions: string[]
+  differential_diagnoses: DifferentialDiagnosis[]
+  confirmatory_tests: ConfirmatoryTest[]
+  management_plan: ManagementPlan
+  complications: Complication[]
+  summary: string
   todo_items: TodoItemJson[]
 }

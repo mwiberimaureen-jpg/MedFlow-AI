@@ -110,12 +110,12 @@ export function getSectionByTitle(sections: AnalysisSection[], title: string): A
  * Get common medical analysis section titles
  */
 export const COMMON_SECTIONS = {
-  SUMMARY: 'Summary',
-  HISTORY: 'History of Presenting Complaint',
-  PHYSICAL_EXAM: 'Physical Examination',
-  INVESTIGATIONS: 'Investigations',
-  DIFFERENTIAL: 'Differential Diagnosis',
-  DIAGNOSIS: 'Diagnosis',
+  SUMMARY: 'Clinical Summary',
+  GAPS: 'Gaps in History',
+  TEST_INTERPRETATION: 'Test Interpretation',
+  IMPRESSIONS: 'Impression(s)',
+  DIFFERENTIAL: 'Differential Diagnoses',
+  CONFIRMATORY_TESTS: 'Confirmatory Tests',
   MANAGEMENT: 'Management Plan',
-  FOLLOW_UP: 'Follow-up',
+  COMPLICATIONS: 'Possible Complications & Prevention',
 } as const;
