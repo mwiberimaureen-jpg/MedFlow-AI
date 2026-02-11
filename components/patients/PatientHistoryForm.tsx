@@ -98,6 +98,11 @@ export function PatientHistoryForm() {
 
     setLoading(true)
 
+    // Clear draft immediately when submitting (not drafting)
+    if (status === 'submitted') {
+      clearDraft()
+    }
+
     try {
       const response = await fetch('/api/patients', {
         method: 'POST',

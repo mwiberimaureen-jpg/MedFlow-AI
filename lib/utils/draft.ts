@@ -19,7 +19,19 @@ export function loadDraft(): any | null {
   try {
     const raw = localStorage.getItem(DRAFT_KEY)
     if (!raw) return null
-    return JSON.parse(raw)
+    const draft = JSON.parse(raw)
+
+    // Don't restore drafts older than 24 hours
+    if (draft.savedAt) {
+      const savedTime = new Date(draft.savedAt).getTime()
+      const now = Date.now()
+      if (now - savedTime > 24 * 60 * 60 * 1000) {
+        localStorage.removeItem(DRAFT_KEY)
+        return null
+      }
+    }
+
+    return draft
   } catch (error) {
     console.error('Failed to load draft:', error)
     return null
