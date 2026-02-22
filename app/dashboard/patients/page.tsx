@@ -27,12 +27,12 @@ export default async function PatientsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Patient Histories</h1>
-          <p className="text-gray-600 mt-2">Manage and analyze your patient histories</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Patient Histories</h1>
+          <p className="text-gray-600 mt-1 text-sm md:text-base">Manage and analyze your patient histories</p>
         </div>
         <Link href="/dashboard/patients/new">
-          <button className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors">
-            Add New Patient
+          <button className="bg-blue-600 text-white px-4 py-2 md:px-6 md:py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm md:text-base">
+            Add New
           </button>
         </Link>
       </div>
@@ -51,66 +51,97 @@ export default async function PatientsPage() {
           </Link>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Patient Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Age
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Gender
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Created
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {patients.map((patient) => (
-                <tr key={patient.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{patient.patient_name}</div>
-                    {patient.patient_identifier && (
-                      <div className="text-sm text-gray-500">{patient.patient_identifier}</div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {patient.patient_age || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {patient.patient_gender || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Badge variant={getStatusBadge(patient.status)}>
-                      {patient.status}
-                    </Badge>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(patient.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Link
-                      href={`/dashboard/patients/${patient.id}`}
-                      className="text-blue-600 hover:text-blue-900"
-                    >
-                      View Details
-                    </Link>
-                  </td>
+        <>
+          {/* Mobile: compact clickable list */}
+          <div className="md:hidden space-y-2">
+            {patients.map((patient) => (
+              <Link
+                key={patient.id}
+                href={`/dashboard/patients/${patient.id}`}
+                className="flex items-center justify-between bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-3 active:bg-gray-50"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 truncate">
+                    {patient.patient_identifier || patient.patient_name}
+                  </p>
+                  {patient.patient_identifier && patient.patient_name && (
+                    <p className="text-xs text-gray-500 truncate">{patient.patient_name}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                  <Badge variant={getStatusBadge(patient.status)}>
+                    {patient.status}
+                  </Badge>
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {/* Desktop: full table */}
+          <div className="hidden md:block bg-white rounded-lg shadow overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Patient Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Age
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Gender
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Created
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {patients.map((patient) => (
+                  <tr key={patient.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{patient.patient_name}</div>
+                      {patient.patient_identifier && (
+                        <div className="text-sm text-gray-500">{patient.patient_identifier}</div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {patient.patient_age || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {patient.patient_gender || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Badge variant={getStatusBadge(patient.status)}>
+                        {patient.status}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(patient.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <Link
+                        href={`/dashboard/patients/${patient.id}`}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        View Details
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   )
