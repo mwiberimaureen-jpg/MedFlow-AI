@@ -2,9 +2,34 @@ import { AnalysisResponse } from '@/lib/types/patient'
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions'
 
+const MAX_RETRIES = 3
+const INITIAL_BACKOFF_MS = 1000
+
 interface OpenRouterConfig {
   apiKey: string
   model?: string
+}
+
+/**
+ * Fetch with automatic retry + exponential backoff for transient API errors (5xx).
+ */
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  retries = MAX_RETRIES,
+  backoff = INITIAL_BACKOFF_MS
+): Promise<Response> {
+  const response = await fetch(url, options)
+
+  if (response.status >= 500 && retries > 0) {
+    console.warn(
+      `OpenRouter returned ${response.status}, retrying in ${backoff}ms (${retries} retries left)`
+    )
+    await new Promise((r) => setTimeout(r, backoff))
+    return fetchWithRetry(url, options, retries - 1, backoff * 2)
+  }
+
+  return response
 }
 
 const SYSTEM_PROMPT = `You are a Clinician Archetype. Analyze patient history to reach a diagnosis or differential diagnosis.
@@ -144,7 +169,6 @@ Return ONLY a valid JSON response with this structure:
       "number": 1,
       "test_name": "Name of the test",
       "deranged_parameters": ["List the specific abnormal values reported"],
-      "normal_parameters_assumed": "State that all other parameters in this panel are assumed normal",
       "interpretation": "Clinical significance of the deranged values in context of the patient"
     }
   ],
@@ -167,7 +191,7 @@ Return ONLY a valid JSON response with this structure:
     "recommended_plan": [
       {
         "step": "Management step WITH specific drug: Name, Dose, Route, Frequency (e.g. 'Furosemide 40mg PO BD')",
-        "rationale": "Why this is indicated, based on AMBOSS guidelines"
+        "rationale": "Why this is indicated"
       }
     ],
     "adjustments_based_on_status": "If the patient is described as improving or deteriorating, explain how the plan should be adjusted accordingly"
@@ -207,7 +231,7 @@ export async function analyzePatientHistory(
     throw new Error('OpenRouter API key is required')
   }
 
-  const response = await fetch(OPENROUTER_API_URL, {
+  const response = await fetchWithRetry(OPENROUTER_API_URL, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -301,6 +325,12 @@ function sanitizeAnalysis(parsed: any): any {
         return 'Monitor specific parameters'
       })
     }
+    // Strip AMBOSS references from user-facing output
+    cleaned = cleaned.replace(/\s*\(?according to AMBOSS\s*(guidelines)?\)?/gi, '')
+    cleaned = cleaned.replace(/\s*\(?based on AMBOSS\s*(guidelines)?\)?/gi, '')
+    cleaned = cleaned.replace(/\s*\(?per AMBOSS\s*(guidelines)?\)?/gi, '')
+    cleaned = cleaned.replace(/\s*\(?as per AMBOSS\)?/gi, '')
+    cleaned = cleaned.replace(/\bAMBOSS\b/g, '')
     return cleaned
   }
 
@@ -365,7 +395,7 @@ export async function analyzeDailyProgress(
     `5. Updated to-do list for today's tasks — do NOT re-list tasks already completed in previous days\n\n` +
     `Apply ALL the same clinical rules from your system instructions (AMBOSS-only, no hallucination, no forbidden phrases, specific drug dosing, etc.)`
 
-  const response = await fetch(OPENROUTER_API_URL, {
+  const response = await fetchWithRetry(OPENROUTER_API_URL, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,

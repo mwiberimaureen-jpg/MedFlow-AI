@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -56,15 +56,56 @@ function getNextDayNumber(analyses: Analysis[]): number {
     return maxDay + 1
 }
 
+function DayNotes({ analysisId }: { analysisId: string }) {
+    const storageKey = `day-notes-${analysisId}`
+    const [open, setOpen] = useState(false)
+    const [text, setText] = useState('')
+
+    useEffect(() => {
+        const saved = localStorage.getItem(storageKey)
+        if (saved) {
+            setText(saved)
+            setOpen(true)
+        }
+    }, [storageKey])
+
+    const handleChange = useCallback((value: string) => {
+        setText(value)
+        if (value.trim()) {
+            localStorage.setItem(storageKey, value)
+        } else {
+            localStorage.removeItem(storageKey)
+        }
+    }, [storageKey])
+
+    return (
+        <div className="mt-2">
+            <button
+                onClick={() => setOpen(prev => !prev)}
+                className="text-sm text-gray-500 hover:text-blue-600 flex items-center gap-1 transition-colors"
+            >
+                <span>{open ? '▾' : '▸'}</span>
+                <span>{open ? 'Hide Notes' : 'Add Notes'}</span>
+            </button>
+            {open && (
+                <textarea
+                    value={text}
+                    onChange={e => handleChange(e.target.value)}
+                    rows={4}
+                    placeholder="Write your own admission notes here… (saved locally)"
+                    className="mt-2 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y bg-gray-50"
+                />
+            )}
+        </div>
+    )
+}
+
 export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelineProps) {
     const [analyses, setAnalyses] = useState<Analysis[]>(initialAnalyses)
     const [discharging, setDischarging] = useState(false)
     const [dischargeError, setDischargeError] = useState<string | null>(null)
 
-    const isDischarged =
-        patient.metadata?.admission_status === 'discharged' ||
-        (analyses.length > 0 && !patient.metadata?.admission_status &&
-            patient.status === 'completed' && !analyses.some(a => a.analysis_version?.startsWith('day_')))
+    const isDischarged = patient.metadata?.admission_status === 'discharged'
 
     const dischargeDate = patient.metadata?.discharge_date
         ? new Date(patient.metadata.discharge_date).toLocaleDateString('en-GB', {
@@ -140,6 +181,9 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
 
                     {/* The analysis panel */}
                     <InteractiveAnalysisPanel analysis={analysis} />
+
+                    {/* Per-day personal notes (localStorage) */}
+                    <DayNotes analysisId={analysis.id} />
                 </div>
             ))}
 

@@ -87,7 +87,7 @@ export interface TestInterpretation {
   number: number
   test_name: string
   deranged_parameters: string[]
-  normal_parameters_assumed: string
+  normal_parameters_assumed?: string
   interpretation: string
 }
 

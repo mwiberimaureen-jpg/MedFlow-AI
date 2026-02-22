@@ -97,7 +97,6 @@ export async function POST(
         for (const t of analysisResponse.test_interpretation) {
           testText += `**${t.number}. ${t.test_name}**\n`
           testText += `Deranged: ${t.deranged_parameters.join(', ')}\n`
-          testText += `${t.normal_parameters_assumed}\n`
           testText += `Interpretation: ${t.interpretation}\n\n`
         }
         reportSections.push(testText)
