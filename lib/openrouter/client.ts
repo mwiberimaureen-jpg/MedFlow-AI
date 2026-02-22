@@ -319,3 +319,95 @@ function sanitizeAnalysis(parsed: any): any {
 
   return deepClean(parsed)
 }
+
+/**
+ * Analyze a daily progress note during admission.
+ * Takes original admission history + summaries from previous analyses + today's notes.
+ */
+export async function analyzeDailyProgress(
+  admissionHistoryText: string,
+  previousSummaries: Array<{ version: string; summary: string }>,
+  progressNotes: string,
+  dayNumber: number,
+  config?: OpenRouterConfig
+): Promise<AnalysisResponse> {
+  const apiKey = config?.apiKey || process.env.OPENROUTER_API_KEY
+
+  if (!apiKey) {
+    throw new Error('OpenRouter API key is required')
+  }
+
+  const ordinals: Record<number, string> = {
+    1: 'One', 2: 'Two', 3: 'Three', 4: 'Four', 5: 'Five',
+    6: 'Six', 7: 'Seven', 8: 'Eight', 9: 'Nine', 10: 'Ten'
+  }
+  const dayLabel = ordinals[dayNumber] ? `Day ${ordinals[dayNumber]}` : `Day ${dayNumber}`
+
+  const previousContext = previousSummaries.length > 0
+    ? '\n\n--- PREVIOUS ANALYSES SUMMARY ---\n' +
+    previousSummaries.map(s => {
+      const label = s.version === 'admission' ? 'Admission Analysis' :
+        s.version.startsWith('day_') ? `Day ${s.version.replace('day_', '')} Analysis` : s.version
+      return `${label}: ${s.summary}`
+    }).join('\n\n') +
+    '\n--- END PREVIOUS ANALYSES SUMMARY ---'
+    : ''
+
+  const userMessage =
+    `=== ORIGINAL ADMISSION HISTORY ===\n${admissionHistoryText}\n=== END ADMISSION HISTORY ===${previousContext}\n\n` +
+    `=== ${dayLabel.toUpperCase()} OF ADMISSION PROGRESS NOTES ===\n${progressNotes}\n=== END PROGRESS NOTES ===\n\n` +
+    `You are generating the ${dayLabel} of Admission clinical analysis.\n` +
+    `Focus on:\n` +
+    `1. Changes from the previous day (improving/deteriorating/stable)\n` +
+    `2. Interpreting any NEW test results mentioned in today's notes (apply the same no-repeat-tests rule)\n` +
+    `3. Adjusting the management plan based on the patient's trajectory\n` +
+    `4. New complications arising or previously flagged complications that have resolved\n` +
+    `5. Updated to-do list for today's tasks — do NOT re-list tasks already completed in previous days\n\n` +
+    `Apply ALL the same clinical rules from your system instructions (AMBOSS-only, no hallucination, no forbidden phrases, specific drug dosing, etc.)`
+
+  const response = await fetch(OPENROUTER_API_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+      'X-Title': 'MedFlow AI',
+    },
+    body: JSON.stringify({
+      model: config?.model || 'anthropic/claude-sonnet-4',
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: userMessage }
+      ],
+      temperature: 0.3,
+      max_tokens: 8000,
+    })
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(`OpenRouter API Error: ${response.status} - ${JSON.stringify(errorData)}`)
+  }
+
+  const data = await response.json()
+
+  if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+    throw new Error('Invalid response from OpenRouter API')
+  }
+
+  const content = data.choices[0].message.content
+
+  try {
+    const cleanContent = content.replace(/```json\n?|\n?```/g, '').trim()
+    const parsed = JSON.parse(cleanContent)
+
+    if (!parsed.summary || !parsed.risk_level || !Array.isArray(parsed.todo_items)) {
+      throw new Error('Invalid response structure from AI')
+    }
+
+    return sanitizeAnalysis(parsed) as AnalysisResponse
+  } catch (error) {
+    console.error('Failed to parse AI daily response:', content)
+    throw new Error('Failed to parse AI daily analysis response')
+  }
+}

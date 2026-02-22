@@ -45,16 +45,17 @@ export async function POST(
       )
     }
 
-    // Check if analysis already exists
-    const { data: existingAnalysis } = await supabase
+    // Check if admission analysis already exists (allow day analyses for the same patient)
+    const { data: existingAdmissionAnalysis } = await supabase
       .from('analyses')
       .select('id')
       .eq('patient_history_id', id)
+      .eq('analysis_version', 'admission')
       .single()
 
-    if (existingAnalysis) {
+    if (existingAdmissionAnalysis) {
       return NextResponse.json(
-        { error: 'Analysis already exists for this patient history' },
+        { error: 'Admission analysis already exists for this patient' },
         { status: 400 }
       )
     }
@@ -161,6 +162,7 @@ export async function POST(
           todo_list_json: analysisResponse.todo_items,
           raw_analysis_text: fullReportText,
           model_used: 'anthropic/claude-sonnet-4',
+          analysis_version: 'admission',
           processing_time_ms: processingTime,
           total_items: analysisResponse.todo_items.length,
           completed_items: 0,

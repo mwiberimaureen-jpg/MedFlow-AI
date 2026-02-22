@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { AnalyzeButton } from '@/components/patients/AnalyzeButton'
-import { AnalysisPanel } from '@/components/patients/AnalysisPanel'
+import { AdmissionTimeline } from '@/components/patients/AdmissionTimeline'
 import Link from 'next/link'
 
 export default async function PatientDetailPage({
@@ -33,20 +33,24 @@ export default async function PatientDetailPage({
     notFound()
   }
 
-  // Get the latest analysis (analyses are ordered by created_at desc in the query)
-  const latestAnalysis = patient.analyses && patient.analyses.length > 0
-    ? patient.analyses[0]
-    : null
+  // Sort analyses chronologically by created_at
+  const sortedAnalyses = (patient.analyses || []).sort(
+    (a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  )
 
-  const getStatusBadge = (status: string) => {
+  const hasAnalyses = sortedAnalyses.length > 0
+
+  const getStatusBadge = (status: string): 'success' | 'warning' | 'info' | 'danger' => {
     const variants: Record<string, 'success' | 'warning' | 'info' | 'danger'> = {
       completed: 'success',
       analyzing: 'warning',
       draft: 'info',
       error: 'danger'
     }
-    return variants[status] || 'default'
+    return variants[status] || 'info'
   }
+
+  const isDischarged = patient.metadata?.admission_status === 'discharged'
 
   return (
     <div className="space-y-6">
@@ -69,9 +73,12 @@ export default async function PatientDetailPage({
               {patient.patient_identifier && <span>ID: {patient.patient_identifier}</span>}
             </div>
           </div>
-          <Badge variant={getStatusBadge(patient.status)}>
-            {patient.status}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {isDischarged && <Badge variant="success">Discharged</Badge>}
+            <Badge variant={getStatusBadge(patient.status)}>
+              {isDischarged ? 'completed' : patient.status}
+            </Badge>
+          </div>
         </div>
       </div>
 
@@ -92,8 +99,8 @@ export default async function PatientDetailPage({
         )}
       </Card>
 
-      {/* Analysis Section */}
-      {!latestAnalysis && patient.status !== 'analyzing' && (
+      {/* Analysis / Admission Workflow Section */}
+      {!hasAnalyses && patient.status !== 'analyzing' && (
         <Card>
           <div className="text-center py-8">
             <div className="text-4xl mb-4">🤖</div>
@@ -108,22 +115,34 @@ export default async function PatientDetailPage({
         </Card>
       )}
 
-      {patient.status === 'analyzing' && (
+      {!hasAnalyses && patient.status === 'analyzing' && (
         <Card>
           <div className="text-center py-8">
             <div className="text-4xl mb-4 animate-pulse">⚡</div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Analysis in Progress
+              Generating Admission Analysis…
             </h3>
             <p className="text-gray-600">
-              Please wait while we analyze the patient history...
+              Please wait while we analyze the patient history. This usually takes 30–60 seconds.
             </p>
           </div>
         </Card>
       )}
 
-      {latestAnalysis && (
-        <AnalysisPanel analysis={latestAnalysis} />
+      {/* Admission Timeline — shown once at least one analysis exists */}
+      {hasAnalyses && (
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Admission Workflow</h2>
+          <AdmissionTimeline
+            patient={{
+              id: patient.id,
+              patient_name: patient.patient_name,
+              metadata: patient.metadata,
+              status: patient.status
+            }}
+            initialAnalyses={sortedAnalyses}
+          />
+        </div>
       )}
     </div>
   )

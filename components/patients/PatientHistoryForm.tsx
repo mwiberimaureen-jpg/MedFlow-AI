@@ -104,6 +104,7 @@ export function PatientHistoryForm() {
     }
 
     try {
+      // Step 1: Create the patient record with 'analyzing' status
       const response = await fetch('/api/patients', {
         method: 'POST',
         headers: {
@@ -115,7 +116,7 @@ export function PatientHistoryForm() {
           patient_gender: formData.patient_gender || undefined,
           patient_identifier: formData.patient_identifier.trim() || undefined,
           history_text: formData.history_text.trim(),
-          status: status === 'submitted' ? 'completed' : 'draft'
+          status: status === 'submitted' ? 'analyzing' : 'draft'
         }),
       })
 
@@ -128,14 +129,21 @@ export function PatientHistoryForm() {
       // Clear draft on successful save
       clearDraft()
 
-      // If submitted (not draft), fire off analysis in background (don't wait)
+      // Step 2: If submitted, run the AI analysis synchronously (await it)
       if (status === 'submitted') {
-        fetch(`/api/patients/${data.patient.id}/analyze`, {
+        setAnalyzing(true)
+
+        const analyzeResponse = await fetch(`/api/patients/${data.patient.id}/analyze`, {
           method: 'POST',
-        }).catch(() => {})
+        })
+
+        if (!analyzeResponse.ok) {
+          const analyzeData = await analyzeResponse.json().catch(() => ({}))
+          throw new Error(analyzeData.error || 'Analysis failed — please try again from the patient page')
+        }
       }
 
-      // Redirect immediately to patient detail page
+      // Step 3: Redirect to patient detail page (analysis is ready)
       router.push(`/dashboard/patients/${data.patient.id}`)
 
     } catch (err: any) {
@@ -248,10 +256,10 @@ export function PatientHistoryForm() {
           <Button
             variant="primary"
             onClick={handleSubmitForm}
-            loading={loading}
-            disabled={loading}
+            loading={loading || analyzing}
+            disabled={loading || analyzing}
           >
-            {analyzing ? 'Analyzing...' : loading ? 'Saving...' : 'Submit & Analyze'}
+            {analyzing ? 'Analyzing... (30–60s)' : loading ? 'Saving...' : 'Submit & Analyze'}
           </Button>
         </div>
       </div>
