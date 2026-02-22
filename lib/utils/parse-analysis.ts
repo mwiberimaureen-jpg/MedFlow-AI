@@ -135,8 +135,13 @@ export function mergeGapsContent(content: string): string {
       skipMissingHeader = true
       continue
     }
-    if (skipMissingHeader && /^\*\*/.test(trimmed)) {
-      skipMissingHeader = false
+    if (skipMissingHeader) {
+      // Stop skipping when we hit the next bold sub-header
+      if (/^\*\*/.test(trimmed)) {
+        skipMissingHeader = false
+      } else {
+        continue  // skip items under Missing Information
+      }
     }
     outputLines.push(line)
   }
