@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { parseAnalysisText } from '@/lib/utils/parse-analysis'
@@ -103,13 +103,113 @@ function formatSectionContent(content: string): string {
         .replace(/\n/g, '<br/>')
 }
 
+/**
+ * Merge "Missing Information" into "Follow-up Questions" for the Gaps section.
+ * Old analyses may still have both sub-headers in the raw text.
+ */
+function mergeGapsContent(content: string): string {
+    // Remove the "Missing Information" sub-header and its items,
+    // fold them into the follow-up questions as numbered items
+    const missingMatch = content.match(/\*\*Missing Information:?\*\*\s*\n([\s\S]*?)(?=\*\*|$)/)
+    const followUpMatch = content.match(/\*\*Follow-up Questions:?\*\*\s*\n([\s\S]*?)(?=\*\*|$)/)
+
+    if (!missingMatch) return content
+
+    const missingItems = missingMatch[1].trim().split('\n').filter(l => l.trim().length > 0)
+    // Convert missing items into question form and prepend to follow-up
+    const asQuestions = missingItems.map(item => {
+        const clean = item.replace(/^[-*]\s*/, '').trim()
+        return `- ${clean}`
+    })
+
+    let merged = content
+    // Remove the missing information block
+    merged = merged.replace(/\*\*Missing Information:?\*\*\s*\n[\s\S]*?(?=\*\*|$)/, '')
+    // If there are follow-up questions, append missing items to them
+    if (followUpMatch) {
+        const insertPoint = merged.indexOf(followUpMatch[1]) + followUpMatch[1].length
+        merged = merged.slice(0, insertPoint) + '\n' + asQuestions.join('\n') + merged.slice(insertPoint)
+    } else {
+        // No follow-up section, create one
+        merged = '**Follow-up Questions:**\n' + asQuestions.join('\n') + '\n\n' + merged
+    }
+    return merged.trim()
+}
+
+/**
+ * Collapsible test interpretation block.
+ * Shows the test name as a header, with interpretation collapsed by default.
+ */
+function CollapsibleTestBlock({ content }: { content: string }) {
+    // Split by test blocks: **1. Test Name** ... **2. Test Name** ...
+    const blocks = content.split(/(?=\*\*\d+\.\s)/).filter(b => b.trim())
+
+    if (blocks.length === 0) {
+        return (
+            <div
+                className="prose prose-sm max-w-none text-gray-700 leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: formatSectionContent(content) }}
+            />
+        )
+    }
+
+    return (
+        <div className="space-y-3">
+            {blocks.map((block, i) => (
+                <TestBlockItem key={i} block={block} />
+            ))}
+        </div>
+    )
+}
+
+function TestBlockItem({ block }: { block: string }) {
+    const [expanded, setExpanded] = useState(false)
+
+    // Extract the first line (test name) and the rest (details)
+    const lines = block.trim().split('\n')
+    const headerLine = lines[0] || ''
+    const detailLines = lines.slice(1).join('\n').trim()
+
+    return (
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <button
+                onClick={() => setExpanded(prev => !prev)}
+                className="w-full text-left px-3 py-2 bg-gray-50 hover:bg-gray-100 flex items-center justify-between gap-2 transition-colors"
+            >
+                <span
+                    className="text-sm font-medium text-gray-900"
+                    dangerouslySetInnerHTML={{ __html: formatSectionContent(headerLine) }}
+                />
+                <span className="text-xs text-blue-600 flex-shrink-0">
+                    {expanded ? 'Hide' : 'More'}
+                </span>
+            </button>
+            {expanded && detailLines && (
+                <div
+                    className="px-3 py-2 prose prose-sm max-w-none text-gray-700 leading-relaxed border-t border-gray-100"
+                    dangerouslySetInnerHTML={{ __html: formatSectionContent(detailLines) }}
+                />
+            )}
+        </div>
+    )
+}
+
 export function InteractiveAnalysisPanel({ analysis }: InteractiveAnalysisPanelProps) {
     const [todoItems, setTodoItems] = useState<TodoItemData[]>(analysis.todo_items || [])
     const [completedCount, setCompletedCount] = useState(analysis.completed_items || 0)
     const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set())
     const [toggleErrors, setToggleErrors] = useState<Record<string, string>>({})
 
-    const sections = parseAnalysisText(analysis.raw_analysis_text)
+    const sections = useMemo(() => {
+        const parsed = parseAnalysisText(analysis.raw_analysis_text)
+        // Merge missing information into follow-up questions for Gaps section
+        return parsed.map(s => {
+            if (s.title.toLowerCase().includes('gaps')) {
+                return { ...s, content: mergeGapsContent(s.content) }
+            }
+            return s
+        })
+    }, [analysis.raw_analysis_text])
 
     const handleToggle = useCallback(async (itemId: string, newChecked: boolean) => {
         // Optimistic update
@@ -187,18 +287,25 @@ export function InteractiveAnalysisPanel({ analysis }: InteractiveAnalysisPanelP
             </Card>
 
             {/* Analysis sections */}
-            {sections.map((section) => (
-                <Card key={section.order}>
-                    <h3 className="text-base font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        <span>{getSectionIcon(section.title)}</span>
-                        {section.title}
-                    </h3>
-                    <div
-                        className="prose prose-sm max-w-none text-gray-700 leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: formatSectionContent(section.content) }}
-                    />
-                </Card>
-            ))}
+            {sections.map((section) => {
+                const isTestInterp = section.title.toLowerCase().includes('test interpretation')
+                return (
+                    <Card key={section.order}>
+                        <h3 className="text-base font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <span>{getSectionIcon(section.title)}</span>
+                            {section.title}
+                        </h3>
+                        {isTestInterp ? (
+                            <CollapsibleTestBlock content={section.content} />
+                        ) : (
+                            <div
+                                className="prose prose-sm max-w-none text-gray-700 leading-relaxed"
+                                dangerouslySetInnerHTML={{ __html: formatSectionContent(section.content) }}
+                            />
+                        )}
+                    </Card>
+                )
+            })}
 
             {/* Interactive Action Items Checklist */}
             {totalItems > 0 && (
