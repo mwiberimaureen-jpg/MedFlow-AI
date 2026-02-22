@@ -9,7 +9,7 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnalysisCardProps, TodoItem } from '@/lib/types/analysis';
-import { parseAnalysisText } from '@/lib/utils/parse-analysis';
+import { parseAnalysisText, mergeGapsContent } from '@/lib/utils/parse-analysis';
 import { exportAnalysisPdf, generatePdfFilename } from '@/lib/utils/export-pdf';
 import AnalysisActions from './AnalysisActions';
 import ProgressBar from './ProgressBar';
@@ -24,9 +24,13 @@ export default function AnalysisCard({
   const router = useRouter();
   const [items, setItems] = useState<TodoItem[]>(initialTodoItems);
 
-  // Parse analysis text into sections
+  // Parse analysis text into sections, merging gaps sub-headers
   const sections = useMemo(
-    () => parseAnalysisText(analysis.raw_analysis_text),
+    () => parseAnalysisText(analysis.raw_analysis_text).map(s =>
+      s.title.toLowerCase().includes('gaps')
+        ? { ...s, content: mergeGapsContent(s.content) }
+        : s
+    ),
     [analysis.raw_analysis_text]
   );
 

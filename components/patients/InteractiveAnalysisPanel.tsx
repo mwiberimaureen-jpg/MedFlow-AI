@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
-import { parseAnalysisText } from '@/lib/utils/parse-analysis'
+import { parseAnalysisText, mergeGapsContent } from '@/lib/utils/parse-analysis'
 
 interface TodoItemData {
     id: string
@@ -104,47 +104,25 @@ function formatSectionContent(content: string): string {
 }
 
 /**
- * Merge "Missing Information" into "Follow-up Questions" for the Gaps section.
- * Old analyses may still have both sub-headers in the raw text.
- */
-function mergeGapsContent(content: string): string {
-    // Remove the "Missing Information" sub-header and its items,
-    // fold them into the follow-up questions as numbered items
-    const missingMatch = content.match(/\*\*Missing Information:?\*\*\s*\n([\s\S]*?)(?=\*\*|$)/)
-    const followUpMatch = content.match(/\*\*Follow-up Questions:?\*\*\s*\n([\s\S]*?)(?=\*\*|$)/)
-
-    if (!missingMatch) return content
-
-    const missingItems = missingMatch[1].trim().split('\n').filter(l => l.trim().length > 0)
-    // Convert missing items into question form and prepend to follow-up
-    const asQuestions = missingItems.map(item => {
-        const clean = item.replace(/^[-*]\s*/, '').trim()
-        return `- ${clean}`
-    })
-
-    let merged = content
-    // Remove the missing information block
-    merged = merged.replace(/\*\*Missing Information:?\*\*\s*\n[\s\S]*?(?=\*\*|$)/, '')
-    // If there are follow-up questions, append missing items to them
-    if (followUpMatch) {
-        const insertPoint = merged.indexOf(followUpMatch[1]) + followUpMatch[1].length
-        merged = merged.slice(0, insertPoint) + '\n' + asQuestions.join('\n') + merged.slice(insertPoint)
-    } else {
-        // No follow-up section, create one
-        merged = '**Follow-up Questions:**\n' + asQuestions.join('\n') + '\n\n' + merged
-    }
-    return merged.trim()
-}
-
-/**
  * Collapsible test interpretation block.
  * Shows the test name as a header, with interpretation collapsed by default.
+ * Handles formats: **1. Test Name**, **Test Name**, or 1. Test Name
  */
 function CollapsibleTestBlock({ content }: { content: string }) {
-    // Split by test blocks: **1. Test Name** ... **2. Test Name** ...
-    const blocks = content.split(/(?=\*\*\d+\.\s)/).filter(b => b.trim())
+    // Try splitting by bold numbered headers first: **1. Test** or **Test**
+    let blocks = content.split(/(?=\*\*\d*\.?\s*[A-Z])/).filter(b => b.trim())
 
-    if (blocks.length === 0) {
+    // If that didn't split anything meaningful, try plain numbered: "1. Test"
+    if (blocks.length <= 1) {
+        blocks = content.split(/(?=^\d+\.\s)/m).filter(b => b.trim())
+    }
+
+    // If still just one block and it's long (>200 chars), make it collapsible as a whole
+    if (blocks.length <= 1 && content.length > 200) {
+        return <TestBlockItem block={content} />
+    }
+
+    if (blocks.length <= 1) {
         return (
             <div
                 className="prose prose-sm max-w-none text-gray-700 leading-relaxed"

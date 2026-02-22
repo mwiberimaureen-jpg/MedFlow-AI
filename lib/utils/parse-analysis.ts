@@ -119,3 +119,31 @@ export const COMMON_SECTIONS = {
   MANAGEMENT: 'Management Plan',
   COMPLICATIONS: 'Possible Complications & Prevention',
 } as const;
+
+/**
+ * Merge "Missing Information" sub-header into "Follow-up Questions".
+ * Old analyses stored both; new analyses only have follow-up questions.
+ */
+export function mergeGapsContent(content: string): string {
+  const lines = content.split('\n')
+  const outputLines: string[] = []
+  let skipMissingHeader = false
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (/^\*?\*?Missing Information:?\*?\*?:?\s*$/.test(trimmed)) {
+      skipMissingHeader = true
+      continue
+    }
+    if (skipMissingHeader && /^\*\*/.test(trimmed)) {
+      skipMissingHeader = false
+    }
+    outputLines.push(line)
+  }
+
+  let result = outputLines.join('\n')
+  if (!/follow.up questions/i.test(result) && result.trim().length > 0) {
+    result = '**Follow-up Questions:**\n' + result
+  }
+  return result.trim()
+}
