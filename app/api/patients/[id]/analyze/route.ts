@@ -80,9 +80,6 @@ export async function POST(
       if (analysisResponse.gaps_in_history) {
         const gaps = analysisResponse.gaps_in_history
         let gapText = '## Gaps in History\n\n'
-        if (gaps.missing_information?.length) {
-          gapText += '**Missing Information:**\n' + gaps.missing_information.map(g => `- ${g}`).join('\n') + '\n\n'
-        }
         if (gaps.follow_up_questions?.length) {
           gapText += '**Follow-up Questions:**\n' + gaps.follow_up_questions.map((q, i) => `${i + 1}. ${q}`).join('\n') + '\n\n'
         }

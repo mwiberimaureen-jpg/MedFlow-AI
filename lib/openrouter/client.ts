@@ -160,8 +160,7 @@ Return ONLY a valid JSON response with this structure:
 {
   "risk_level": "low" | "medium" | "high",
   "gaps_in_history": {
-    "missing_information": ["List specific missing elements"],
-    "follow_up_questions": ["Specific questions to ask the patient"],
+    "follow_up_questions": ["Specific questions to ask the patient — include questions that address any missing information in the history"],
     "physical_exam_checklist": ["Specific physical exam findings to look for, with REASON for each based on history"]
   },
   "test_interpretation": [

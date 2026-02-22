@@ -78,7 +78,7 @@ export interface CreatePatientRequest {
 }
 
 export interface GapsInHistory {
-  missing_information: string[]
+  missing_information?: string[]
   follow_up_questions: string[]
   physical_exam_checklist: string[]
 }
