@@ -38,7 +38,7 @@ export interface TodoItem {
   title: string
   description?: string
   priority: 'low' | 'medium' | 'high' | 'urgent'
-  category: 'diagnostic' | 'treatment' | 'follow-up' | 'referral' | 'monitoring' | 'lifestyle'
+  category: 'physical_examination' | 'investigations' | 'differential_diagnosis' | 'management_plan' | 'complications' | 'follow_up' | 'diagnostic' | 'treatment' | 'follow-up' | 'referral' | 'monitoring' | 'lifestyle'
   is_completed: boolean
   order_index: number
   parent_item_id?: string | null
@@ -50,7 +50,7 @@ export interface TodoItemJson {
   title: string
   description?: string
   priority: 'low' | 'medium' | 'high' | 'urgent'
-  category: 'diagnostic' | 'treatment' | 'follow-up' | 'referral' | 'monitoring' | 'lifestyle'
+  category: 'physical_examination' | 'investigations' | 'differential_diagnosis' | 'management_plan' | 'complications' | 'follow_up' | 'diagnostic' | 'treatment' | 'follow-up' | 'referral' | 'monitoring' | 'lifestyle'
   order?: number
 }
 

@@ -10,10 +10,23 @@ import TodoItem from './TodoItem';
 
 // Category display names
 const CATEGORY_LABELS: Record<string, string> = {
+  physical_examination: 'Physical Examination',
+  investigations: 'Investigations',
+  differential_diagnosis: 'Differential Diagnosis',
+  management_plan: 'Management Plan',
+  complications: 'Complications & Prevention',
+  follow_up: 'Follow-up',
+  // Legacy categories
   physical_exam: 'Physical Examination',
   tests: 'Investigations & Tests',
   management: 'Management Plan',
   differential: 'Differential Diagnosis',
+  diagnostic: 'Diagnostic',
+  treatment: 'Treatment',
+  'follow-up': 'Follow-up',
+  referral: 'Referral',
+  monitoring: 'Monitoring',
+  lifestyle: 'Lifestyle',
 };
 
 // Build tree structure from flat todo items
@@ -59,7 +72,14 @@ export default function TodoListDisplay({ todoItems, onToggle }: TodoListDisplay
   const tree = buildTodoTree(todoItems);
 
   // Sort categories in logical order
-  const categoryOrder = ['physical_exam', 'tests', 'differential', 'management', 'uncategorized'];
+  const categoryOrder = [
+    'physical_examination', 'investigations', 'differential_diagnosis',
+    'management_plan', 'complications', 'follow_up',
+    // Legacy order
+    'physical_exam', 'tests', 'differential', 'management',
+    'diagnostic', 'treatment', 'follow-up', 'referral', 'monitoring', 'lifestyle',
+    'uncategorized'
+  ];
   const sortedCategories = Object.keys(categorized).sort((a, b) => {
     const aIndex = categoryOrder.indexOf(a);
     const bIndex = categoryOrder.indexOf(b);
