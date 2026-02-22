@@ -21,11 +21,12 @@ export interface Analysis {
   todo_list_json: TodoItemJson[]
   raw_analysis_text: string
   model_used?: string
+  analysis_version?: string | null
   processing_time_ms?: number
   total_items: number
   completed_items: number
   user_rating?: number
-  user_feedback?: string
+  user_feedback?: string | null
   summary: string
   risk_level: 'low' | 'medium' | 'high'
   created_at: string

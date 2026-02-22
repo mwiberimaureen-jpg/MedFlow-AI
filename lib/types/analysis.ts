@@ -31,6 +31,8 @@ export interface Analysis {
   processing_time_ms: number | null;
   total_items: number | null;
   completed_items: number;
+  summary?: string;
+  risk_level?: string;
   created_at: string;
   updated_at: string;
   user_rating: number | null;
