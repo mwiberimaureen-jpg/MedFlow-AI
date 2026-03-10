@@ -1,15 +1,4 @@
-import { type NextRequest } from 'next/server'
-import { updateSession } from '@/lib/supabase/middleware'
-
-export async function middleware(request: NextRequest) {
-  return await updateSession(request)
-}
-
-export const config = {
-  matcher: [
-    '/dashboard/:path*',
-    '/login',
-    '/signup',
-    '/forgot-password',
-  ],
-}
+// Middleware intentionally left empty.
+// Auth protection is handled in app/dashboard/layout.tsx (server-side getUser + redirect).
+// Vercel's hobby plan has an extremely tight middleware timeout (~1.5s) that
+// Supabase client initialization alone can exceed, causing 504 GATEWAY_TIMEOUT.
