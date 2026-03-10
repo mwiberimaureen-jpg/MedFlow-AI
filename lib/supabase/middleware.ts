@@ -29,14 +29,18 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // Important: refreshing session
+  // Use getSession() instead of getUser() to avoid a network call to Supabase.
+  // getSession() reads the JWT from the cookie locally, which is fast enough
+  // for Vercel's strict middleware timeout. Actual token verification via
+  // getUser() should happen in server components / API routes where timeouts
+  // are more generous.
   const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    data: { session },
+  } = await supabase.auth.getSession()
 
   // Protected routes - redirect to login if not authenticated
   if (
-    !user &&
+    !session &&
     !request.nextUrl.pathname.startsWith('/login') &&
     !request.nextUrl.pathname.startsWith('/signup') &&
     !request.nextUrl.pathname.startsWith('/forgot-password') &&
@@ -49,7 +53,7 @@ export async function updateSession(request: NextRequest) {
 
   // Redirect authenticated users from auth pages to dashboard
   if (
-    user &&
+    session &&
     (request.nextUrl.pathname.startsWith('/login') ||
       request.nextUrl.pathname.startsWith('/signup'))
   ) {
