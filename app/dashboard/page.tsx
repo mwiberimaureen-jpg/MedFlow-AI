@@ -35,15 +35,17 @@ export default async function DashboardPage() {
   // Fetch recent patients with latest analysis risk_level
   const { data: recentPatients } = await supabase
     .from('patient_histories')
-    .select('id, patient_name, status, created_at, analyses(risk_level, created_at)')
+    .select('id, patient_name, status, created_at, analyses(risk_level, analysis_version, created_at)')
     .eq('user_id', user!.id)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(5)
 
-  const getLatestRiskLevel = (analyses: Array<{ risk_level: string; created_at: string }> | null) => {
+  const getLatestRiskLevel = (analyses: Array<{ risk_level: string; analysis_version: string | null; created_at: string }> | null) => {
     if (!analyses || analyses.length === 0) return null
-    const sorted = [...analyses].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    const clinical = analyses.filter(a => a.analysis_version !== 'discharge')
+    if (clinical.length === 0) return null
+    const sorted = [...clinical].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     return sorted[0].risk_level
   }
 
@@ -112,7 +114,7 @@ export default async function DashboardPage() {
           ) : (
             <div className="space-y-3">
               {recentPatients.map((patient) => {
-                const riskLevel = getLatestRiskLevel(patient.analyses as Array<{ risk_level: string; created_at: string }> | null)
+                const riskLevel = getLatestRiskLevel(patient.analyses as Array<{ risk_level: string; analysis_version: string | null; created_at: string }> | null)
                 const triage = getTriageFromRiskLevel(riskLevel)
                 const showProcessingBadge = patient.status !== 'completed'
 

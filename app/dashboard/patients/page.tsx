@@ -9,14 +9,17 @@ export default async function PatientsPage() {
 
   const { data: patients } = await supabase
     .from('patient_histories')
-    .select('*, analyses(risk_level, created_at)')
+    .select('*, analyses(risk_level, analysis_version, created_at)')
     .eq('user_id', user!.id)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
 
-  const getLatestRiskLevel = (analyses: Array<{ risk_level: string; created_at: string }> | null) => {
+  const getLatestRiskLevel = (analyses: Array<{ risk_level: string; analysis_version: string | null; created_at: string }> | null) => {
     if (!analyses || analyses.length === 0) return null
-    const sorted = [...analyses].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    // Filter out discharge analyses — they don't have clinical triage risk levels
+    const clinical = analyses.filter(a => a.analysis_version !== 'discharge')
+    if (clinical.length === 0) return null
+    const sorted = [...clinical].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     return sorted[0].risk_level
   }
 

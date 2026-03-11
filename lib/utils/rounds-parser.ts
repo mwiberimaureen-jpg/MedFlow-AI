@@ -75,6 +75,58 @@ export function extractKnownConditions(historyText: string): string[] {
   return conditions
 }
 
+export function extractChiefComplaintWithDuration(historyText: string): string {
+  // Try patterns that capture complaint + duration together
+  const durationPatterns = [
+    /(?:chief\s+complaint|presenting\s+complaint|complains?\s+of)[:\s]+([\s\S]+?)(?:\n{2}|\n(?=[A-Z]))/i,
+    /(?:presents?\s+with|admitted\s+(?:with|for|due\s+to))[:\s]+([\s\S]+?)(?:\n{2}|\n(?=[A-Z]))/i,
+  ]
+
+  for (const pattern of durationPatterns) {
+    const match = historyText.match(pattern)
+    if (match?.[1]) {
+      // Take up to the first period-ending sentence that mentions duration, or first 2 sentences
+      const text = match[1].trim()
+      const sentences = text.split(/\.(?:\s|$)/).filter(s => s.trim().length > 3)
+      const result = sentences.slice(0, 2).join('. ').trim()
+      return result ? result + '.' : result
+    }
+  }
+
+  return extractChiefComplaint(historyText)
+}
+
+export function buildCourseSummary(analyses: Array<{
+  analysis_version: string | null
+  summary: string
+  user_feedback?: string | null
+  created_at: string
+}>): string {
+  if (analyses.length === 0) return ''
+
+  // Sort chronologically
+  const sorted = [...analyses]
+    .filter(a => a.analysis_version !== 'discharge')
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+
+  const parts: string[] = []
+
+  for (const a of sorted) {
+    const label = a.analysis_version === 'admission' ? 'Admission'
+      : a.analysis_version?.startsWith('day_') ? `Day ${a.analysis_version.replace('day_', '')}`
+      : 'Update'
+
+    // Use user_feedback (progress notes) if available, otherwise use summary
+    if (a.user_feedback) {
+      parts.push(`${label}: ${a.user_feedback.split('\n')[0].trim()}`)
+    } else if (a.summary) {
+      parts.push(`${label}: ${a.summary.split('.').slice(0, 2).join('.').trim()}.`)
+    }
+  }
+
+  return parts.join('\n')
+}
+
 export function extractSectionFromAnalysis(rawAnalysisText: string, sectionKey: string): string {
   try {
     const parsed = JSON.parse(rawAnalysisText)

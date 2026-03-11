@@ -36,6 +36,12 @@ export default async function RoundsPage() {
         created_at: patient.created_at,
       },
       latestAnalysis: analyses[0] || null,
+      allAnalyses: analyses.map((a: any) => ({
+        analysis_version: a.analysis_version,
+        summary: a.summary,
+        user_feedback: a.user_feedback,
+        created_at: a.created_at,
+      })),
       analysisCount: analyses.length,
     }
   })
@@ -62,11 +68,12 @@ export default async function RoundsPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {patientsWithLatestAnalysis.map(({ patient, latestAnalysis, analysisCount }) => (
+          {patientsWithLatestAnalysis.map(({ patient, latestAnalysis, allAnalyses, analysisCount }) => (
             <PatientRoundCard
               key={patient.id}
               patient={patient}
               latestAnalysis={latestAnalysis}
+              allAnalyses={allAnalyses}
               analysisCount={analysisCount}
             />
           ))}
