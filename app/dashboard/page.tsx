@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { Badge } from '@/components/ui/Badge'
+import { getTriageFromRiskLevel, getTriageBadgeVariant, getTriageLabel } from '@/lib/utils/triage'
 import Link from 'next/link'
 
 export default async function DashboardPage() {
@@ -31,60 +32,56 @@ export default async function DashboardPage() {
     .gte('created_at', startOfMonth.toISOString())
     .is('deleted_at', null)
 
-  // Fetch recent patients
+  // Fetch recent patients with latest analysis risk_level
   const { data: recentPatients } = await supabase
     .from('patient_histories')
-    .select('id, patient_name, status, created_at')
+    .select('id, patient_name, status, created_at, analyses(risk_level, created_at)')
     .eq('user_id', user!.id)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(5)
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, 'success' | 'warning' | 'info' | 'danger'> = {
-      completed: 'success',
-      analyzing: 'warning',
-      draft: 'info',
-      error: 'danger'
-    }
-    return variants[status] || 'default'
+  const getLatestRiskLevel = (analyses: Array<{ risk_level: string; created_at: string }> | null) => {
+    if (!analyses || analyses.length === 0) return null
+    const sorted = [...analyses].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    return sorted[0].risk_level
   }
 
   return (
     <div className="space-y-6">
       {/* Stats cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Patients</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">{totalPatients || 0}</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Patients</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{totalPatients || 0}</p>
             </div>
-            <div className="bg-blue-100 rounded-full p-3">
+            <div className="bg-blue-100 dark:bg-blue-900/30 rounded-full p-3">
               <span className="text-2xl">👥</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Analyses Done</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">{totalAnalyses || 0}</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Analyses Done</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{totalAnalyses || 0}</p>
             </div>
-            <div className="bg-green-100 rounded-full p-3">
+            <div className="bg-green-100 dark:bg-green-900/30 rounded-full p-3">
               <span className="text-2xl">🔬</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">This Month</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">{thisMonthCount || 0}</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">This Month</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{thisMonthCount || 0}</p>
             </div>
-            <div className="bg-purple-100 rounded-full p-3">
+            <div className="bg-purple-100 dark:bg-purple-900/30 rounded-full p-3">
               <span className="text-2xl">📊</span>
             </div>
           </div>
@@ -105,34 +102,50 @@ export default async function DashboardPage() {
       </div>
 
       {/* Recent activity */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Recent Patients</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Patients</h3>
         </div>
         <div className="p-6">
           {!recentPatients || recentPatients.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No patients yet. Add your first patient to get started!</p>
+            <p className="text-gray-500 dark:text-gray-400 text-center py-8">No patients yet. Add your first patient to get started!</p>
           ) : (
             <div className="space-y-3">
-              {recentPatients.map((patient) => (
-                <Link
-                  key={patient.id}
-                  href={`/dashboard/patients/${patient.id}`}
-                  className="block p-4 hover:bg-gray-50 rounded-lg transition-colors border border-gray-200"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-gray-900">{patient.patient_name}</p>
-                      <p className="text-sm text-gray-500">
-                        {new Date(patient.created_at).toLocaleDateString()}
-                      </p>
+              {recentPatients.map((patient) => {
+                const riskLevel = getLatestRiskLevel(patient.analyses as Array<{ risk_level: string; created_at: string }> | null)
+                const triage = getTriageFromRiskLevel(riskLevel)
+                const showProcessingBadge = patient.status !== 'completed'
+
+                return (
+                  <Link
+                    key={patient.id}
+                    href={`/dashboard/patients/${patient.id}`}
+                    className="block p-4 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors border border-gray-200 dark:border-gray-700"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white">{patient.patient_name}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {new Date(patient.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {triage ? (
+                          <Badge variant={getTriageBadgeVariant(triage)}>
+                            {getTriageLabel(triage)}
+                          </Badge>
+                        ) : showProcessingBadge ? (
+                          <Badge variant={patient.status === 'analyzing' ? 'warning' : patient.status === 'draft' ? 'info' : patient.status === 'error' ? 'danger' : 'default'}>
+                            {patient.status}
+                          </Badge>
+                        ) : (
+                          <Badge variant="default">Unassessed</Badge>
+                        )}
+                      </div>
                     </div>
-                    <Badge variant={getStatusBadge(patient.status)}>
-                      {patient.status}
-                    </Badge>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                )
+              })}
             </div>
           )}
         </div>

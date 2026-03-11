@@ -1,4 +1,4 @@
-import { AnalysisResponse } from '@/lib/types/patient'
+import { AnalysisResponse, DischargeSummaryResponse } from '@/lib/types/patient'
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions'
 
@@ -438,5 +438,102 @@ export async function analyzeDailyProgress(
   } catch (error) {
     console.error('Failed to parse AI daily response:', content)
     throw new Error('Failed to parse AI daily analysis response')
+  }
+}
+
+const DISCHARGE_PROMPT = `You are generating a comprehensive discharge summary for a patient.
+Based on the admission history and all clinical analyses during the hospital stay, produce a structured discharge summary.
+
+Return ONLY a valid JSON response with this structure:
+
+{
+  "discharge_diagnosis": "Final diagnosis at discharge",
+  "admission_diagnosis": "Original admission diagnosis",
+  "hospital_course": "Summary of hospital course (2-3 paragraphs)",
+  "procedures_performed": ["List of procedures performed during admission"],
+  "discharge_medications": [
+    { "drug": "Drug name", "dose": "Dose", "route": "Route", "frequency": "Frequency", "duration": "Duration or instructions" }
+  ],
+  "follow_up": [
+    { "specialty": "Department/Specialty", "when": "Timeframe (e.g. 2 weeks)", "reason": "Purpose of follow-up" }
+  ],
+  "tests_pending": ["Tests or results to follow up on post-discharge"],
+  "patient_instructions": ["Key instructions for the patient post-discharge"],
+  "condition_at_discharge": "stable/improved/deteriorated/unchanged",
+  "summary": "2-3 paragraph discharge summary suitable for clinical documentation"
+}
+
+Return ONLY the JSON object. No markdown code fences, no additional text.`
+
+/**
+ * Generate a discharge summary using AI.
+ * Takes admission history and all analysis summaries from the hospital stay.
+ */
+export async function generateDischargeSummary(
+  admissionHistoryText: string,
+  analysisSummaries: Array<{ version: string; summary: string; rawText?: string }>,
+  config?: OpenRouterConfig
+): Promise<DischargeSummaryResponse> {
+  const apiKey = config?.apiKey || process.env.OPENROUTER_API_KEY
+
+  if (!apiKey) {
+    throw new Error('OpenRouter API key is required')
+  }
+
+  const analysisContext = analysisSummaries.map(s => {
+    const label = s.version === 'admission' ? 'Admission Analysis' :
+      s.version.startsWith('day_') ? `Day ${s.version.replace('day_', '')} Analysis` : s.version
+    return `${label}:\n${s.summary}`
+  }).join('\n\n')
+
+  const userMessage =
+    `=== ADMISSION HISTORY ===\n${admissionHistoryText}\n=== END ADMISSION HISTORY ===\n\n` +
+    `=== CLINICAL ANALYSES DURING STAY ===\n${analysisContext}\n=== END ANALYSES ===\n\n` +
+    `Generate a comprehensive discharge summary based on the above admission history and clinical analyses.`
+
+  const response = await fetchWithRetry(OPENROUTER_API_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+      'X-Title': 'MedFlow AI',
+    },
+    body: JSON.stringify({
+      model: config?.model || 'anthropic/claude-sonnet-4',
+      messages: [
+        { role: 'system', content: DISCHARGE_PROMPT },
+        { role: 'user', content: userMessage }
+      ],
+      temperature: 0.3,
+      max_tokens: 8000,
+    })
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(`OpenRouter API Error: ${response.status} - ${JSON.stringify(errorData)}`)
+  }
+
+  const data = await response.json()
+
+  if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+    throw new Error('Invalid response from OpenRouter API')
+  }
+
+  const content = data.choices[0].message.content
+
+  try {
+    const cleanContent = content.replace(/```json\n?|\n?```/g, '').trim()
+    const parsed = JSON.parse(cleanContent)
+
+    if (!parsed.summary || !parsed.discharge_diagnosis) {
+      throw new Error('Invalid discharge summary structure from AI')
+    }
+
+    return parsed as DischargeSummaryResponse
+  } catch (error) {
+    console.error('Failed to parse AI discharge response:', content)
+    throw new Error('Failed to parse AI discharge summary response')
   }
 }

@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
 @theme inline {
@@ -12,15 +19,12 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 input, textarea, select {
   color: #171717;
+}
+
+.dark input, .dark textarea, .dark select {
+  color: #ededed;
 }
 
 body {
@@ -109,4 +113,12 @@ body {
 .print-mode .analysis-actions,
 .print-mode button {
   display: none !important;
+}
+
+/* Rounds print styles */
+@media print {
+  .print\:break-inside-avoid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
 }

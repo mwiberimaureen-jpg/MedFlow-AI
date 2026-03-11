@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { AnalyzeButton } from '@/components/patients/AnalyzeButton'
 import { AdmissionTimeline } from '@/components/patients/AdmissionTimeline'
+import { getTriageFromRiskLevel, getTriageBadgeVariant, getTriageLabel } from '@/lib/utils/triage'
 import Link from 'next/link'
 
 export default async function PatientDetailPage({
@@ -39,18 +40,11 @@ export default async function PatientDetailPage({
   )
 
   const hasAnalyses = sortedAnalyses.length > 0
-
-  const getStatusBadge = (status: string): 'success' | 'warning' | 'info' | 'danger' => {
-    const variants: Record<string, 'success' | 'warning' | 'info' | 'danger'> = {
-      completed: 'success',
-      analyzing: 'warning',
-      draft: 'info',
-      error: 'danger'
-    }
-    return variants[status] || 'info'
-  }
-
   const isDischarged = patient.metadata?.admission_status === 'discharged'
+
+  // Get triage from latest analysis
+  const latestAnalysis = sortedAnalyses.length > 0 ? sortedAnalyses[sortedAnalyses.length - 1] : null
+  const triage = getTriageFromRiskLevel(latestAnalysis?.risk_level)
 
   return (
     <div className="space-y-6">
@@ -58,14 +52,14 @@ export default async function PatientDetailPage({
       <div>
         <Link
           href="/dashboard/patients"
-          className="text-blue-600 hover:text-blue-700 text-sm font-medium mb-4 inline-block"
+          className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium mb-4 inline-block"
         >
           ← Back to Patients
         </Link>
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{patient.patient_name}</h1>
-            <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{patient.patient_name}</h1>
+            <div className="flex items-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-400">
               {patient.patient_age && <span>Age: {patient.patient_age}</span>}
               {patient.patient_gender && (
                 <span>Gender: {patient.patient_gender.charAt(0).toUpperCase() + patient.patient_gender.slice(1)}</span>
@@ -75,9 +69,13 @@ export default async function PatientDetailPage({
           </div>
           <div className="flex items-center gap-2">
             {isDischarged && <Badge variant="success">Discharged</Badge>}
-            <Badge variant={getStatusBadge(patient.status)}>
-              {isDischarged ? 'completed' : patient.status}
-            </Badge>
+            {triage ? (
+              <Badge variant={getTriageBadgeVariant(triage)}>{getTriageLabel(triage)}</Badge>
+            ) : patient.status !== 'completed' ? (
+              <Badge variant={patient.status === 'analyzing' ? 'warning' : patient.status === 'draft' ? 'info' : patient.status === 'error' ? 'danger' : 'default'}>
+                {patient.status}
+              </Badge>
+            ) : null}
           </div>
         </div>
       </div>
@@ -88,12 +86,12 @@ export default async function PatientDetailPage({
         subtitle: `Created on ${new Date(patient.created_at).toLocaleDateString()}`
       }}>
         <div className="prose prose-sm max-w-none">
-          <div className="whitespace-pre-wrap text-gray-700">
+          <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">
             {patient.history_text}
           </div>
         </div>
         {patient.word_count && (
-          <div className="mt-4 pt-4 border-t border-gray-200 text-sm text-gray-500">
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400">
             Word count: {patient.word_count}
           </div>
         )}
@@ -104,10 +102,10 @@ export default async function PatientDetailPage({
         <Card>
           <div className="text-center py-8">
             <div className="text-4xl mb-4">🤖</div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               No Analysis Yet
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               Run AI analysis to generate clinical insights and action items
             </p>
             <AnalyzeButton patientId={id} />
@@ -119,10 +117,10 @@ export default async function PatientDetailPage({
         <Card>
           <div className="text-center py-8">
             <div className="text-4xl mb-4 animate-pulse">⚡</div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               Generating Admission Analysis…
             </h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               Please wait while we analyze the patient history. This usually takes 30–60 seconds.
             </p>
           </div>
@@ -132,7 +130,7 @@ export default async function PatientDetailPage({
       {/* Admission Timeline — shown once at least one analysis exists */}
       {hasAnalyses && (
         <div>
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Admission Workflow</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Admission Workflow</h2>
           <AdmissionTimeline
             patient={{
               id: patient.id,

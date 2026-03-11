@@ -125,3 +125,30 @@ export interface AnalysisResponse {
   summary: string
   todo_items: TodoItemJson[]
 }
+
+export interface DischargeMedication {
+  drug: string
+  dose: string
+  route: string
+  frequency: string
+  duration: string
+}
+
+export interface FollowUp {
+  specialty: string
+  when: string
+  reason: string
+}
+
+export interface DischargeSummaryResponse {
+  discharge_diagnosis: string
+  admission_diagnosis: string
+  hospital_course: string
+  procedures_performed: string[]
+  discharge_medications: DischargeMedication[]
+  follow_up: FollowUp[]
+  tests_pending: string[]
+  patient_instructions: string[]
+  condition_at_discharge: string
+  summary: string
+}

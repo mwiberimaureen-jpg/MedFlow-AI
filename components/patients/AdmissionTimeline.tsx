@@ -6,6 +6,8 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { InteractiveAnalysisPanel } from './InteractiveAnalysisPanel'
 import { DayProgressForm } from './DayProgressForm'
+import { DischargeSummaryView } from './DischargeSummaryView'
+import { DischargeSummaryResponse } from '@/lib/types/patient'
 
 interface Analysis {
     id: string
@@ -36,6 +38,7 @@ interface AdmissionTimelineProps {
 
 function getVersionLabel(version: string | null, index: number): string {
     if (version === 'admission') return 'Analysis at Admission'
+    if (version === 'discharge') return 'Discharge Summary'
     if (version?.startsWith('day_')) {
         const dayNum = parseInt(version.replace('day_', ''), 10)
         const ordinals: Record<number, string> = {
@@ -82,7 +85,7 @@ function DayNotes({ analysisId }: { analysisId: string }) {
         <div className="mt-2">
             <button
                 onClick={() => setOpen(prev => !prev)}
-                className="text-sm text-gray-500 hover:text-blue-600 flex items-center gap-1 transition-colors"
+                className="text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1 transition-colors"
             >
                 <span>{open ? '▾' : '▸'}</span>
                 <span>{open ? 'Hide Notes' : 'Add Notes'}</span>
@@ -93,11 +96,19 @@ function DayNotes({ analysisId }: { analysisId: string }) {
                     onChange={e => handleChange(e.target.value)}
                     rows={4}
                     placeholder="Write your own admission notes here… (saved locally)"
-                    className="mt-2 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y bg-gray-50"
+                    className="mt-2 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y bg-gray-50 dark:bg-gray-800 dark:text-gray-200"
                 />
             )}
         </div>
     )
+}
+
+function parseDischargeSummary(rawText: string): DischargeSummaryResponse | null {
+    try {
+        return JSON.parse(rawText)
+    } catch {
+        return null
+    }
 }
 
 export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelineProps) {
@@ -113,14 +124,18 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
         })
         : null
 
-    const nextDayNumber = getNextDayNumber(analyses)
+    // Separate discharge analysis from regular analyses
+    const regularAnalyses = analyses.filter(a => a.analysis_version !== 'discharge')
+    const dischargeAnalysis = analyses.find(a => a.analysis_version === 'discharge')
+
+    const nextDayNumber = getNextDayNumber(regularAnalyses)
 
     const handleDailyAnalysisComplete = (newAnalysis: Analysis) => {
         setAnalyses(prev => [...prev, newAnalysis])
     }
 
     const handleDischarge = async () => {
-        if (!confirm('Are you sure you want to discharge this patient?')) return
+        if (!confirm('Are you sure you want to discharge this patient? A discharge summary will be generated.')) return
 
         setDischarging(true)
         setDischargeError(null)
@@ -133,7 +148,7 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
 
             if (!res.ok) throw new Error(data.error || 'Failed to discharge patient')
 
-            // Reload page to show updated metadata
+            // Reload page to show updated metadata + discharge summary
             window.location.reload()
 
         } catch (err: any) {
@@ -145,7 +160,7 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
     if (analyses.length === 0) {
         return (
             <Card>
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                     <div className="text-4xl mb-4">📋</div>
                     <p>No analyses yet. Submit the patient history to start.</p>
                 </div>
@@ -155,25 +170,25 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
 
     return (
         <div className="space-y-8">
-            {/* Render each analysis with its label */}
-            {analyses.map((analysis, index) => (
+            {/* Render each regular analysis with its label */}
+            {regularAnalyses.map((analysis, index) => (
                 <div key={analysis.id} className="space-y-2">
                     {/* Section divider + label */}
                     <div className="flex items-center gap-3">
-                        <div className="flex-1 h-px bg-gray-200" />
-                        <span className="text-sm font-semibold text-blue-700 bg-blue-50 px-3 py-1 rounded-full whitespace-nowrap">
+                        <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+                        <span className="text-sm font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full whitespace-nowrap">
                             {getVersionLabel(analysis.analysis_version, index)}
                         </span>
-                        <div className="flex-1 h-px bg-gray-200" />
+                        <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
                     </div>
 
                     {/* If this day had progress notes, show them first */}
                     {analysis.user_feedback && (
-                        <Card className="border-l-4 border-blue-400 bg-blue-50">
-                            <h4 className="text-sm font-semibold text-blue-800 mb-2 flex items-center gap-2">
+                        <Card className="border-l-4 border-blue-400 bg-blue-50 dark:bg-blue-900/20">
+                            <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-2">
                                 📝 Progress Notes
                             </h4>
-                            <p className="text-sm text-blue-900 whitespace-pre-wrap leading-relaxed">
+                            <p className="text-sm text-blue-900 dark:text-blue-200 whitespace-pre-wrap leading-relaxed">
                                 {analysis.user_feedback}
                             </p>
                         </Card>
@@ -191,11 +206,11 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
             {!isDischarged && (
                 <div className="space-y-2">
                     <div className="flex items-center gap-3">
-                        <div className="flex-1 h-px bg-gray-200" />
-                        <span className="text-sm font-semibold text-green-700 bg-green-50 px-3 py-1 rounded-full whitespace-nowrap">
+                        <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+                        <span className="text-sm font-semibold text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full whitespace-nowrap">
                             {nextDayNumber === 1 ? 'Day One of Admission' : `Day ${nextDayNumber} of Admission`}
                         </span>
-                        <div className="flex-1 h-px bg-gray-200" />
+                        <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
                     </div>
                     <DayProgressForm
                         patientId={patient.id}
@@ -206,24 +221,41 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
             )}
 
             {/* Discharge section */}
-            <div className="pt-4 border-t border-gray-200">
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                 {isDischarged ? (
-                    <Card className="bg-green-50 border-green-200">
-                        <div className="flex items-center gap-3">
-                            <span className="text-2xl">✅</span>
-                            <div>
-                                <p className="font-semibold text-green-800">Patient Discharged</p>
-                                {dischargeDate && (
-                                    <p className="text-sm text-green-700">Discharged on {dischargeDate}</p>
-                                )}
+                    <div className="space-y-6">
+                        <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+                            <div className="flex items-center gap-3">
+                                <span className="text-2xl">✅</span>
+                                <div>
+                                    <p className="font-semibold text-green-800 dark:text-green-300">Patient Discharged</p>
+                                    {dischargeDate && (
+                                        <p className="text-sm text-green-700 dark:text-green-400">Discharged on {dischargeDate}</p>
+                                    )}
+                                </div>
+                                <Badge variant="success">Discharged</Badge>
                             </div>
-                            <Badge variant="success">Discharged</Badge>
-                        </div>
-                    </Card>
+                        </Card>
+
+                        {/* Render discharge summary if available */}
+                        {dischargeAnalysis && (() => {
+                            const dischargeSummary = parseDischargeSummary(dischargeAnalysis.raw_analysis_text)
+                            if (!dischargeSummary) return null
+                            return (
+                                <Card>
+                                    <DischargeSummaryView
+                                        summary={dischargeSummary}
+                                        patientName={patient.patient_name}
+                                        dischargeDate={patient.metadata?.discharge_date}
+                                    />
+                                </Card>
+                            )
+                        })()}
+                    </div>
                 ) : (
                     <div className="flex flex-col items-start gap-2">
                         {dischargeError && (
-                            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm w-full">
+                            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded text-sm w-full">
                                 {dischargeError}
                             </div>
                         )}
@@ -234,10 +266,10 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
                             disabled={discharging}
                             className="max-w-xs"
                         >
-                            {discharging ? 'Discharging...' : '🏥 Discharge Patient'}
+                            {discharging ? 'Generating discharge summary...' : '🏥 Discharge Patient'}
                         </Button>
-                        <p className="text-xs text-gray-500">
-                            This will mark the patient as discharged and close the admission workflow.
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                            This will mark the patient as discharged, generate a discharge summary, and close the admission workflow.
                         </p>
                     </div>
                 )}

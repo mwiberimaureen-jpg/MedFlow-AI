@@ -3,11 +3,13 @@
  * PATCH /api/patients/[id]/discharge
  *
  * Sets metadata.admission_status = 'discharged' and metadata.discharge_date.
+ * Generates an AI discharge summary and saves it as an analysis record.
  * Updates patient status to 'completed'.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { generateDischargeSummary } from '@/lib/openrouter/client'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,10 +26,10 @@ export async function PATCH(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        // Fetch patient to verify ownership
+        // Fetch patient with history text
         const { data: patient, error: patientError } = await supabase
             .from('patient_histories')
-            .select('id, user_id, metadata')
+            .select('id, user_id, metadata, history_text, patient_name, patient_age, patient_gender')
             .eq('id', id)
             .eq('user_id', user.id)
             .is('deleted_at', null)
@@ -37,6 +39,7 @@ export async function PATCH(
             return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
         }
 
+        // Mark patient as discharged
         const dischargeDate = new Date().toISOString()
         const updatedMetadata = {
             ...(patient.metadata || {}),
@@ -58,9 +61,54 @@ export async function PATCH(
             return NextResponse.json({ error: 'Failed to discharge patient' }, { status: 500 })
         }
 
+        // Fetch all analyses for discharge summary context
+        const { data: allAnalyses } = await supabase
+            .from('analyses')
+            .select('analysis_version, summary, raw_analysis_text')
+            .eq('patient_history_id', id)
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: true })
+
+        const analysisSummaries = (allAnalyses || []).map(a => ({
+            version: a.analysis_version || 'admission',
+            summary: a.summary,
+            rawText: a.raw_analysis_text
+        }))
+
+        // Generate AI discharge summary
+        const startTime = Date.now()
+        const dischargeSummary = await generateDischargeSummary(
+            patient.history_text,
+            analysisSummaries
+        )
+        const processingTime = Date.now() - startTime
+
+        // Save discharge summary as an analysis record
+        const { error: analysisError } = await supabase
+            .from('analyses')
+            .insert({
+                patient_history_id: id,
+                user_id: user.id,
+                analysis_version: 'discharge',
+                summary: dischargeSummary.summary,
+                risk_level: 'low',
+                raw_analysis_text: JSON.stringify(dischargeSummary),
+                model_used: 'anthropic/claude-sonnet-4',
+                processing_time_ms: processingTime,
+                total_items: 0,
+                completed_items: 0,
+                todo_list_json: []
+            })
+
+        if (analysisError) {
+            console.error('Error saving discharge summary:', analysisError)
+            // Don't fail the discharge — it's already done, summary is a bonus
+        }
+
         return NextResponse.json({
             success: true,
-            discharge_date: dischargeDate
+            discharge_date: dischargeDate,
+            discharge_summary: dischargeSummary
         })
 
     } catch (error: any) {
