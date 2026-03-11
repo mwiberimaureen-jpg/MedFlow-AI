@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { parseAnalysisText, mergeGapsContent } from '@/lib/utils/parse-analysis'
+import { getTriageFromRiskLevel, getTriageBadgeVariant, getTriageLabel } from '@/lib/utils/triage'
 
 interface TodoItemData {
     id: string
@@ -77,6 +78,7 @@ const PRIORITY_VARIANTS: Record<string, 'danger' | 'warning' | 'info' | 'default
 
 const SECTION_ICONS: Record<string, string> = {
     'Clinical Summary': '📋',
+    'Follow-up Questions': '🔍',
     'Gaps in History': '🔍',
     'Test Interpretation': '🧪',
     'Impression(s)': '🎯',
@@ -86,11 +88,19 @@ const SECTION_ICONS: Record<string, string> = {
     'Possible Complications': '⚠️',
 }
 
+// Sections expanded by default
+const DEFAULT_EXPANDED_SECTIONS = ['clinical summary', 'impression(s)', 'impressions']
+
 function getSectionIcon(title: string): string {
     for (const [key, icon] of Object.entries(SECTION_ICONS)) {
         if (title.toLowerCase().includes(key.toLowerCase())) return icon
     }
     return '📄'
+}
+
+function getDisplayTitle(title: string): string {
+    if (title.toLowerCase().includes('gaps')) return 'Follow-up Questions'
+    return title
 }
 
 function formatSectionContent(content: string): string {
@@ -103,21 +113,44 @@ function formatSectionContent(content: string): string {
         .replace(/\n/g, '<br/>')
 }
 
-/**
- * Collapsible test interpretation block.
- * Shows the test name as a header, with interpretation collapsed by default.
- * Handles formats: **1. Test Name**, **Test Name**, or 1. Test Name
- */
+function CollapsibleSection({ title, icon, children, defaultOpen = false }: {
+    title: string
+    icon: string
+    children: React.ReactNode
+    defaultOpen?: boolean
+}) {
+    const [open, setOpen] = useState(defaultOpen)
+
+    return (
+        <Card>
+            <button
+                onClick={() => setOpen(prev => !prev)}
+                className="w-full text-left flex items-center justify-between gap-2"
+            >
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span>{icon}</span>
+                    {title}
+                </h3>
+                <span className="text-sm text-blue-600 dark:text-blue-400 flex-shrink-0">
+                    {open ? '▾ Collapse' : '▸ Expand'}
+                </span>
+            </button>
+            {open && (
+                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                    {children}
+                </div>
+            )}
+        </Card>
+    )
+}
+
 function CollapsibleTestBlock({ content }: { content: string }) {
-    // Try splitting by bold numbered headers first: **1. Test** or **Test**
     let blocks = content.split(/(?=\*\*\d*\.?\s*[A-Z])/).filter(b => b.trim())
 
-    // If that didn't split anything meaningful, try plain numbered: "1. Test"
     if (blocks.length <= 1) {
         blocks = content.split(/(?=^\d+\.\s)/m).filter(b => b.trim())
     }
 
-    // If still just one block and it's long (>200 chars), make it collapsible as a whole
     if (blocks.length <= 1 && content.length > 200) {
         return <TestBlockItem block={content} />
     }
@@ -125,7 +158,7 @@ function CollapsibleTestBlock({ content }: { content: string }) {
     if (blocks.length <= 1) {
         return (
             <div
-                className="prose prose-sm max-w-none text-gray-700 leading-relaxed"
+                className="prose prose-sm max-w-none text-gray-800 dark:text-gray-200 leading-relaxed"
                 dangerouslySetInnerHTML={{ __html: formatSectionContent(content) }}
             />
         )
@@ -143,28 +176,27 @@ function CollapsibleTestBlock({ content }: { content: string }) {
 function TestBlockItem({ block }: { block: string }) {
     const [expanded, setExpanded] = useState(false)
 
-    // Extract the first line (test name) and the rest (details)
     const lines = block.trim().split('\n')
     const headerLine = lines[0] || ''
     const detailLines = lines.slice(1).join('\n').trim()
 
     return (
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
+        <div className="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
             <button
                 onClick={() => setExpanded(prev => !prev)}
-                className="w-full text-left px-3 py-2 bg-gray-50 hover:bg-gray-100 flex items-center justify-between gap-2 transition-colors"
+                className="w-full text-left px-3 py-2 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center justify-between gap-2 transition-colors"
             >
                 <span
-                    className="text-sm font-medium text-gray-900"
+                    className="text-sm font-medium text-gray-900 dark:text-gray-100"
                     dangerouslySetInnerHTML={{ __html: formatSectionContent(headerLine) }}
                 />
-                <span className="text-xs text-blue-600 flex-shrink-0">
+                <span className="text-xs text-blue-600 dark:text-blue-400 flex-shrink-0">
                     {expanded ? 'Hide' : 'More'}
                 </span>
             </button>
             {expanded && detailLines && (
                 <div
-                    className="px-3 py-2 prose prose-sm max-w-none text-gray-700 leading-relaxed border-t border-gray-100"
+                    className="px-3 py-2 prose prose-sm max-w-none text-gray-800 dark:text-gray-200 leading-relaxed border-t border-gray-100 dark:border-gray-600"
                     dangerouslySetInnerHTML={{ __html: formatSectionContent(detailLines) }}
                 />
             )}
@@ -180,7 +212,6 @@ export function InteractiveAnalysisPanel({ analysis }: InteractiveAnalysisPanelP
 
     const sections = useMemo(() => {
         const parsed = parseAnalysisText(analysis.raw_analysis_text)
-        // Merge missing information into follow-up questions for Gaps section
         return parsed.map(s => {
             if (s.title.toLowerCase().includes('gaps')) {
                 return { ...s, content: mergeGapsContent(s.content) }
@@ -190,7 +221,6 @@ export function InteractiveAnalysisPanel({ analysis }: InteractiveAnalysisPanelP
     }, [analysis.raw_analysis_text])
 
     const handleToggle = useCallback(async (itemId: string, newChecked: boolean) => {
-        // Optimistic update
         setTodoItems(prev =>
             prev.map(item => item.id === itemId ? { ...item, is_completed: newChecked } : item)
         )
@@ -209,7 +239,6 @@ export function InteractiveAnalysisPanel({ analysis }: InteractiveAnalysisPanelP
                 throw new Error('Failed to update')
             }
         } catch {
-            // Revert on failure
             setTodoItems(prev =>
                 prev.map(item => item.id === itemId ? { ...item, is_completed: !newChecked } : item)
             )
@@ -220,12 +249,7 @@ export function InteractiveAnalysisPanel({ analysis }: InteractiveAnalysisPanelP
         }
     }, [analysis.id])
 
-    const getRiskBadge = (risk: string): 'danger' | 'warning' | 'success' => {
-        const map: Record<string, 'danger' | 'warning' | 'success'> = {
-            high: 'danger', medium: 'warning', low: 'success'
-        }
-        return map[risk] || 'success'
-    }
+    const triage = getTriageFromRiskLevel(analysis.risk_level)
 
     // Group items by category
     const grouped = todoItems.reduce((acc, item) => {
@@ -251,37 +275,45 @@ export function InteractiveAnalysisPanel({ analysis }: InteractiveAnalysisPanelP
                 subtitle: `Generated ${new Date(analysis.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
             }}>
                 <div className="flex items-center gap-3 mb-2">
-                    <span className="text-sm font-medium text-gray-600">Risk Level:</span>
-                    <Badge variant={getRiskBadge(analysis.risk_level)}>
-                        {analysis.risk_level?.toUpperCase()}
-                    </Badge>
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Triage:</span>
+                    {triage ? (
+                        <Badge variant={getTriageBadgeVariant(triage)}>
+                            {getTriageLabel(triage)}
+                        </Badge>
+                    ) : (
+                        <Badge variant="default">Unassessed</Badge>
+                    )}
                 </div>
                 {analysis.model_used && (
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
                         Model: {analysis.model_used}
                         {analysis.processing_time_ms && ` · ${(analysis.processing_time_ms / 1000).toFixed(1)}s`}
                     </div>
                 )}
             </Card>
 
-            {/* Analysis sections */}
+            {/* Analysis sections — each collapsible */}
             {sections.map((section) => {
                 const isTestInterp = section.title.toLowerCase().includes('test interpretation')
+                const displayTitle = getDisplayTitle(section.title)
+                const isDefaultOpen = DEFAULT_EXPANDED_SECTIONS.includes(section.title.toLowerCase())
+
                 return (
-                    <Card key={section.order}>
-                        <h3 className="text-base font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                            <span>{getSectionIcon(section.title)}</span>
-                            {section.title}
-                        </h3>
+                    <CollapsibleSection
+                        key={section.order}
+                        title={displayTitle}
+                        icon={getSectionIcon(section.title)}
+                        defaultOpen={isDefaultOpen}
+                    >
                         {isTestInterp ? (
                             <CollapsibleTestBlock content={section.content} />
                         ) : (
                             <div
-                                className="prose prose-sm max-w-none text-gray-700 leading-relaxed"
+                                className="prose prose-sm max-w-none text-gray-800 dark:text-gray-200 leading-relaxed"
                                 dangerouslySetInnerHTML={{ __html: formatSectionContent(section.content) }}
                             />
                         )}
-                    </Card>
+                    </CollapsibleSection>
                 )
             })}
 
@@ -293,7 +325,7 @@ export function InteractiveAnalysisPanel({ analysis }: InteractiveAnalysisPanelP
                 }}>
                     {/* Progress bar */}
                     <div className="mb-6">
-                        <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                             <div
                                 className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                                 style={{ width: totalItems > 0 ? `${(completedCount / totalItems) * 100}%` : '0%' }}
@@ -304,10 +336,10 @@ export function InteractiveAnalysisPanel({ analysis }: InteractiveAnalysisPanelP
                     <div className="space-y-6">
                         {sortedCategories.map(([category, items]) => (
                             <div key={category}>
-                                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2 uppercase tracking-wide">
+                                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2 uppercase tracking-wide">
                                     <span>{CATEGORY_ICONS[category] || '📋'}</span>
                                     {CATEGORY_LABELS[category] || category.replace(/[-_]/g, ' ')}
-                                    <span className="text-xs font-normal text-gray-400 normal-case tracking-normal">
+                                    <span className="text-xs font-normal text-gray-400 dark:text-gray-500 normal-case tracking-normal">
                                         ({items.filter(i => i.is_completed).length}/{items.length})
                                     </span>
                                 </h4>
@@ -318,8 +350,8 @@ export function InteractiveAnalysisPanel({ analysis }: InteractiveAnalysisPanelP
                                             <div
                                                 key={item.id}
                                                 className={`rounded-lg border p-3 transition-colors ${item.is_completed
-                                                        ? 'bg-green-50 border-green-200'
-                                                        : 'bg-gray-50 border-gray-200'
+                                                        ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                                                        : 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600'
                                                     }`}
                                             >
                                                 <div className="flex items-start gap-3">
@@ -328,28 +360,28 @@ export function InteractiveAnalysisPanel({ analysis }: InteractiveAnalysisPanelP
                                                         checked={item.is_completed}
                                                         disabled={togglingIds.has(item.id)}
                                                         onChange={e => handleToggle(item.id, e.target.checked)}
-                                                        className="mt-0.5 h-4 w-4 text-blue-600 rounded border-gray-300 cursor-pointer focus:ring-blue-500 disabled:opacity-50"
+                                                        className="mt-0.5 h-4 w-4 text-blue-600 rounded border-gray-300 dark:border-gray-500 cursor-pointer focus:ring-blue-500 disabled:opacity-50"
                                                         aria-label={item.title}
                                                     />
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-2 flex-wrap">
-                                                            <span className={`text-sm font-medium ${item.is_completed ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                                                            <span className={`text-sm font-medium ${item.is_completed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
                                                                 {item.title}
                                                             </span>
                                                             <Badge variant={PRIORITY_VARIANTS[item.priority] || 'default'}>
                                                                 {item.priority}
                                                             </Badge>
                                                             {togglingIds.has(item.id) && (
-                                                                <span className="text-xs text-blue-500">saving…</span>
+                                                                <span className="text-xs text-blue-500 dark:text-blue-400">saving…</span>
                                                             )}
                                                         </div>
                                                         {item.description && (
-                                                            <p className={`text-xs mt-1 leading-relaxed ${item.is_completed ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                            <p className={`text-xs mt-1 leading-relaxed ${item.is_completed ? 'text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-300'}`}>
                                                                 {item.description}
                                                             </p>
                                                         )}
                                                         {toggleErrors[item.id] && (
-                                                            <p className="text-xs text-red-500 mt-1">{toggleErrors[item.id]}</p>
+                                                            <p className="text-xs text-red-500 dark:text-red-400 mt-1">{toggleErrors[item.id]}</p>
                                                         )}
                                                     </div>
                                                 </div>

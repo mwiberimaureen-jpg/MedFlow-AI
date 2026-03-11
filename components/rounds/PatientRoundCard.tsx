@@ -51,7 +51,10 @@ export function PatientRoundCard({ patient, latestAnalysis, analysisCount }: Pat
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden print:break-inside-avoid print:border-gray-400">
       {/* Header */}
-      <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <div
+        className="px-4 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between cursor-pointer"
+        onClick={() => setExpanded(!expanded)}
+      >
         <div className="flex items-center gap-3">
           <div>
             <h3 className="font-semibold text-gray-900 dark:text-white">
@@ -71,63 +74,68 @@ export function PatientRoundCard({ patient, latestAnalysis, analysisCount }: Pat
           {triage && (
             <Badge variant={getTriageBadgeVariant(triage)}>{getTriageLabel(triage)}</Badge>
           )}
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="text-sm text-blue-600 dark:text-blue-400 hover:underline no-print"
-          >
-            {expanded ? 'Collapse' : 'Expand'}
-          </button>
+          <span className="text-sm text-blue-600 dark:text-blue-400 no-print">
+            {expanded ? '▾' : '▸'}
+          </span>
         </div>
       </div>
 
-      {/* Summary body */}
+      {/* Summary body — always visible */}
       <div className="px-4 py-3 space-y-3 text-sm">
         {/* Known conditions */}
         {knownConditions.length > 0 && (
           <div>
-            <span className="font-semibold text-gray-700 dark:text-gray-300">Background: </span>
-            <span className="text-gray-600 dark:text-gray-400">{knownConditions.join(' | ')}</span>
+            <span className="font-semibold text-gray-800 dark:text-gray-200">Background: </span>
+            <span className="text-gray-700 dark:text-gray-300">{knownConditions.join(' | ')}</span>
           </div>
         )}
 
         {/* Chief complaint */}
         <div>
-          <span className="font-semibold text-gray-700 dark:text-gray-300">Chief Complaint: </span>
-          <span className="text-gray-600 dark:text-gray-400">{chiefComplaint}</span>
+          <span className="font-semibold text-gray-800 dark:text-gray-200">Chief Complaint: </span>
+          <span className="text-gray-700 dark:text-gray-300">{chiefComplaint}</span>
         </div>
 
         {/* Impressions */}
         {impressions && (
           <div>
-            <span className="font-semibold text-gray-700 dark:text-gray-300">Impression: </span>
-            <span className="text-gray-600 dark:text-gray-400">{impressions}</span>
+            <span className="font-semibold text-gray-800 dark:text-gray-200">Impression: </span>
+            <span className="text-gray-700 dark:text-gray-300">{impressions}</span>
           </div>
         )}
 
         {/* New symptoms / latest progress */}
         {latestAnalysis?.user_feedback && (
           <div>
-            <span className="font-semibold text-gray-700 dark:text-gray-300">Latest Update: </span>
-            <span className="text-gray-600 dark:text-gray-400">{latestAnalysis.user_feedback}</span>
+            <span className="font-semibold text-gray-800 dark:text-gray-200">Latest Update: </span>
+            <span className="text-gray-700 dark:text-gray-300">{latestAnalysis.user_feedback}</span>
           </div>
         )}
 
         {/* Expanded details */}
-        {(expanded || true) && (
-          <div className={`space-y-3 ${expanded ? '' : 'hidden print:block'}`}>
+        {expanded && (
+          <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-700">
             {/* Test results */}
             {testResults && (
               <div>
-                <span className="font-semibold text-gray-700 dark:text-gray-300">Relevant Results: </span>
-                <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap mt-1">{testResults}</p>
+                <span className="font-semibold text-gray-800 dark:text-gray-200">Relevant Results: </span>
+                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap mt-1">{testResults}</p>
               </div>
             )}
 
             {/* Current management plan */}
             {currentPlan && (
               <div>
-                <span className="font-semibold text-gray-700 dark:text-gray-300">Current Plan: </span>
-                <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap mt-1">{currentPlan}</p>
+                <span className="font-semibold text-gray-800 dark:text-gray-200">Current Plan: </span>
+                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap mt-1">{currentPlan}</p>
+              </div>
+            )}
+
+            {/* AI Summary */}
+            {latestAnalysis?.summary && (
+              <div>
+                <span className="font-semibold text-gray-800 dark:text-gray-200">Summary: </span>
+                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap mt-1">{latestAnalysis.summary}</p>
               </div>
             )}
           </div>
