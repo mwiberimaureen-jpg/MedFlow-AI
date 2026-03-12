@@ -33,6 +33,13 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Loading animation for analysis progress bar */
+@keyframes loading {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(60%); }
+  100% { transform: translateX(-100%); }
+}
+
 /* ========================================
    Print Styles for Analysis Pages
    ======================================== */

@@ -14,7 +14,6 @@ const MIN_HISTORY_LENGTH = 50
 export function PatientHistoryForm() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [analyzing, setAnalyzing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
 
@@ -129,28 +128,22 @@ export function PatientHistoryForm() {
       // Clear draft on successful save
       clearDraft()
 
-      // Step 2: If submitted, run the AI analysis synchronously (await it)
+      // Step 2: If submitted, fire off analysis in background (don't await)
       if (status === 'submitted') {
-        setAnalyzing(true)
-
-        const analyzeResponse = await fetch(`/api/patients/${data.patient.id}/analyze`, {
+        fetch(`/api/patients/${data.patient.id}/analyze`, {
           method: 'POST',
+        }).catch(() => {
+          // Analysis errors are handled on the patient detail page
         })
-
-        if (!analyzeResponse.ok) {
-          const analyzeData = await analyzeResponse.json().catch(() => ({}))
-          throw new Error(analyzeData.error || 'Analysis failed — please try again from the patient page')
-        }
       }
 
-      // Step 3: Redirect to patient detail page (analysis is ready)
+      // Step 3: Redirect immediately — patient page will poll for results
       router.push(`/dashboard/patients/${data.patient.id}`)
 
     } catch (err: any) {
       setError(err.message || 'An error occurred while saving')
     } finally {
       setLoading(false)
-      setAnalyzing(false)
     }
   }
 
@@ -256,10 +249,10 @@ export function PatientHistoryForm() {
           <Button
             variant="primary"
             onClick={handleSubmitForm}
-            loading={loading || analyzing}
-            disabled={loading || analyzing}
+            loading={loading}
+            disabled={loading}
           >
-            {analyzing ? 'Analyzing... (30–60s)' : loading ? 'Saving...' : 'Submit & Analyze'}
+            {loading ? 'Saving...' : 'Submit & Analyze'}
           </Button>
         </div>
       </div>

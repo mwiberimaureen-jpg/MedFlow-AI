@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/Card'
 import { AnalyzeButton } from '@/components/patients/AnalyzeButton'
 import { AdmissionTimeline } from '@/components/patients/AdmissionTimeline'
 import { getTriageFromRiskLevel, getTriageBadgeVariant, getTriageLabel } from '@/lib/utils/triage'
+import { AnalysisPoller } from '@/components/patients/AnalysisPoller'
 import Link from 'next/link'
 
 export default async function PatientDetailPage({
@@ -113,18 +114,26 @@ export default async function PatientDetailPage({
         </Card>
       )}
 
-      {!hasAnalyses && patient.status === 'analyzing' && (
-        <Card>
-          <div className="text-center py-8">
-            <div className="text-4xl mb-4 animate-pulse">⚡</div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              Generating Admission Analysis…
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Please wait while we analyze the patient history. This usually takes 30–60 seconds.
-            </p>
-          </div>
-        </Card>
+      {patient.status === 'analyzing' && (
+        <>
+          <AnalysisPoller patientId={id} />
+          <Card>
+            <div className="text-center py-8">
+              <div className="text-4xl mb-4 animate-pulse">⚡</div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                Generating Admission Analysis…
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                AI is analyzing the patient history. This page will update automatically when ready.
+              </p>
+              <div className="mt-4 flex justify-center">
+                <div className="h-1 w-48 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-full bg-blue-500 rounded-full animate-[loading_2s_ease-in-out_infinite]" style={{ width: '60%' }} />
+                </div>
+              </div>
+            </div>
+          </Card>
+        </>
       )}
 
       {/* Admission Timeline — shown once at least one analysis exists */}
