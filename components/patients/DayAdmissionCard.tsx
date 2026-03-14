@@ -248,7 +248,16 @@ export function DayAdmissionCard({
     const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set())
     const autoCheckedRef = useRef<Set<string>>(new Set())
     const [editedNotes, setEditedNotes] = useState<string | null>(null) // null = auto-generated, string = user edited
-    const [submittedSections, setSubmittedSections] = useState<Set<string>>(new Set())
+
+    // Persist submitted sections in localStorage
+    const submittedKey = `submitted-sections-${patientId}`
+    const [submittedSections, setSubmittedSections] = useState<Set<string>>(() => {
+        if (typeof window === 'undefined') return new Set()
+        try {
+            const saved = localStorage.getItem(submittedKey)
+            return saved ? new Set(JSON.parse(saved)) : new Set()
+        } catch { return new Set() }
+    })
 
     // Parse analysis sections
     const analysisSections = useMemo(() => {
@@ -324,13 +333,21 @@ export function DayAdmissionCard({
     }, [sectionAnswers, todoItems, handleToggle])
 
     const handleSectionSubmit = useCallback((key: string) => {
-        setSubmittedSections(prev => new Set([...prev, key]))
+        setSubmittedSections(prev => {
+            const n = new Set([...prev, key])
+            try { localStorage.setItem(submittedKey, JSON.stringify([...n])) } catch {}
+            return n
+        })
         setEditedNotes(null) // refresh auto-generated notes
-    }, [])
+    }, [submittedKey])
 
     const handleSectionEdit = useCallback((key: string) => {
-        setSubmittedSections(prev => { const n = new Set(prev); n.delete(key); return n })
-    }, [])
+        setSubmittedSections(prev => {
+            const n = new Set(prev); n.delete(key)
+            try { localStorage.setItem(submittedKey, JSON.stringify([...n])) } catch {}
+            return n
+        })
+    }, [submittedKey])
 
     // Submit uses the displayNotes (which the user can edit)
     const handleSubmit = async () => {

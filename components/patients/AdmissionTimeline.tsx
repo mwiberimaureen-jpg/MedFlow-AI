@@ -153,6 +153,7 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
         setAnalyses(prev => [...prev, newAnalysis])
         setSectionAnswers({})
         try { localStorage.removeItem(storageKey) } catch {}
+        try { localStorage.removeItem(`submitted-sections-${patient.id}`) } catch {}
     }
 
     const handleSubmitDay = async (notes: string) => {
