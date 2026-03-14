@@ -1,13 +1,15 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useCallback } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { InteractiveAnalysisPanel } from './InteractiveAnalysisPanel'
-import { DayProgressForm } from './DayProgressForm'
+import { DayAdmissionCard } from './DayAdmissionCard'
 import { DischargeSummaryView } from './DischargeSummaryView'
 import { DischargeSummaryResponse } from '@/lib/types/patient'
+import { getTriageFromRiskLevel, getTriageBadgeVariant, getTriageLabel } from '@/lib/utils/triage'
+import { parseAnalysisText } from '@/lib/utils/parse-analysis'
 
 interface Analysis {
     id: string
@@ -48,100 +50,39 @@ function getVersionLabel(version: string | null, index: number): string {
         const label = ordinals[dayNum] ? `Day ${ordinals[dayNum]}` : `Day ${dayNum}`
         return `${label} of Admission Analysis`
     }
-    // Fallback for legacy analyses without version
     return index === 0 ? 'Analysis at Admission' : `Analysis ${index + 1}`
 }
 
-function getNextDayNumber(analyses: Analysis[]): number {
-    const dayAnalyses = analyses.filter(a => a.analysis_version?.startsWith('day_'))
-    if (dayAnalyses.length === 0) return 1
-    const maxDay = Math.max(...dayAnalyses.map(a => parseInt(a.analysis_version!.replace('day_', ''), 10)))
-    return maxDay + 1
-}
-
-function DayNotes({ analysisId }: { analysisId: string }) {
-    const storageKey = `day-notes-${analysisId}`
-    const [open, setOpen] = useState(false)
-    const [text, setText] = useState('')
-
-    useEffect(() => {
-        const saved = localStorage.getItem(storageKey)
-        if (saved) {
-            setText(saved)
-            setOpen(true)
-        }
-    }, [storageKey])
-
-    const handleChange = useCallback((value: string) => {
-        setText(value)
-        if (value.trim()) {
-            localStorage.setItem(storageKey, value)
-        } else {
-            localStorage.removeItem(storageKey)
-        }
-    }, [storageKey])
-
-    return (
-        <div className="mt-2">
-            <button
-                onClick={() => setOpen(prev => !prev)}
-                className="text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1 transition-colors"
-            >
-                <span>{open ? '▾' : '▸'}</span>
-                <span>{open ? 'Hide Notes' : 'Add Notes'}</span>
-            </button>
-            {open && (
-                <textarea
-                    value={text}
-                    onChange={e => handleChange(e.target.value)}
-                    rows={4}
-                    placeholder="Write your own admission notes here… (saved locally)"
-                    className="mt-2 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y bg-gray-50 dark:bg-gray-800 dark:text-gray-200"
-                />
-            )}
-        </div>
-    )
+function getDayLabel(n: number): string {
+    const ordinals: Record<number, string> = {
+        1: 'One', 2: 'Two', 3: 'Three', 4: 'Four', 5: 'Five',
+        6: 'Six', 7: 'Seven', 8: 'Eight', 9: 'Nine', 10: 'Ten'
+    }
+    return ordinals[n] ? `Day ${ordinals[n]}` : `Day ${n}`
 }
 
 /**
- * Extract follow-up questions and PE checklist from the latest analysis markdown.
- * The raw_analysis_text contains sections like:
- *   ## Gaps in History / Outstanding Questions
- *   **Follow-up Questions:**
- *   1. Question text
- *   **Physical Exam Checklist:**
- *   - [ ] Exam item
+ * Calculate next day number from admission date and existing analyses.
  */
-function extractPromptsFromAnalysis(rawText: string): {
-    followUpQuestions: string[]
-    peChecklist: string[]
-} {
-    const followUpQuestions: string[] = []
-    const peChecklist: string[] = []
-
-    if (!rawText) return { followUpQuestions, peChecklist }
-
-    // Extract follow-up questions: numbered items after "Follow-up Questions"
-    const fqMatch = rawText.match(/\*\*Follow-up Questions:?\*\*\s*\n([\s\S]*?)(?=\n\*\*|\n##|$)/)
-    if (fqMatch?.[1]) {
-        const lines = fqMatch[1].trim().split('\n')
-        for (const line of lines) {
-            const cleaned = line.replace(/^\d+\.\s*/, '').trim()
-            if (cleaned.length > 5) followUpQuestions.push(cleaned)
-        }
+function getNextDayNumber(analyses: Analysis[]): number {
+    const admissionAnalysis = analyses.find(a => a.analysis_version === 'admission')
+    let calendarDay = 1
+    if (admissionAnalysis) {
+        const admissionDate = new Date(admissionAnalysis.created_at)
+        const now = new Date()
+        const admStart = new Date(admissionDate.getFullYear(), admissionDate.getMonth(), admissionDate.getDate())
+        const nowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        const diffMs = nowStart.getTime() - admStart.getTime()
+        calendarDay = Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24)))
     }
 
-    // Extract PE checklist: checkbox items after "Physical Exam Checklist"
-    const peMatch = rawText.match(/\*\*Physical Exam Checklist:?\*\*\s*\n([\s\S]*?)(?=\n\*\*|\n##|$)/)
-    if (peMatch?.[1]) {
-        const lines = peMatch[1].trim().split('\n')
-        for (const line of lines) {
-            const cleaned = line.replace(/^-\s*\[.\]\s*/, '').replace(/^-\s*/, '').trim()
-            if (cleaned.length > 5) peChecklist.push(cleaned)
-        }
+    const dayAnalyses = analyses.filter(a => a.analysis_version?.startsWith('day_'))
+    let maxExistingDay = 0
+    if (dayAnalyses.length > 0) {
+        maxExistingDay = Math.max(...dayAnalyses.map(a => parseInt(a.analysis_version!.replace('day_', ''), 10)))
     }
 
-    return { followUpQuestions, peChecklist }
+    return Math.max(calendarDay, maxExistingDay + 1)
 }
 
 function parseDischargeSummary(rawText: string): DischargeSummaryResponse | null {
@@ -156,11 +97,27 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
     const [analyses, setAnalyses] = useState<Analysis[]>(initialAnalyses)
     const [discharging, setDischarging] = useState(false)
     const [dischargeError, setDischargeError] = useState<string | null>(null)
-    const [sectionAnswers, setSectionAnswers] = useState<Record<string, string>>({})
+    const [submitting, setSubmitting] = useState(false)
 
-    const handleSectionSubmit = useCallback((sectionKey: string, content: string) => {
-        setSectionAnswers(prev => ({ ...prev, [sectionKey]: content }))
-    }, [])
+    // Persist section answers in localStorage
+    const storageKey = `section-answers-${patient.id}`
+    const [sectionAnswers, setSectionAnswers] = useState<Record<string, string>>(() => {
+        if (typeof window === 'undefined') return {}
+        try {
+            const saved = localStorage.getItem(storageKey)
+            return saved ? JSON.parse(saved) : {}
+        } catch {
+            return {}
+        }
+    })
+
+    const handleSectionAnswerChange = useCallback((key: string, value: string) => {
+        setSectionAnswers(prev => {
+            const updated = { ...prev, [key]: value }
+            try { localStorage.setItem(storageKey, JSON.stringify(updated)) } catch {}
+            return updated
+        })
+    }, [storageKey])
 
     const isDischarged = patient.metadata?.admission_status === 'discharged'
 
@@ -175,15 +132,53 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
     const dischargeAnalysis = analyses.find(a => a.analysis_version === 'discharge')
 
     const nextDayNumber = getNextDayNumber(regularAnalyses)
+    const dayLabel = getDayLabel(nextDayNumber)
 
-    // Extract prompts from latest analysis for the next-day form
+    // Latest regular analysis provides AI content for the day card
     const latestRegular = regularAnalyses.length > 0 ? regularAnalyses[regularAnalyses.length - 1] : null
-    const { followUpQuestions, peChecklist } = latestRegular
-        ? extractPromptsFromAnalysis(latestRegular.raw_analysis_text)
-        : { followUpQuestions: [], peChecklist: [] }
+
+    // Extract clinical summary from latest analysis
+    const clinicalSummary = latestRegular
+        ? parseAnalysisText(latestRegular.raw_analysis_text).find(s =>
+            s.title.toLowerCase().includes('clinical summary')
+        )?.content || latestRegular.summary
+        : null
+
+    const latestTriage = latestRegular ? getTriageFromRiskLevel(latestRegular.risk_level) : null
+
+    // Past analyses = all except the latest (which feeds the day card)
+    const pastAnalyses = regularAnalyses.length > 1 ? regularAnalyses.slice(0, -1) : []
 
     const handleDailyAnalysisComplete = (newAnalysis: Analysis) => {
         setAnalyses(prev => [...prev, newAnalysis])
+        setSectionAnswers({})
+        try { localStorage.removeItem(storageKey) } catch {}
+    }
+
+    const handleSubmitDay = async (notes: string) => {
+        setSubmitting(true)
+        try {
+            const response = await fetch(`/api/patients/${patient.id}/daily-note`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    progress_notes: notes,
+                    day_number: nextDayNumber,
+                })
+            })
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to generate analysis')
+            }
+
+            handleDailyAnalysisComplete(data.analysis)
+        } catch (err: any) {
+            alert(err.message || 'An error occurred')
+        } finally {
+            setSubmitting(false)
+        }
     }
 
     const handleDischarge = async () => {
@@ -200,9 +195,7 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
 
             if (!res.ok) throw new Error(data.error || 'Failed to discharge patient')
 
-            // Reload page to show updated metadata + discharge summary
             window.location.reload()
-
         } catch (err: any) {
             setDischargeError(err.message || 'Failed to discharge patient')
             setDischarging(false)
@@ -222,64 +215,94 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
 
     return (
         <div className="space-y-8">
-            {/* Render each regular analysis with its label */}
-            {regularAnalyses.map((analysis, index) => (
-                <div key={analysis.id} className="space-y-2">
-                    {/* Section divider + label */}
-                    <div className="flex items-center gap-3">
-                        <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
-                        <span className="text-sm font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full whitespace-nowrap">
-                            {getVersionLabel(analysis.analysis_version, index)}
-                        </span>
-                        <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+            {/* 1. Clinical Summary — always visible at the top */}
+            {clinicalSummary && (
+                <Card header={{
+                    title: 'Clinical Summary',
+                    subtitle: latestRegular
+                        ? `Updated ${new Date(latestRegular.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                        : undefined
+                }}>
+                    <div className="flex items-center gap-3 mb-3">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Triage:</span>
+                        {latestTriage ? (
+                            <Badge variant={getTriageBadgeVariant(latestTriage)}>
+                                {getTriageLabel(latestTriage)}
+                            </Badge>
+                        ) : (
+                            <Badge variant="default">Unassessed</Badge>
+                        )}
                     </div>
-
-                    {/* If this day had progress notes, show them first */}
-                    {analysis.user_feedback && (
-                        <Card className="border-l-4 border-blue-400 bg-blue-50 dark:bg-blue-900/20">
-                            <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-2">
-                                📝 Progress Notes
-                            </h4>
-                            <p className="text-sm text-blue-900 dark:text-blue-200 whitespace-pre-wrap leading-relaxed">
-                                {analysis.user_feedback}
-                            </p>
-                        </Card>
+                    <div className="prose prose-sm max-w-none text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
+                        {clinicalSummary}
+                    </div>
+                    {latestRegular?.model_used && (
+                        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
+                            Model: {latestRegular.model_used}
+                            {latestRegular.processing_time_ms && ` · ${(latestRegular.processing_time_ms / 1000).toFixed(1)}s`}
+                        </div>
                     )}
+                </Card>
+            )}
 
-                    {/* The analysis panel */}
-                    <InteractiveAnalysisPanel
-                        analysis={analysis}
-                        isLatest={!isDischarged && index === regularAnalyses.length - 1}
-                        onSectionSubmit={index === regularAnalyses.length - 1 ? handleSectionSubmit : undefined}
-                    />
+            {/* 2. Past analyses (read-only, collapsed) */}
+            {pastAnalyses.length > 0 && (
+                <div className="space-y-6">
+                    {pastAnalyses.map((analysis, index) => (
+                        <div key={analysis.id} className="space-y-2">
+                            <div className="flex items-center gap-3">
+                                <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+                                <span className="text-sm font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full whitespace-nowrap">
+                                    {getVersionLabel(analysis.analysis_version, index)}
+                                </span>
+                                <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+                            </div>
 
-                    {/* Per-day personal notes (localStorage) */}
-                    <DayNotes analysisId={analysis.id} />
+                            {analysis.user_feedback && (
+                                <Card className="border-l-4 border-blue-400 bg-blue-50 dark:bg-blue-900/20">
+                                    <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-2">
+                                        📝 Progress Notes
+                                    </h4>
+                                    <p className="text-sm text-blue-900 dark:text-blue-200 whitespace-pre-wrap leading-relaxed">
+                                        {analysis.user_feedback}
+                                    </p>
+                                </Card>
+                            )}
+
+                            <InteractiveAnalysisPanel
+                                analysis={analysis}
+                                onRegenerate={() => window.location.reload()}
+                            />
+                        </div>
+                    ))}
                 </div>
-            ))}
+            )}
 
-            {/* Form for the next day — only if not discharged */}
-            {!isDischarged && (
+            {/* 3. Current Day — unified card with AI content + input spaces */}
+            {!isDischarged && latestRegular && (
                 <div className="space-y-2">
                     <div className="flex items-center gap-3">
                         <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
                         <span className="text-sm font-semibold text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full whitespace-nowrap">
-                            {nextDayNumber === 1 ? 'Day One of Admission' : `Day ${nextDayNumber} of Admission`}
+                            {dayLabel} of Admission
                         </span>
                         <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
                     </div>
-                    <DayProgressForm
+
+                    <DayAdmissionCard
                         patientId={patient.id}
                         dayNumber={nextDayNumber}
-                        onAnalysisComplete={handleDailyAnalysisComplete}
-                        previousFollowUpQuestions={followUpQuestions}
-                        previousPEChecklist={peChecklist}
-                        prefilled={sectionAnswers}
+                        analysis={latestRegular}
+                        sectionAnswers={sectionAnswers}
+                        onSectionAnswerChange={handleSectionAnswerChange}
+                        onSubmitDay={handleSubmitDay}
+                        submitting={submitting}
+                        dayLabel={dayLabel}
                     />
                 </div>
             )}
 
-            {/* Discharge section */}
+            {/* 4. Discharge section */}
             <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                 {isDischarged ? (
                     <div className="space-y-6">
@@ -296,7 +319,6 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
                             </div>
                         </Card>
 
-                        {/* Render discharge summary if available */}
                         {dischargeAnalysis && (() => {
                             const dischargeSummary = parseDischargeSummary(dischargeAnalysis.raw_analysis_text)
                             if (!dischargeSummary) return null
