@@ -103,6 +103,47 @@ function DayNotes({ analysisId }: { analysisId: string }) {
     )
 }
 
+/**
+ * Extract follow-up questions and PE checklist from the latest analysis markdown.
+ * The raw_analysis_text contains sections like:
+ *   ## Gaps in History / Outstanding Questions
+ *   **Follow-up Questions:**
+ *   1. Question text
+ *   **Physical Exam Checklist:**
+ *   - [ ] Exam item
+ */
+function extractPromptsFromAnalysis(rawText: string): {
+    followUpQuestions: string[]
+    peChecklist: string[]
+} {
+    const followUpQuestions: string[] = []
+    const peChecklist: string[] = []
+
+    if (!rawText) return { followUpQuestions, peChecklist }
+
+    // Extract follow-up questions: numbered items after "Follow-up Questions"
+    const fqMatch = rawText.match(/\*\*Follow-up Questions:?\*\*\s*\n([\s\S]*?)(?=\n\*\*|\n##|$)/)
+    if (fqMatch?.[1]) {
+        const lines = fqMatch[1].trim().split('\n')
+        for (const line of lines) {
+            const cleaned = line.replace(/^\d+\.\s*/, '').trim()
+            if (cleaned.length > 5) followUpQuestions.push(cleaned)
+        }
+    }
+
+    // Extract PE checklist: checkbox items after "Physical Exam Checklist"
+    const peMatch = rawText.match(/\*\*Physical Exam Checklist:?\*\*\s*\n([\s\S]*?)(?=\n\*\*|\n##|$)/)
+    if (peMatch?.[1]) {
+        const lines = peMatch[1].trim().split('\n')
+        for (const line of lines) {
+            const cleaned = line.replace(/^-\s*\[.\]\s*/, '').replace(/^-\s*/, '').trim()
+            if (cleaned.length > 5) peChecklist.push(cleaned)
+        }
+    }
+
+    return { followUpQuestions, peChecklist }
+}
+
 function parseDischargeSummary(rawText: string): DischargeSummaryResponse | null {
     try {
         return JSON.parse(rawText)
@@ -129,6 +170,12 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
     const dischargeAnalysis = analyses.find(a => a.analysis_version === 'discharge')
 
     const nextDayNumber = getNextDayNumber(regularAnalyses)
+
+    // Extract prompts from latest analysis for the next-day form
+    const latestRegular = regularAnalyses.length > 0 ? regularAnalyses[regularAnalyses.length - 1] : null
+    const { followUpQuestions, peChecklist } = latestRegular
+        ? extractPromptsFromAnalysis(latestRegular.raw_analysis_text)
+        : { followUpQuestions: [], peChecklist: [] }
 
     const handleDailyAnalysisComplete = (newAnalysis: Analysis) => {
         setAnalyses(prev => [...prev, newAnalysis])
@@ -216,6 +263,8 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
                         patientId={patient.id}
                         dayNumber={nextDayNumber}
                         onAnalysisComplete={handleDailyAnalysisComplete}
+                        previousFollowUpQuestions={followUpQuestions}
+                        previousPEChecklist={peChecklist}
                     />
                 </div>
             )}
