@@ -421,6 +421,25 @@ export function DayAdmissionCard({
                                 icon="⚠️"
                                 aiContent={analysisSections['complications'] || 'Potential complications and preventive measures will be outlined here.'}
                             />
+
+                            {/* Submit assessment input to populate summary below */}
+                            {hasContent && (
+                                <div className="pt-2 flex items-center gap-3">
+                                    <Button
+                                        variant="primary"
+                                        onClick={() => {
+                                            setEditedNotes(null) // reset to auto-generated so new input shows
+                                            setAssessmentOpen(false) // collapse assessment
+                                        }}
+                                        className="max-w-xs"
+                                    >
+                                        Done — Review Notes Below
+                                    </Button>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                        Your input will appear in the Day Notes Summary below
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
