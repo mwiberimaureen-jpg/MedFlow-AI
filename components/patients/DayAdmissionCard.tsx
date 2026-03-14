@@ -386,7 +386,7 @@ export function DayAdmissionCard({
                 subtitle: 'Complete the assessment, check off tasks, then submit'
             }}
         >
-            <div className="space-y-5">
+<div className="space-y-5">
 
                 {/* ── 1. ASSESSMENT (collapsible wrapper) ── */}
                 <div className="border border-blue-200 dark:border-blue-800 rounded-xl overflow-hidden">

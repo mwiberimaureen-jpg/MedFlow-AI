@@ -216,7 +216,7 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
 
     return (
         <div className="space-y-8">
-            {/* 1. Clinical Summary — always visible at the top */}
+{/* 1. Clinical Summary — always visible at the top */}
             {clinicalSummary && (
                 <Card header={{
                     title: 'Clinical Summary',
