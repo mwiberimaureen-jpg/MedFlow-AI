@@ -246,7 +246,31 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
                 </Card>
             )}
 
-            {/* 2. Past analyses (read-only, collapsed) */}
+            {/* 2. Current Day — directly below Clinical Summary */}
+            {!isDischarged && latestRegular && (
+                <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                        <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+                        <span className="text-sm font-semibold text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full whitespace-nowrap">
+                            {dayLabel} of Admission
+                        </span>
+                        <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+                    </div>
+
+                    <DayAdmissionCard
+                        patientId={patient.id}
+                        dayNumber={nextDayNumber}
+                        analysis={latestRegular}
+                        sectionAnswers={sectionAnswers}
+                        onSectionAnswerChange={handleSectionAnswerChange}
+                        onSubmitDay={handleSubmitDay}
+                        submitting={submitting}
+                        dayLabel={dayLabel}
+                    />
+                </div>
+            )}
+
+            {/* 3. Past analyses (read-only, collapsed) */}
             {pastAnalyses.length > 0 && (
                 <div className="space-y-6">
                     {pastAnalyses.map((analysis, index) => (
@@ -276,30 +300,6 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
                             />
                         </div>
                     ))}
-                </div>
-            )}
-
-            {/* 3. Current Day — unified card with AI content + input spaces */}
-            {!isDischarged && latestRegular && (
-                <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                        <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
-                        <span className="text-sm font-semibold text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full whitespace-nowrap">
-                            {dayLabel} of Admission
-                        </span>
-                        <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
-                    </div>
-
-                    <DayAdmissionCard
-                        patientId={patient.id}
-                        dayNumber={nextDayNumber}
-                        analysis={latestRegular}
-                        sectionAnswers={sectionAnswers}
-                        onSectionAnswerChange={handleSectionAnswerChange}
-                        onSubmitDay={handleSubmitDay}
-                        submitting={submitting}
-                        dayLabel={dayLabel}
-                    />
                 </div>
             )}
 

@@ -243,6 +243,8 @@ export function DayAdmissionCard({
 }: DayAdmissionCardProps) {
     const [error, setError] = useState<string | null>(null)
     const [assessmentOpen, setAssessmentOpen] = useState(true)
+    const [checklistOpen, setChecklistOpen] = useState(true)
+    const [notesOpen, setNotesOpen] = useState(true)
     const [todoItems, setTodoItems] = useState<TodoItemData[]>(analysis.todo_items || [])
     const [completedCount, setCompletedCount] = useState(analysis.completed_items || 0)
     const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set())
@@ -513,10 +515,13 @@ export function DayAdmissionCard({
                     )}
                 </div>
 
-                {/* ── 2. CHECKLIST (brief, below Assessment) ── */}
+                {/* ── 2. CHECKLIST (collapsible, brief, below Assessment) ── */}
                 {totalItems > 0 && (
                     <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-                        <div className="flex items-center justify-between px-5 py-3 bg-gray-50 dark:bg-gray-800">
+                        <button
+                            onClick={() => setChecklistOpen(prev => !prev)}
+                            className="w-full text-left flex items-center justify-between px-5 py-3 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
                             <div className="flex items-center gap-2">
                                 <span>✔️</span>
                                 <h3 className="text-base font-bold text-gray-900 dark:text-white">Checklist</h3>
@@ -524,57 +529,73 @@ export function DayAdmissionCard({
                                     {completedCount}/{totalItems}
                                 </span>
                             </div>
-                            <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                                <div
-                                    className="bg-green-500 h-1.5 rounded-full transition-all duration-300"
-                                    style={{ width: `${(completedCount / totalItems) * 100}%` }}
-                                />
-                            </div>
-                        </div>
-                        <div className="px-5 py-3 space-y-1">
-                            {allItemsSorted.map(item => (
-                                <label
-                                    key={item.id}
-                                    className={`flex items-center gap-3 py-1.5 px-2 rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
-                                        item.is_completed ? 'opacity-60' : ''
-                                    }`}
-                                >
-                                    <input
-                                        type="checkbox"
-                                        checked={item.is_completed}
-                                        disabled={togglingIds.has(item.id)}
-                                        onChange={e => handleToggle(item.id, e.target.checked)}
-                                        className="h-4 w-4 text-green-600 rounded border-gray-300 dark:border-gray-500 cursor-pointer focus:ring-green-500 disabled:opacity-50"
+                            <div className="flex items-center gap-3">
+                                <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                                    <div
+                                        className="bg-green-500 h-1.5 rounded-full transition-all duration-300"
+                                        style={{ width: `${(completedCount / totalItems) * 100}%` }}
                                     />
-                                    <span className={`text-sm ${
-                                        item.is_completed
-                                            ? 'line-through text-gray-400 dark:text-gray-500'
-                                            : 'text-gray-800 dark:text-gray-200'
-                                    }`}>
-                                        {item.title}
-                                    </span>
-                                </label>
-                            ))}
-                        </div>
+                                </div>
+                                <span className="text-sm text-gray-500 dark:text-gray-400">
+                                    {checklistOpen ? '▾' : '▸'}
+                                </span>
+                            </div>
+                        </button>
+                        {checklistOpen && (
+                            <div className="px-5 py-3 space-y-1">
+                                {allItemsSorted.map(item => (
+                                    <label
+                                        key={item.id}
+                                        className={`flex items-center gap-3 py-1.5 px-2 rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
+                                            item.is_completed ? 'opacity-60' : ''
+                                        }`}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={item.is_completed}
+                                            disabled={togglingIds.has(item.id)}
+                                            onChange={e => handleToggle(item.id, e.target.checked)}
+                                            className="h-4 w-4 text-green-600 rounded border-gray-300 dark:border-gray-500 cursor-pointer focus:ring-green-500 disabled:opacity-50"
+                                        />
+                                        <span className={`text-sm ${
+                                            item.is_completed
+                                                ? 'line-through text-gray-400 dark:text-gray-500'
+                                                : 'text-gray-800 dark:text-gray-200'
+                                        }`}>
+                                            {item.title}
+                                        </span>
+                                    </label>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
 
-                {/* ── 3. DAY NOTES SUMMARY (editable clinical history) ── */}
+                {/* ── 3. DAY NOTES SUMMARY (collapsible, editable clinical history) ── */}
                 <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-                    <div className="px-5 py-3 bg-gray-50 dark:bg-gray-800 flex items-center justify-between">
+                    <button
+                        onClick={() => setNotesOpen(prev => !prev)}
+                        className="w-full text-left flex items-center justify-between px-5 py-3 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    >
                         <div className="flex items-center gap-2">
                             <span>📝</span>
                             <h3 className="text-base font-bold text-gray-900 dark:text-white">Day Notes Summary</h3>
                         </div>
-                        {editedNotes !== null && (
-                            <button
-                                onClick={() => setEditedNotes(null)}
-                                className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                            >
-                                Reset to auto-generated
-                            </button>
-                        )}
-                    </div>
+                        <div className="flex items-center gap-3">
+                            {editedNotes !== null && (
+                                <span
+                                    onClick={e => { e.stopPropagation(); setEditedNotes(null) }}
+                                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                                >
+                                    Reset to auto-generated
+                                </span>
+                            )}
+                            <span className="text-sm text-gray-500 dark:text-gray-400">
+                                {notesOpen ? '▾' : '▸'}
+                            </span>
+                        </div>
+                    </button>
+                    {notesOpen && (
                     <div className="px-5 py-3 space-y-3">
                         {submittedSections.size === 0 && editedNotes === null ? (
                             <p className="text-sm text-gray-400 dark:text-gray-500 italic">
@@ -606,6 +627,7 @@ export function DayAdmissionCard({
                             {submitting ? `Generating ${dayLabel} Analysis...` : `Submit ${dayLabel} Notes`}
                         </Button>
                     </div>
+                    )}
                 </div>
 
             </div>
