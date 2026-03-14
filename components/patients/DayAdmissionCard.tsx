@@ -204,8 +204,8 @@ function DaySection({ title, icon, aiContent, inputKey, placeholder, value, onCh
     )
 }
 
-// Labels for the summary display
-const SUMMARY_LABELS: Array<{ key: string; label: string }> = [
+// Sections included in the summary narrative
+const SUMMARY_SECTIONS: Array<{ key: string; label: string }> = [
     { key: 'follow_up_questions', label: 'History of Presenting Illness' },
     { key: 'review_of_systems', label: 'Review of Systems' },
     { key: 'vitals', label: 'Vital Signs' },
@@ -214,21 +214,61 @@ const SUMMARY_LABELS: Array<{ key: string; label: string }> = [
     { key: 'management_plan', label: 'Plan' },
 ]
 
-/** Build a clinical history narrative from submitted section answers */
+/**
+ * Build a clinical history narrative from submitted section answers.
+ * Formats as a proper clinical note — flowing prose grouped into
+ * Subjective / Objective / Assessment & Plan blocks, not raw copy-paste.
+ */
 function buildClinicalNotes(sectionAnswers: Record<string, string>, dayLabel: string, submittedSections: Set<string>): string {
-    const parts: string[] = []
-    parts.push(`${dayLabel} of Admission\n`)
+    const get = (key: string) => submittedSections.has(key) ? sectionAnswers[key]?.trim() || '' : ''
 
-    for (const { key, label } of SUMMARY_LABELS) {
-        if (!submittedSections.has(key)) continue
-        const value = sectionAnswers[key]?.trim()
-        if (value) {
-            parts.push(`${label}:\n${value}`)
+    const hpi = get('follow_up_questions')
+    const ros = get('review_of_systems')
+    const vitals = get('vitals')
+    const exam = get('physical_exam')
+    const investigations = get('confirmatory_tests')
+    const plan = get('management_plan')
+
+    const hasContent = [hpi, ros, vitals, exam, investigations, plan].some(v => v)
+    if (!hasContent) return ''
+
+    const lines: string[] = []
+    lines.push(`${dayLabel} of Admission`)
+    lines.push('')
+
+    // Subjective — HPI and ROS woven together
+    if (hpi || ros) {
+        const subjective: string[] = []
+        if (hpi) subjective.push(hpi)
+        if (ros) {
+            subjective.push(subjective.length > 0
+                ? `Systems review: ${ros}`
+                : `Review of Systems: ${ros}`)
         }
+        lines.push(subjective.join('. ').replace(/\.\./g, '.'))
+        lines.push('')
     }
 
-    if (parts.length <= 1) return ''
-    return parts.join('\n\n')
+    // Objective — Vitals then Exam
+    if (vitals || exam) {
+        if (vitals) lines.push(`Vitals: ${vitals}`)
+        if (vitals && exam) lines.push('')
+        if (exam) lines.push(`On examination: ${exam}`)
+        lines.push('')
+    }
+
+    // Investigations
+    if (investigations) {
+        lines.push(`Investigations: ${investigations}`)
+        lines.push('')
+    }
+
+    // Plan
+    if (plan) {
+        lines.push(`Plan: ${plan}`)
+    }
+
+    return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
 }
 
 export function DayAdmissionCard({
@@ -367,7 +407,7 @@ export function DayAdmissionCard({
     const totalItems = todoItems.length
 
     // Filled sections for the summary area
-    const filledSections = SUMMARY_LABELS.filter(({ key }) => sectionAnswers[key]?.trim())
+    const filledSections = SUMMARY_SECTIONS.filter(({ key }) => sectionAnswers[key]?.trim())
 
     // Auto-generated clinical notes from assessment inputs
     const autoNotes = useMemo(() => buildClinicalNotes(sectionAnswers, dayLabel, submittedSections), [sectionAnswers, dayLabel, submittedSections])
