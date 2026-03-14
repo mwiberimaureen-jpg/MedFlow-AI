@@ -7,10 +7,11 @@ Agentic workflows detail automation pipelines for lead scraping, proposal genera
 - **Always commit and push**: After making any changes to the MedFlow-AI app, always `git add`, `git commit`, and `git push` the changes to GitHub. Do not wait to be asked — push as soon as the build passes.
 - **Verify deployment**: After pushing, check that the Vercel deployment succeeded. If the app is running locally, restart the dev server after pushing.
 - **Persist ALL UI state to localStorage**: Any user input, submitted/draft status, or UI state that should survive page navigation MUST be persisted to localStorage keyed by patient ID. React state alone is not enough — it resets on navigation.
-- **Day N of Admission structure**: The Day card has 3 sections in order:
+- **Admission Workflow page layout order**: Clinical Summary → Day N of Admission (current day) → Past Analyses → Discharge. The Day N card is always directly below Clinical Summary.
+- **Day N of Admission structure**: The Day card has 3 collapsible sections in order:
   1. **Assessment** (collapsible) — contains collapsible sub-sections (Follow-up Questions, ROS, Vitals, Physical Exam, Impression, Test Interpretation, Differential Diagnoses, Confirmatory Tests, Management Plan, Complications). Each input section has its own Submit and Edit button.
-  2. **Checklist** — brief checkboxes only (no badges/descriptions). Auto-checks from user input in Assessment.
-  3. **Day Notes Summary** — editable textarea showing submitted section inputs formatted as clinical history. Final submit button lives here. Does NOT auto-submit — user reviews and edits before submitting.
+  2. **Checklist** (collapsible) — brief checkboxes only (no badges/descriptions). Auto-checks from user input in Assessment.
+  3. **Day Notes Summary** (collapsible) — editable textarea showing submitted section inputs formatted as clinical history. Final submit button lives here. Does NOT auto-submit — user reviews and edits before submitting.
 - **Always show clinical reasoning sections**: Impression, Test Interpretation, Differential Diagnoses, and Complications sections must always be visible (not conditional). Show fallback text if AI content is not available.
 - **Day number calculation**: Day 1 = admission day. Use `Math.floor(diffDays) + 1` from admission date.
 
