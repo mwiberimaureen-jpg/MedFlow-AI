@@ -31,6 +31,8 @@ interface AnalysisData {
 
 interface InteractiveAnalysisPanelProps {
     analysis: AnalysisData
+    isLatest?: boolean
+    onSectionSubmit?: (sectionKey: string, content: string) => void
 }
 
 const CATEGORY_ORDER = [
@@ -90,6 +92,75 @@ const SECTION_ICONS: Record<string, string> = {
 
 // Sections expanded by default
 const DEFAULT_EXPANDED_SECTIONS = ['clinical summary', 'impression(s)', 'impressions']
+
+// Sections that should NOT get inline input fields
+const READ_ONLY_SECTIONS = ['clinical summary', 'impression(s)', 'impressions', 'differential diagnoses']
+
+// Map display titles to section keys for data collection
+function getSectionKey(title: string): string {
+    const t = title.toLowerCase()
+    if (t.includes('follow-up') || t.includes('gaps')) return 'follow_up_questions'
+    if (t.includes('physical exam')) return 'physical_exam'
+    if (t.includes('test interpretation')) return 'test_interpretation'
+    if (t.includes('confirmatory')) return 'confirmatory_tests'
+    if (t.includes('management')) return 'management_plan'
+    if (t.includes('complication')) return 'complications'
+    return t.replace(/\s+/g, '_')
+}
+
+const SECTION_PLACEHOLDERS: Record<string, string> = {
+    follow_up_questions: 'Type your answers to the questions above...',
+    physical_exam: 'Report physical examination findings...',
+    test_interpretation: 'Enter new test results or updates...',
+    confirmatory_tests: 'Report results of ordered tests...',
+    management_plan: 'Note any medication changes, new orders...',
+    complications: 'Report any complications observed or resolved...',
+}
+
+function SectionInput({ sectionKey, onSubmit }: {
+    sectionKey: string
+    onSubmit: (key: string, value: string) => void
+}) {
+    const [value, setValue] = useState('')
+    const [submitted, setSubmitted] = useState(false)
+
+    const handleSubmit = () => {
+        if (!value.trim()) return
+        onSubmit(sectionKey, value.trim())
+        setSubmitted(true)
+    }
+
+    return (
+        <div className="mt-3 pt-3 border-t border-dashed border-gray-200 dark:border-gray-600">
+            {submitted ? (
+                <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                    <span>✓</span>
+                    <span>Saved — your input will appear in the Day form below</span>
+                </div>
+            ) : (
+                <div className="space-y-2">
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        Your input
+                    </label>
+                    <textarea
+                        value={value}
+                        onChange={e => setValue(e.target.value)}
+                        rows={3}
+                        placeholder={SECTION_PLACEHOLDERS[sectionKey] || 'Enter your findings...'}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm leading-relaxed resize-y bg-white dark:bg-gray-800 dark:text-gray-200"
+                    />
+                    <button
+                        onClick={handleSubmit}
+                        disabled={!value.trim()}
+                        className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                        Submit
+                    </button>
+                </div>
+            )}
+        </div>
+    )
+}
 
 function getSectionIcon(title: string): string {
     for (const [key, icon] of Object.entries(SECTION_ICONS)) {
@@ -204,7 +275,7 @@ function TestBlockItem({ block }: { block: string }) {
     )
 }
 
-export function InteractiveAnalysisPanel({ analysis }: InteractiveAnalysisPanelProps) {
+export function InteractiveAnalysisPanel({ analysis, isLatest, onSectionSubmit }: InteractiveAnalysisPanelProps) {
     const [todoItems, setTodoItems] = useState<TodoItemData[]>(analysis.todo_items || [])
     const [completedCount, setCompletedCount] = useState(analysis.completed_items || 0)
     const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set())
@@ -313,6 +384,9 @@ export function InteractiveAnalysisPanel({ analysis }: InteractiveAnalysisPanelP
                 const isTestInterp = section.title.toLowerCase().includes('test interpretation')
                 const displayTitle = getDisplayTitle(section.title)
                 const isDefaultOpen = DEFAULT_EXPANDED_SECTIONS.includes(section.title.toLowerCase())
+                const sectionKey = getSectionKey(section.title)
+                const isReadOnly = READ_ONLY_SECTIONS.some(ro => section.title.toLowerCase().includes(ro))
+                const showInput = isLatest && !isReadOnly && onSectionSubmit
 
                 return (
                     <CollapsibleSection
@@ -327,6 +401,12 @@ export function InteractiveAnalysisPanel({ analysis }: InteractiveAnalysisPanelP
                             <div
                                 className="prose prose-sm max-w-none text-gray-800 dark:text-gray-200 leading-relaxed"
                                 dangerouslySetInnerHTML={{ __html: formatSectionContent(section.content) }}
+                            />
+                        )}
+                        {showInput && (
+                            <SectionInput
+                                sectionKey={sectionKey}
+                                onSubmit={onSectionSubmit}
                             />
                         )}
                     </CollapsibleSection>

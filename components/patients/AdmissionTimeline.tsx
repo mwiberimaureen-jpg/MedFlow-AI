@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -156,6 +156,11 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
     const [analyses, setAnalyses] = useState<Analysis[]>(initialAnalyses)
     const [discharging, setDischarging] = useState(false)
     const [dischargeError, setDischargeError] = useState<string | null>(null)
+    const [sectionAnswers, setSectionAnswers] = useState<Record<string, string>>({})
+
+    const handleSectionSubmit = useCallback((sectionKey: string, content: string) => {
+        setSectionAnswers(prev => ({ ...prev, [sectionKey]: content }))
+    }, [])
 
     const isDischarged = patient.metadata?.admission_status === 'discharged'
 
@@ -242,7 +247,11 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
                     )}
 
                     {/* The analysis panel */}
-                    <InteractiveAnalysisPanel analysis={analysis} />
+                    <InteractiveAnalysisPanel
+                        analysis={analysis}
+                        isLatest={!isDischarged && index === regularAnalyses.length - 1}
+                        onSectionSubmit={index === regularAnalyses.length - 1 ? handleSectionSubmit : undefined}
+                    />
 
                     {/* Per-day personal notes (localStorage) */}
                     <DayNotes analysisId={analysis.id} />
@@ -265,6 +274,7 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
                         onAnalysisComplete={handleDailyAnalysisComplete}
                         previousFollowUpQuestions={followUpQuestions}
                         previousPEChecklist={peChecklist}
+                        prefilled={sectionAnswers}
                     />
                 </div>
             )}

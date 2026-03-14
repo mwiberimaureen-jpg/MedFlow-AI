@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 
@@ -10,6 +10,7 @@ interface DayProgressFormProps {
     onAnalysisComplete: (analysis: any) => void
     previousFollowUpQuestions?: string[]
     previousPEChecklist?: string[]
+    prefilled?: Record<string, string>
 }
 
 const DAY_ORDINALS: Record<number, string> = {
@@ -31,12 +32,23 @@ interface SectionConfig {
     promptLabel?: string
 }
 
+// Map section answer keys from InteractiveAnalysisPanel to form section keys
+const PREFILL_MAP: Record<string, string> = {
+    follow_up_questions: 'hpi',
+    physical_exam: 'physical_exam',
+    test_interpretation: 'tests',
+    confirmatory_tests: 'tests',
+    management_plan: 'medications',
+    complications: 'hpi',
+}
+
 export function DayProgressForm({
     patientId,
     dayNumber,
     onAnalysisComplete,
     previousFollowUpQuestions,
     previousPEChecklist,
+    prefilled,
 }: DayProgressFormProps) {
     const [loading, setLoading] = useState(false)
     const [submitted, setSubmitted] = useState(false)
@@ -50,6 +62,30 @@ export function DayProgressForm({
         tests: '',
         medications: '',
     })
+
+    // When inline section answers arrive, populate the corresponding form fields
+    useEffect(() => {
+        if (!prefilled || Object.keys(prefilled).length === 0) return
+
+        setSections(prev => {
+            const updated = { ...prev }
+            for (const [answerKey, value] of Object.entries(prefilled)) {
+                const formKey = PREFILL_MAP[answerKey]
+                if (!formKey || !value) continue
+
+                // Append if the form field already has content (e.g. multiple answers map to 'hpi')
+                if (updated[formKey] && updated[formKey].trim()) {
+                    // Don't duplicate if already contains this value
+                    if (!updated[formKey].includes(value)) {
+                        updated[formKey] = updated[formKey] + '\n\n' + value
+                    }
+                } else {
+                    updated[formKey] = value
+                }
+            }
+            return updated
+        })
+    }, [prefilled])
 
     const dayLabel = getDayLabel(dayNumber)
 
