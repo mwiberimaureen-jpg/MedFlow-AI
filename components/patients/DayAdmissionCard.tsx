@@ -169,13 +169,29 @@ function DaySection({ title, icon, aiContent, inputKey, placeholder, value, onCh
 
 // Labels for the summary display
 const SUMMARY_LABELS: Array<{ key: string; label: string }> = [
-    { key: 'follow_up_questions', label: 'History Update / HPI' },
+    { key: 'follow_up_questions', label: 'History of Presenting Illness' },
     { key: 'review_of_systems', label: 'Review of Systems' },
     { key: 'vitals', label: 'Vital Signs' },
     { key: 'physical_exam', label: 'Physical Examination' },
-    { key: 'confirmatory_tests', label: 'Test Results' },
-    { key: 'management_plan', label: 'Management Plan' },
+    { key: 'confirmatory_tests', label: 'Investigations' },
+    { key: 'management_plan', label: 'Plan' },
 ]
+
+/** Build a clinical history narrative from section answers */
+function buildClinicalNotes(sectionAnswers: Record<string, string>, dayLabel: string): string {
+    const parts: string[] = []
+    parts.push(`${dayLabel} of Admission\n`)
+
+    for (const { key, label } of SUMMARY_LABELS) {
+        const value = sectionAnswers[key]?.trim()
+        if (value) {
+            parts.push(`${label}:\n${value}`)
+        }
+    }
+
+    if (parts.length <= 1) return ''
+    return parts.join('\n\n')
+}
 
 export function DayAdmissionCard({
     patientId,
@@ -193,6 +209,7 @@ export function DayAdmissionCard({
     const [completedCount, setCompletedCount] = useState(analysis.completed_items || 0)
     const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set())
     const autoCheckedRef = useRef<Set<string>>(new Set())
+    const [editedNotes, setEditedNotes] = useState<string | null>(null) // null = auto-generated, string = user edited
 
     // Parse analysis sections
     const analysisSections = useMemo(() => {
@@ -267,22 +284,9 @@ export function DayAdmissionCard({
         }
     }, [sectionAnswers, todoItems, handleToggle])
 
-    // Submit
+    // Submit uses the displayNotes (which the user can edit)
     const handleSubmit = async () => {
-        const parts: string[] = []
-        const fieldMap: Array<{ key: string; header: string }> = [
-            { key: 'follow_up_questions', header: 'HISTORY UPDATE / HPI' },
-            { key: 'review_of_systems', header: 'REVIEW OF SYSTEMS' },
-            { key: 'vitals', header: 'VITAL SIGNS' },
-            { key: 'physical_exam', header: 'PHYSICAL EXAMINATION' },
-            { key: 'confirmatory_tests', header: 'TEST RESULTS' },
-            { key: 'management_plan', header: 'MEDICATION CHANGES' },
-        ]
-        for (const { key, header } of fieldMap) {
-            const value = sectionAnswers[key]?.trim()
-            if (value) parts.push(`${header}:\n${value}`)
-        }
-        const notes = parts.join('\n\n')
+        const notes = displayNotes.trim()
         if (notes.length < 10) {
             setError('Please fill in at least one section with enough detail (minimum 10 characters total)')
             return
@@ -297,6 +301,18 @@ export function DayAdmissionCard({
 
     // Filled sections for the summary area
     const filledSections = SUMMARY_LABELS.filter(({ key }) => sectionAnswers[key]?.trim())
+
+    // Auto-generated clinical notes from assessment inputs
+    const autoNotes = useMemo(() => buildClinicalNotes(sectionAnswers, dayLabel), [sectionAnswers, dayLabel])
+
+    // The displayed notes: user-edited version takes priority, otherwise auto-generated
+    const displayNotes = editedNotes !== null ? editedNotes : autoNotes
+
+    // When assessment inputs change and user hasn't manually edited, update automatically
+    useEffect(() => {
+        if (editedNotes === null) return // still in auto mode, no action needed
+        // If user has edited but assessment changed, keep their edits
+    }, [autoNotes, editedNotes])
 
     return (
         <Card
@@ -397,22 +413,6 @@ export function DayAdmissionCard({
                             {analysisSections['complications'] && (
                                 <DaySection title="Possible Complications & Prevention" icon="⚠️" aiContent={analysisSections['complications']} />
                             )}
-
-                            {error && (
-                                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded text-sm">
-                                    {error}
-                                </div>
-                            )}
-
-                            <Button
-                                variant="primary"
-                                onClick={handleSubmit}
-                                loading={submitting}
-                                disabled={submitting || !hasContent}
-                                className="max-w-xs"
-                            >
-                                {submitting ? `Generating ${dayLabel} Analysis...` : `Submit ${dayLabel} Notes`}
-                            </Button>
                         </div>
                     )}
                 </div>
@@ -463,33 +463,52 @@ export function DayAdmissionCard({
                     </div>
                 )}
 
-                {/* ── 3. SUMMARY (live display of filled-in inputs) ── */}
+                {/* ── 3. DAY NOTES SUMMARY (editable clinical history) ── */}
                 <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-                    <div className="px-5 py-3 bg-gray-50 dark:bg-gray-800">
+                    <div className="px-5 py-3 bg-gray-50 dark:bg-gray-800 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <span>📝</span>
                             <h3 className="text-base font-bold text-gray-900 dark:text-white">Day Notes Summary</h3>
                         </div>
+                        {editedNotes !== null && (
+                            <button
+                                onClick={() => setEditedNotes(null)}
+                                className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                            >
+                                Reset to auto-generated
+                            </button>
+                        )}
                     </div>
-                    <div className="px-5 py-3">
-                        {filledSections.length === 0 ? (
+                    <div className="px-5 py-3 space-y-3">
+                        {filledSections.length === 0 && editedNotes === null ? (
                             <p className="text-sm text-gray-400 dark:text-gray-500 italic">
-                                Notes will appear here as you fill in the Assessment sections above.
+                                A clinical history will be composed here as you fill in the Assessment sections above. You can edit it before submitting.
                             </p>
                         ) : (
-                            <div className="space-y-3">
-                                {filledSections.map(({ key, label }) => (
-                                    <div key={key}>
-                                        <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-                                            {label}
-                                        </h4>
-                                        <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">
-                                            {sectionAnswers[key]}
-                                        </p>
-                                    </div>
-                                ))}
+                            <textarea
+                                value={displayNotes}
+                                onChange={e => setEditedNotes(e.target.value)}
+                                rows={Math.max(8, displayNotes.split('\n').length + 2)}
+                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm leading-relaxed resize-y bg-white dark:bg-gray-800 dark:text-gray-200 font-mono"
+                                placeholder="Clinical notes will appear here..."
+                            />
+                        )}
+
+                        {error && (
+                            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded text-sm">
+                                {error}
                             </div>
                         )}
+
+                        <Button
+                            variant="primary"
+                            onClick={handleSubmit}
+                            loading={submitting}
+                            disabled={submitting || (!hasContent && editedNotes === null)}
+                            className="max-w-xs"
+                        >
+                            {submitting ? `Generating ${dayLabel} Analysis...` : `Submit ${dayLabel} Notes`}
+                        </Button>
                     </div>
                 </div>
 
