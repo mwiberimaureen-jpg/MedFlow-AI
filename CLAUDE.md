@@ -11,7 +11,7 @@ Agentic workflows detail automation pipelines for lead scraping, proposal genera
 - **Day N of Admission structure**: The Day card has 3 collapsible sections in order:
   1. **Assessment** (collapsible) — contains collapsible sub-sections (Follow-up Questions, ROS, Vitals, Physical Exam, Impression, Test Interpretation, Differential Diagnoses, Confirmatory Tests, Management Plan, Complications). Each input section has its own Submit and Edit button.
   2. **Checklist** (collapsible) — brief checkboxes only (no badges/descriptions). Auto-checks from user input in Assessment.
-  3. **Day Notes Summary** (collapsible) — editable textarea showing submitted section inputs formatted as a proper clinical narrative (NOT raw copy-paste). Uses flowing prose: HPI + ROS woven together, then "Vitals:", "On examination:", "Investigations:", "Plan:" — NOT section headers with raw input dumped below. Final submit button lives here. Does NOT auto-submit — user reviews and edits before submitting.
+  3. **Day Notes Summary** (collapsible) — editable textarea formatted as proper clinical documentation. HPI flows as narrative (no header), then each section has its own header on a new line: "Review of Systems:", "Vital Signs:", "Physical Examination:", "Investigations:", "PLAN:" (caps). Matches the format of a clinical history document. Final submit button lives here. Does NOT auto-submit — user reviews and edits before submitting.
 - **Always show clinical reasoning sections**: Impression, Test Interpretation, Differential Diagnoses, and Complications sections must always be visible (not conditional). Show fallback text if AI content is not available.
 - **Day number calculation**: Day 1 = admission day. Use `Math.floor(diffDays) + 1` from admission date.
 

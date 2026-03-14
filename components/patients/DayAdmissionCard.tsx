@@ -216,8 +216,10 @@ const SUMMARY_SECTIONS: Array<{ key: string; label: string }> = [
 
 /**
  * Build a clinical history narrative from submitted section answers.
- * Formats as a proper clinical note — flowing prose grouped into
- * Subjective / Objective / Assessment & Plan blocks, not raw copy-paste.
+ * Matches the clinical documentation format:
+ *   - HPI flows as narrative (no header)
+ *   - Each subsequent section has its own header on a separate line
+ *   - PLAN: in caps with content below
  */
 function buildClinicalNotes(sectionAnswers: Record<string, string>, dayLabel: string, submittedSections: Set<string>): string {
     const get = (key: string) => submittedSections.has(key) ? sectionAnswers[key]?.trim() || '' : ''
@@ -232,43 +234,35 @@ function buildClinicalNotes(sectionAnswers: Record<string, string>, dayLabel: st
     const hasContent = [hpi, ros, vitals, exam, investigations, plan].some(v => v)
     if (!hasContent) return ''
 
-    const lines: string[] = []
-    lines.push(`${dayLabel} of Admission`)
-    lines.push('')
+    const blocks: string[] = []
 
-    // Subjective — HPI and ROS woven together
-    if (hpi || ros) {
-        const subjective: string[] = []
-        if (hpi) subjective.push(hpi)
-        if (ros) {
-            subjective.push(subjective.length > 0
-                ? `Systems review: ${ros}`
-                : `Review of Systems: ${ros}`)
-        }
-        lines.push(subjective.join('. ').replace(/\.\./g, '.'))
-        lines.push('')
+    // HPI flows as narrative — no header, just the clinical story
+    if (hpi) {
+        blocks.push(hpi)
     }
 
-    // Objective — Vitals then Exam
-    if (vitals || exam) {
-        if (vitals) lines.push(`Vitals: ${vitals}`)
-        if (vitals && exam) lines.push('')
-        if (exam) lines.push(`On examination: ${exam}`)
-        lines.push('')
+    // Each subsequent section gets its own header
+    if (ros) {
+        blocks.push(`Review of Systems:\n${ros}`)
     }
 
-    // Investigations
+    if (vitals) {
+        blocks.push(`Vital Signs:\n${vitals}`)
+    }
+
+    if (exam) {
+        blocks.push(`Physical Examination:\n${exam}`)
+    }
+
     if (investigations) {
-        lines.push(`Investigations: ${investigations}`)
-        lines.push('')
+        blocks.push(`Investigations:\n${investigations}`)
     }
 
-    // Plan
     if (plan) {
-        lines.push(`Plan: ${plan}`)
+        blocks.push(`PLAN:\n${plan}`)
     }
 
-    return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+    return blocks.join('\n\n').trim()
 }
 
 export function DayAdmissionCard({
