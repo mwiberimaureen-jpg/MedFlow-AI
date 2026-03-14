@@ -73,7 +73,7 @@ function getNextDayNumber(analyses: Analysis[]): number {
         const admStart = new Date(admissionDate.getFullYear(), admissionDate.getMonth(), admissionDate.getDate())
         const nowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
         const diffMs = nowStart.getTime() - admStart.getTime()
-        calendarDay = Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24)))
+        calendarDay = Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1)
     }
 
     const dayAnalyses = analyses.filter(a => a.analysis_version?.startsWith('day_'))
