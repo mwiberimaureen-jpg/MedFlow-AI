@@ -171,8 +171,8 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
 
     const latestTriage = latestRegular ? getTriageFromRiskLevel(latestRegular.risk_level) : null
 
-    // Past analyses = all except the latest (which feeds the day card)
-    const pastAnalyses = regularAnalyses.length > 1 ? regularAnalyses.slice(0, -1) : []
+    // Past analyses = all regular analyses shown as collapsible reference sections
+    const pastAnalyses = regularAnalyses
 
     const handleDailyAnalysisComplete = (newAnalysis: Analysis) => {
         setAnalyses(prev => [...prev, newAnalysis])
