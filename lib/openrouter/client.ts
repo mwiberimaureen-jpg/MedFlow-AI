@@ -363,7 +363,7 @@ function sanitizeAnalysis(parsed: any): any {
  */
 export async function analyzeDailyProgress(
   admissionHistoryText: string,
-  previousSummaries: Array<{ version: string; summary: string }>,
+  previousSummaries: Array<{ version: string; summary: string; rawText?: string }>,
   progressNotes: string,
   dayNumber: number,
   config?: OpenRouterConfig
@@ -381,13 +381,20 @@ export async function analyzeDailyProgress(
   const dayLabel = ordinals[dayNumber] ? `Day ${ordinals[dayNumber]}` : `Day ${dayNumber}`
 
   const previousContext = previousSummaries.length > 0
-    ? '\n\n--- PREVIOUS ANALYSES SUMMARY ---\n' +
-    previousSummaries.map(s => {
+    ? '\n\n--- PREVIOUS ANALYSES ---\n' +
+    previousSummaries.map((s, i) => {
       const label = s.version === 'admission' ? 'Admission Analysis' :
         s.version.startsWith('day_') ? `Day ${s.version.replace('day_', '')} Analysis` : s.version
-      return `${label}: ${s.summary}`
+      // Include full raw text for the most recent analysis (has latest test results & interpretations)
+      // and for admission analysis (has initial test results). Use summary for middle analyses to save tokens.
+      const isRecent = i === previousSummaries.length - 1
+      const isAdmission = s.version === 'admission'
+      if ((isRecent || isAdmission) && s.rawText) {
+        return `${label} (FULL):\n${s.rawText}`
+      }
+      return `${label} (Summary): ${s.summary}`
     }).join('\n\n') +
-    '\n--- END PREVIOUS ANALYSES SUMMARY ---'
+    '\n--- END PREVIOUS ANALYSES ---'
     : ''
 
   const userMessage =
@@ -396,11 +403,12 @@ export async function analyzeDailyProgress(
     `You are generating the ${dayLabel} of Admission clinical analysis.\n` +
     `Focus on:\n` +
     `1. Changes from the previous day (improving/deteriorating/stable)\n` +
-    `2. Interpreting any NEW test results mentioned in today's notes (apply the same no-repeat-tests rule)\n` +
+    `2. ALWAYS interpret ALL test results present in the progress notes AND any test results from the initial admission history that have not been interpreted in previous analyses. The test_interpretation array must NEVER be empty if there are any test results anywhere in the history or progress notes. Apply the same no-repeat-tests rule for ordering new tests.\n` +
     `3. Adjusting the management plan based on the patient's trajectory\n` +
     `4. New complications arising or previously flagged complications that have resolved\n` +
     `5. Updated to-do list for today's tasks — do NOT re-list tasks already completed in previous days\n` +
     `6. If a pregnancy outcome occurred (delivery, miscarriage, stillbirth), UPDATE the obstetric formula in the clinical summary — e.g. G4P3+0 admitted → after miscarriage → now P3+1 (no longer gravid)\n\n` +
+    `CRITICAL: You MUST provide test_interpretation for every test result mentioned in the progress notes or the original admission history. Include the test name, deranged parameters, and clinical interpretation. Do NOT skip test interpretation.\n\n` +
     `Apply ALL the same clinical rules from your system instructions (AMBOSS-only, no hallucination, no forbidden phrases, specific drug dosing, etc.)`
 
   const response = await fetchWithRetry(OPENROUTER_API_URL, {

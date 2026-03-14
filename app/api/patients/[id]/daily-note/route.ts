@@ -55,10 +55,10 @@ export async function POST(
             return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
         }
 
-        // Fetch all existing analyses ordered chronologically
+        // Fetch all existing analyses ordered chronologically (include raw text for full context)
         const { data: existingAnalyses } = await supabase
             .from('analyses')
-            .select('id, analysis_version, summary, created_at')
+            .select('id, analysis_version, summary, raw_analysis_text, created_at')
             .eq('patient_history_id', id)
             .order('created_at', { ascending: true })
 
@@ -73,10 +73,11 @@ export async function POST(
             )
         }
 
-        // Build summaries of previous analyses for AI context
+        // Build summaries of previous analyses for AI context (include raw text for full detail)
         const previousSummaries = (existingAnalyses || []).map(a => ({
             version: a.analysis_version || 'unknown',
-            summary: a.summary || ''
+            summary: a.summary || '',
+            rawText: a.raw_analysis_text || ''
         }))
 
         // Call OpenRouter AI for daily progress analysis
