@@ -110,8 +110,8 @@ function doesInputMatchItem(itemTitle: string, allUserInput: string): boolean {
     return false
 }
 
-/** Collapsible section inside Assessment */
-function DaySection({ title, icon, aiContent, inputKey, placeholder, value, onChange, defaultOpen = false }: {
+/** Collapsible section inside Assessment with per-section Submit/Edit */
+function DaySection({ title, icon, aiContent, inputKey, placeholder, value, onChange, isSubmitted, onSubmitSection, onEditSection, defaultOpen = false }: {
     title: string
     icon: string
     aiContent?: string
@@ -119,21 +119,34 @@ function DaySection({ title, icon, aiContent, inputKey, placeholder, value, onCh
     placeholder?: string
     value?: string
     onChange?: (value: string) => void
+    isSubmitted?: boolean
+    onSubmitSection?: () => void
+    onEditSection?: () => void
     defaultOpen?: boolean
 }) {
     const [open, setOpen] = useState(defaultOpen)
     const hasFilled = !!(value && value.trim())
+    const hasInput = !!inputKey
 
     return (
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+        <div className={`border rounded-lg overflow-hidden ${
+            isSubmitted
+                ? 'border-green-200 dark:border-green-800'
+                : 'border-gray-200 dark:border-gray-700'
+        }`}>
             <button
                 onClick={() => setOpen(prev => !prev)}
-                className="w-full text-left flex items-center justify-between gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className={`w-full text-left flex items-center justify-between gap-2 px-4 py-2 transition-colors ${
+                    isSubmitted
+                        ? 'bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30'
+                        : 'bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
             >
                 <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
                     <span>{icon}</span>
                     {title}
-                    {hasFilled && <span className="text-green-500 text-xs">✓</span>}
+                    {isSubmitted && <span className="text-green-600 dark:text-green-400 text-xs font-bold">Submitted</span>}
+                    {!isSubmitted && hasFilled && <span className="text-yellow-500 text-xs">Draft</span>}
                 </h4>
                 <span className="text-xs text-blue-600 dark:text-blue-400 flex-shrink-0">
                     {open ? '▾' : '▸'}
@@ -147,18 +160,42 @@ function DaySection({ title, icon, aiContent, inputKey, placeholder, value, onCh
                             dangerouslySetInnerHTML={{ __html: formatSectionContent(aiContent) }}
                         />
                     )}
-                    {inputKey && onChange && (
+                    {hasInput && onChange && (
                         <div className={aiContent ? 'pt-2 border-t border-dashed border-gray-200 dark:border-gray-600' : ''}>
-                            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
-                                Your response
-                            </label>
-                            <textarea
-                                value={value || ''}
-                                onChange={e => onChange(e.target.value)}
-                                rows={3}
-                                placeholder={placeholder}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm leading-relaxed resize-y bg-white dark:bg-gray-800 dark:text-gray-200"
-                            />
+                            {isSubmitted ? (
+                                <>
+                                    <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed bg-green-50 dark:bg-green-900/10 rounded-lg px-3 py-2">
+                                        {value}
+                                    </p>
+                                    <button
+                                        onClick={onEditSection}
+                                        className="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                                    >
+                                        Edit
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
+                                        Your response
+                                    </label>
+                                    <textarea
+                                        value={value || ''}
+                                        onChange={e => onChange(e.target.value)}
+                                        rows={3}
+                                        placeholder={placeholder}
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm leading-relaxed resize-y bg-white dark:bg-gray-800 dark:text-gray-200"
+                                    />
+                                    {hasFilled && onSubmitSection && (
+                                        <button
+                                            onClick={onSubmitSection}
+                                            className="mt-2 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"
+                                        >
+                                            Submit
+                                        </button>
+                                    )}
+                                </>
+                            )}
                         </div>
                     )}
                 </div>
@@ -177,12 +214,13 @@ const SUMMARY_LABELS: Array<{ key: string; label: string }> = [
     { key: 'management_plan', label: 'Plan' },
 ]
 
-/** Build a clinical history narrative from section answers */
-function buildClinicalNotes(sectionAnswers: Record<string, string>, dayLabel: string): string {
+/** Build a clinical history narrative from submitted section answers */
+function buildClinicalNotes(sectionAnswers: Record<string, string>, dayLabel: string, submittedSections: Set<string>): string {
     const parts: string[] = []
     parts.push(`${dayLabel} of Admission\n`)
 
     for (const { key, label } of SUMMARY_LABELS) {
+        if (!submittedSections.has(key)) continue
         const value = sectionAnswers[key]?.trim()
         if (value) {
             parts.push(`${label}:\n${value}`)
@@ -210,6 +248,7 @@ export function DayAdmissionCard({
     const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set())
     const autoCheckedRef = useRef<Set<string>>(new Set())
     const [editedNotes, setEditedNotes] = useState<string | null>(null) // null = auto-generated, string = user edited
+    const [submittedSections, setSubmittedSections] = useState<Set<string>>(new Set())
 
     // Parse analysis sections
     const analysisSections = useMemo(() => {
@@ -284,6 +323,15 @@ export function DayAdmissionCard({
         }
     }, [sectionAnswers, todoItems, handleToggle])
 
+    const handleSectionSubmit = useCallback((key: string) => {
+        setSubmittedSections(prev => new Set([...prev, key]))
+        setEditedNotes(null) // refresh auto-generated notes
+    }, [])
+
+    const handleSectionEdit = useCallback((key: string) => {
+        setSubmittedSections(prev => { const n = new Set(prev); n.delete(key); return n })
+    }, [])
+
     // Submit uses the displayNotes (which the user can edit)
     const handleSubmit = async () => {
         const notes = displayNotes.trim()
@@ -303,7 +351,7 @@ export function DayAdmissionCard({
     const filledSections = SUMMARY_LABELS.filter(({ key }) => sectionAnswers[key]?.trim())
 
     // Auto-generated clinical notes from assessment inputs
-    const autoNotes = useMemo(() => buildClinicalNotes(sectionAnswers, dayLabel), [sectionAnswers, dayLabel])
+    const autoNotes = useMemo(() => buildClinicalNotes(sectionAnswers, dayLabel, submittedSections), [sectionAnswers, dayLabel, submittedSections])
 
     // The displayed notes: user-edited version takes priority, otherwise auto-generated
     const displayNotes = editedNotes !== null ? editedNotes : autoNotes
@@ -332,9 +380,14 @@ export function DayAdmissionCard({
                         <div className="flex items-center gap-2">
                             <span className="text-lg">📋</span>
                             <h3 className="text-base font-bold text-blue-900 dark:text-blue-100">Assessment</h3>
-                            {filledSections.length > 0 && (
-                                <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-800 px-2 py-0.5 rounded-full">
-                                    {filledSections.length} filled
+                            {submittedSections.size > 0 && (
+                                <span className="text-xs text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-800 px-2 py-0.5 rounded-full">
+                                    {submittedSections.size} submitted
+                                </span>
+                            )}
+                            {filledSections.length > submittedSections.size && (
+                                <span className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-800 px-2 py-0.5 rounded-full">
+                                    {filledSections.length - submittedSections.size} draft
                                 </span>
                             )}
                         </div>
@@ -353,6 +406,9 @@ export function DayAdmissionCard({
                                 placeholder={SECTION_PLACEHOLDERS['follow_up_questions']}
                                 value={sectionAnswers['follow_up_questions']}
                                 onChange={v => onSectionAnswerChange('follow_up_questions', v)}
+                                isSubmitted={submittedSections.has('follow_up_questions')}
+                                onSubmitSection={() => handleSectionSubmit('follow_up_questions')}
+                                onEditSection={() => handleSectionEdit('follow_up_questions')}
                             />
                             <DaySection
                                 title="Review of Systems"
@@ -365,6 +421,9 @@ export function DayAdmissionCard({
                                 placeholder={SECTION_PLACEHOLDERS['review_of_systems']}
                                 value={sectionAnswers['review_of_systems']}
                                 onChange={v => onSectionAnswerChange('review_of_systems', v)}
+                                isSubmitted={submittedSections.has('review_of_systems')}
+                                onSubmitSection={() => handleSectionSubmit('review_of_systems')}
+                                onEditSection={() => handleSectionEdit('review_of_systems')}
                             />
                             <DaySection
                                 title="Vital Signs"
@@ -373,6 +432,9 @@ export function DayAdmissionCard({
                                 placeholder={SECTION_PLACEHOLDERS['vitals']}
                                 value={sectionAnswers['vitals']}
                                 onChange={v => onSectionAnswerChange('vitals', v)}
+                                isSubmitted={submittedSections.has('vitals')}
+                                onSubmitSection={() => handleSectionSubmit('vitals')}
+                                onEditSection={() => handleSectionEdit('vitals')}
                             />
                             <DaySection
                                 title="Physical Examination"
@@ -382,6 +444,9 @@ export function DayAdmissionCard({
                                 placeholder={SECTION_PLACEHOLDERS['physical_exam']}
                                 value={sectionAnswers['physical_exam']}
                                 onChange={v => onSectionAnswerChange('physical_exam', v)}
+                                isSubmitted={submittedSections.has('physical_exam')}
+                                onSubmitSection={() => handleSectionSubmit('physical_exam')}
+                                onEditSection={() => handleSectionEdit('physical_exam')}
                             />
                             <DaySection
                                 title="Impression"
@@ -406,6 +471,9 @@ export function DayAdmissionCard({
                                 placeholder={SECTION_PLACEHOLDERS['confirmatory_tests']}
                                 value={sectionAnswers['confirmatory_tests']}
                                 onChange={v => onSectionAnswerChange('confirmatory_tests', v)}
+                                isSubmitted={submittedSections.has('confirmatory_tests')}
+                                onSubmitSection={() => handleSectionSubmit('confirmatory_tests')}
+                                onEditSection={() => handleSectionEdit('confirmatory_tests')}
                             />
                             <DaySection
                                 title="Management Plan"
@@ -415,31 +483,15 @@ export function DayAdmissionCard({
                                 placeholder={SECTION_PLACEHOLDERS['management_plan']}
                                 value={sectionAnswers['management_plan']}
                                 onChange={v => onSectionAnswerChange('management_plan', v)}
+                                isSubmitted={submittedSections.has('management_plan')}
+                                onSubmitSection={() => handleSectionSubmit('management_plan')}
+                                onEditSection={() => handleSectionEdit('management_plan')}
                             />
                             <DaySection
                                 title="Possible Complications & Prevention"
                                 icon="⚠️"
                                 aiContent={analysisSections['complications'] || 'Potential complications and preventive measures will be outlined here.'}
                             />
-
-                            {/* Submit assessment input to populate summary below */}
-                            {hasContent && (
-                                <div className="pt-2 flex items-center gap-3">
-                                    <Button
-                                        variant="primary"
-                                        onClick={() => {
-                                            setEditedNotes(null) // reset to auto-generated so new input shows
-                                            setAssessmentOpen(false) // collapse assessment
-                                        }}
-                                        className="max-w-xs"
-                                    >
-                                        Done — Review Notes Below
-                                    </Button>
-                                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                                        Your input will appear in the Day Notes Summary below
-                                    </span>
-                                </div>
-                            )}
                         </div>
                     )}
                 </div>
@@ -507,9 +559,9 @@ export function DayAdmissionCard({
                         )}
                     </div>
                     <div className="px-5 py-3 space-y-3">
-                        {filledSections.length === 0 && editedNotes === null ? (
+                        {submittedSections.size === 0 && editedNotes === null ? (
                             <p className="text-sm text-gray-400 dark:text-gray-500 italic">
-                                A clinical history will be composed here as you fill in the Assessment sections above. You can edit it before submitting.
+                                Submit sections in the Assessment above. Notes will appear here for review and editing before final submission.
                             </p>
                         ) : (
                             <textarea
