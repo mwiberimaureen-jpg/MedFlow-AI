@@ -383,19 +383,25 @@ export function DayAdmissionCard({
                                 value={sectionAnswers['physical_exam']}
                                 onChange={v => onSectionAnswerChange('physical_exam', v)}
                             />
-                            {analysisSections['impressions'] && (
-                                <DaySection title="Impression" icon="🎯" aiContent={analysisSections['impressions']} />
-                            )}
-                            {analysisSections['differential_diagnoses'] && (
-                                <DaySection title="Differential Diagnoses" icon="🔀" aiContent={analysisSections['differential_diagnoses']} />
-                            )}
-                            {analysisSections['test_interpretation'] && (
-                                <DaySection title="Test Interpretation" icon="🧪" aiContent={analysisSections['test_interpretation']} />
-                            )}
+                            <DaySection
+                                title="Impression"
+                                icon="🎯"
+                                aiContent={analysisSections['impressions'] || 'Impression will be generated based on the clinical findings above.'}
+                            />
+                            <DaySection
+                                title="Test Interpretation"
+                                icon="🧪"
+                                aiContent={analysisSections['test_interpretation'] || 'Interpretation of test results submitted in the initial history and subsequent investigations.'}
+                            />
+                            <DaySection
+                                title="Differential Diagnoses"
+                                icon="🔀"
+                                aiContent={analysisSections['differential_diagnoses'] || 'Differential diagnoses will be listed here to guide confirmatory testing.'}
+                            />
                             <DaySection
                                 title="Confirmatory / Follow-up Tests"
                                 icon="✅"
-                                aiContent={analysisSections['confirmatory_tests']}
+                                aiContent={analysisSections['confirmatory_tests'] || 'Tests to rule in or rule out the differential diagnoses above.'}
                                 inputKey="confirmatory_tests"
                                 placeholder={SECTION_PLACEHOLDERS['confirmatory_tests']}
                                 value={sectionAnswers['confirmatory_tests']}
@@ -404,15 +410,17 @@ export function DayAdmissionCard({
                             <DaySection
                                 title="Management Plan"
                                 icon="💊"
-                                aiContent={analysisSections['management_plan']}
+                                aiContent={analysisSections['management_plan'] || 'Management plan based on current clinical status and investigation results.'}
                                 inputKey="management_plan"
                                 placeholder={SECTION_PLACEHOLDERS['management_plan']}
                                 value={sectionAnswers['management_plan']}
                                 onChange={v => onSectionAnswerChange('management_plan', v)}
                             />
-                            {analysisSections['complications'] && (
-                                <DaySection title="Possible Complications & Prevention" icon="⚠️" aiContent={analysisSections['complications']} />
-                            )}
+                            <DaySection
+                                title="Possible Complications & Prevention"
+                                icon="⚠️"
+                                aiContent={analysisSections['complications'] || 'Potential complications and preventive measures will be outlined here.'}
+                            />
                         </div>
                     )}
                 </div>
