@@ -64,6 +64,14 @@ Comorbidity-Aware Analysis:
   - Include management of comorbidities in the to-do list (e.g. antihypertensives, inhalers)
   - If medication details are missing, add to checklist: "Clarify current [HTN/DM/asthma] medications"
 
+Obstetric Status Updates (OB/GYN):
+- When a pregnancy outcome occurs during admission (delivery, miscarriage, stillbirth, evacuation, expulsion of products of conception), UPDATE the obstetric formula in your clinical summary:
+  - Increment parity: e.g. P3+0 becomes P3+1 after miscarriage/stillbirth, or P4+0 after live delivery
+  - The patient is NO LONGER GRAVID after the pregnancy ends: remove the gravida count or note "not currently pregnant"
+  - Example: Admitted as G4P3+0 → after miscarriage → now P3+1 (no longer gravid)
+  - ALWAYS reflect the CURRENT obstetric status in the clinical summary, not the admission status
+- This applies to ALL subsequent day analyses after the pregnancy outcome is documented
+
 Impression Format:
 - Impressions should be SHORT, like a diagnosis (e.g. "Decompensated liver cirrhosis")
 - If multiple impressions, NUMBER them: 1. Primary impression, 2. Secondary impression
@@ -391,7 +399,8 @@ export async function analyzeDailyProgress(
     `2. Interpreting any NEW test results mentioned in today's notes (apply the same no-repeat-tests rule)\n` +
     `3. Adjusting the management plan based on the patient's trajectory\n` +
     `4. New complications arising or previously flagged complications that have resolved\n` +
-    `5. Updated to-do list for today's tasks — do NOT re-list tasks already completed in previous days\n\n` +
+    `5. Updated to-do list for today's tasks — do NOT re-list tasks already completed in previous days\n` +
+    `6. If a pregnancy outcome occurred (delivery, miscarriage, stillbirth), UPDATE the obstetric formula in the clinical summary — e.g. G4P3+0 admitted → after miscarriage → now P3+1 (no longer gravid)\n\n` +
     `Apply ALL the same clinical rules from your system instructions (AMBOSS-only, no hallucination, no forbidden phrases, specific drug dosing, etc.)`
 
   const response = await fetchWithRetry(OPENROUTER_API_URL, {
