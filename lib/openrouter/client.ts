@@ -363,7 +363,7 @@ function sanitizeAnalysis(parsed: any): any {
  */
 export async function analyzeDailyProgress(
   admissionHistoryText: string,
-  previousSummaries: Array<{ version: string; summary: string; rawText?: string }>,
+  previousSummaries: Array<{ version: string; summary: string; rawText?: string; userNotes?: string }>,
   progressNotes: string,
   dayNumber: number,
   config?: OpenRouterConfig
@@ -389,10 +389,17 @@ export async function analyzeDailyProgress(
       // and for admission analysis (has initial test results). Use summary for middle analyses to save tokens.
       const isRecent = i === previousSummaries.length - 1
       const isAdmission = s.version === 'admission'
-      if ((isRecent || isAdmission) && s.rawText) {
-        return `${label} (FULL):\n${s.rawText}`
+      const parts: string[] = []
+      // Include user's submitted progress notes so AI sees what was actually reported each day
+      if (s.userNotes) {
+        parts.push(`${label} — USER SUBMITTED PROGRESS NOTES:\n${s.userNotes}`)
       }
-      return `${label} (Summary): ${s.summary}`
+      if ((isRecent || isAdmission) && s.rawText) {
+        parts.push(`${label} — AI ANALYSIS (FULL):\n${s.rawText}`)
+      } else {
+        parts.push(`${label} — AI ANALYSIS (Summary): ${s.summary}`)
+      }
+      return parts.join('\n\n')
     }).join('\n\n') +
     '\n--- END PREVIOUS ANALYSES ---'
     : ''
@@ -408,7 +415,12 @@ export async function analyzeDailyProgress(
     `4. New complications arising or previously flagged complications that have resolved\n` +
     `5. Updated to-do list for today's tasks — do NOT re-list tasks already completed in previous days\n` +
     `6. If a pregnancy outcome occurred (delivery, miscarriage, stillbirth), UPDATE the obstetric formula in the clinical summary — e.g. G4P3+0 admitted → after miscarriage → now P3+1 (no longer gravid)\n\n` +
-    `CRITICAL: You MUST provide test_interpretation for every test result mentioned in the progress notes or the original admission history. Include the test name, deranged parameters, and clinical interpretation. Do NOT skip test interpretation.\n\n` +
+    `CRITICAL REQUIREMENTS — these sections must NEVER be empty:\n` +
+    `- test_interpretation: Interpret ALL test results from progress notes AND admission history. Never empty if any test results exist.\n` +
+    `- complications: ALWAYS list possible complications and prevention plans based on the patient's current condition, medications, and procedures. Never empty.\n` +
+    `- impressions: ALWAYS provide current clinical impressions.\n` +
+    `- differential_diagnoses: ALWAYS provide differentials.\n` +
+    `- management_plan: Account for ALL medications and treatments mentioned in previous progress notes. If a drug was reported in a previous day (e.g. ceftriaxone), acknowledge it and build on it — do NOT say the antibiotic choice is unspecified.\n\n` +
     `Apply ALL the same clinical rules from your system instructions (AMBOSS-only, no hallucination, no forbidden phrases, specific drug dosing, etc.)`
 
   const response = await fetchWithRetry(OPENROUTER_API_URL, {
