@@ -50,12 +50,12 @@ function formatSectionContent(content: string): string {
 }
 
 const SECTION_PLACEHOLDERS: Record<string, string> = {
-    follow_up_questions: 'Answer the follow-up questions above...',
-    review_of_systems: 'GI: no nausea/vomiting. Respiratory: no SOB. CVS: no chest pain...',
-    vitals: 'BP 120/80, HR 78, Temp 36.5, RR 18, SpO2 98%...',
-    physical_exam: 'General: alert. Abdomen: soft, non-tender. Extremities: no edema...',
-    confirmatory_tests: 'Report results of ordered tests or new test results...',
-    management_plan: 'Medication changes, new orders, dose adjustments...',
+    follow_up_questions: 'Write the clinical narrative: Dx, current status, new symptoms, changes since last day...',
+    review_of_systems: 'GI: no nausea/vomiting. Resp: no SOB. CVS: no chest pain. GU: no dysuria. Neuro: no headache...',
+    vitals: 'BP 120/80, PR 78, Temp 36.5, RR 18, SpO2 98%...',
+    physical_exam: 'Abdomen: soft, non-tender. Conjunctivae: pink. Lower limbs: no edema, no tenderness...',
+    confirmatory_tests: 'Full Hemogram: HB 12.5, WBC 6.0. CRP: 15. Ultrasound findings...',
+    management_plan: '- continue ceftriaxone 1g IV BD.\n- IV PCM 1g TDS.\n- vital signs monitoring 2 hrly.',
 }
 
 // Map analysis section titles to our section keys
@@ -236,30 +236,41 @@ function buildClinicalNotes(sectionAnswers: Record<string, string>, dayLabel: st
 
     const blocks: string[] = []
 
-    // HPI flows as narrative — no header, just the clinical story
+    // HPI — the clinical narrative (Dx, status, new symptoms)
     if (hpi) {
         blocks.push(hpi)
     }
 
-    // Each subsequent section gets its own header
+    // ROS — brief system-by-system
     if (ros) {
         blocks.push(`Review of Systems:\n${ros}`)
     }
 
+    // Vitals — listed directly, no prefix
     if (vitals) {
         blocks.push(`Vital Signs:\n${vitals}`)
     }
 
+    // Physical Examination — findings directly
     if (exam) {
         blocks.push(`Physical Examination:\n${exam}`)
     }
 
+    // Investigations — test results
     if (investigations) {
         blocks.push(`Investigations:\n${investigations}`)
     }
 
+    // PLAN — management steps
     if (plan) {
-        blocks.push(`PLAN:\n${plan}`)
+        // Ensure plan items start with dashes if they don't already
+        const planLines = plan.split('\n').map(line => {
+            const trimmed = line.trim()
+            if (!trimmed) return ''
+            if (trimmed.startsWith('-') || trimmed.startsWith('•')) return trimmed
+            return `- ${trimmed}`
+        }).filter(Boolean).join('\n')
+        blocks.push(`PLAN: \n${planLines}`)
     }
 
     return blocks.join('\n\n').trim()
