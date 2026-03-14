@@ -7,7 +7,7 @@ Agentic workflows detail automation pipelines for lead scraping, proposal genera
 - **Always commit and push**: After making any changes to the MedFlow-AI app, always `git add`, `git commit`, and `git push` the changes to GitHub. Do not wait to be asked — push as soon as the build passes.
 - **Verify deployment**: After pushing, check that the Vercel deployment succeeded. If the app is running locally, restart the dev server after pushing.
 - **Persist ALL UI state to localStorage**: Any user input, submitted/draft status, or UI state that should survive page navigation MUST be persisted to localStorage keyed by patient ID. React state alone is not enough — it resets on navigation.
-- **Admission Workflow page layout order**: Clinical Summary → Day N of Admission (current day) → Past Analyses → Discharge. The Day N card is always directly below Clinical Summary.
+- **Admission Workflow page layout order**: Clinical Summary → Past Day Summaries (collapsible, collapsed by default) → Current Day N of Admission → Discharge. Past day summaries sit between the clinical summary and the active day card so the user can reference previous days while working on the current day.
 - **Day N of Admission structure**: The Day card has 3 collapsible sections in order:
   1. **Assessment** (collapsible) — contains collapsible sub-sections (Follow-up Questions, ROS, Vitals, Physical Exam, Impression, Test Interpretation, Differential Diagnoses, Confirmatory Tests, Management Plan, Complications). Each input section has its own Submit and Edit button.
   2. **Checklist** (collapsible) — brief checkboxes only (no badges/descriptions). Auto-checks from user input in Assessment.

@@ -93,6 +93,31 @@ function parseDischargeSummary(rawText: string): DischargeSummaryResponse | null
     }
 }
 
+/** Collapsible wrapper for past day analyses */
+function PastDaySection({ label, children }: { label: string; children: React.ReactNode }) {
+    const [open, setOpen] = useState(false)
+    return (
+        <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+            <button
+                onClick={() => setOpen(prev => !prev)}
+                className="w-full text-left flex items-center justify-between px-5 py-3 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+                <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                    {label}
+                </span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {open ? '▾ Collapse' : '▸ Expand'}
+                </span>
+            </button>
+            {open && (
+                <div className="p-4 space-y-4">
+                    {children}
+                </div>
+            )}
+        </div>
+    )
+}
+
 export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelineProps) {
     const [analyses, setAnalyses] = useState<Analysis[]>(initialAnalyses)
     const [discharging, setDischarging] = useState(false)
@@ -246,7 +271,35 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
                 </Card>
             )}
 
-            {/* 2. Current Day — directly below Clinical Summary */}
+            {/* 2. Past day summaries (collapsible, for reference) */}
+            {pastAnalyses.length > 0 && (
+                <div className="space-y-4">
+                    {pastAnalyses.map((analysis, index) => {
+                        const versionLabel = getVersionLabel(analysis.analysis_version, index)
+                        return (
+                            <PastDaySection key={analysis.id} label={versionLabel}>
+                                {analysis.user_feedback && (
+                                    <Card className="border-l-4 border-blue-400 bg-blue-50 dark:bg-blue-900/20">
+                                        <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-2">
+                                            📝 Progress Notes
+                                        </h4>
+                                        <p className="text-sm text-blue-900 dark:text-blue-200 whitespace-pre-wrap leading-relaxed">
+                                            {analysis.user_feedback}
+                                        </p>
+                                    </Card>
+                                )}
+
+                                <InteractiveAnalysisPanel
+                                    analysis={analysis}
+                                    onRegenerate={() => window.location.reload()}
+                                />
+                            </PastDaySection>
+                        )
+                    })}
+                </div>
+            )}
+
+            {/* 3. Current Day — active input card */}
             {!isDischarged && latestRegular && (
                 <div className="space-y-2">
                     <div className="flex items-center gap-3">
@@ -267,39 +320,6 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
                         submitting={submitting}
                         dayLabel={dayLabel}
                     />
-                </div>
-            )}
-
-            {/* 3. Past analyses (read-only, collapsed) */}
-            {pastAnalyses.length > 0 && (
-                <div className="space-y-6">
-                    {pastAnalyses.map((analysis, index) => (
-                        <div key={analysis.id} className="space-y-2">
-                            <div className="flex items-center gap-3">
-                                <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
-                                <span className="text-sm font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full whitespace-nowrap">
-                                    {getVersionLabel(analysis.analysis_version, index)}
-                                </span>
-                                <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
-                            </div>
-
-                            {analysis.user_feedback && (
-                                <Card className="border-l-4 border-blue-400 bg-blue-50 dark:bg-blue-900/20">
-                                    <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-2">
-                                        📝 Progress Notes
-                                    </h4>
-                                    <p className="text-sm text-blue-900 dark:text-blue-200 whitespace-pre-wrap leading-relaxed">
-                                        {analysis.user_feedback}
-                                    </p>
-                                </Card>
-                            )}
-
-                            <InteractiveAnalysisPanel
-                                analysis={analysis}
-                                onRegenerate={() => window.location.reload()}
-                            />
-                        </div>
-                    ))}
                 </div>
             )}
 
