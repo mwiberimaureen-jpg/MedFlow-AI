@@ -212,12 +212,28 @@ export function InteractiveAnalysisPanel({ analysis }: InteractiveAnalysisPanelP
 
     const sections = useMemo(() => {
         const parsed = parseAnalysisText(analysis.raw_analysis_text)
-        return parsed.map(s => {
-            if (s.title.toLowerCase().includes('gaps')) {
-                return { ...s, content: mergeGapsContent(s.content) }
+
+        // Find "Gaps in History" and "Follow-up Questions" sections
+        const gapsIdx = parsed.findIndex(s => s.title.toLowerCase().includes('gaps'))
+        const followUpIdx = parsed.findIndex(s => /follow.?up\s+questions/i.test(s.title))
+
+        if (gapsIdx !== -1 && followUpIdx !== -1 && gapsIdx !== followUpIdx) {
+            // Both exist — merge Gaps content into Follow-up Questions, then remove Gaps
+            const gapsContent = mergeGapsContent(parsed[gapsIdx].content)
+            parsed[followUpIdx] = {
+                ...parsed[followUpIdx],
+                content: parsed[followUpIdx].content + '\n' + gapsContent,
             }
-            return s
-        })
+            parsed.splice(gapsIdx, 1)
+        } else if (gapsIdx !== -1) {
+            // Only Gaps exists — transform it into Follow-up Questions
+            parsed[gapsIdx] = {
+                ...parsed[gapsIdx],
+                content: mergeGapsContent(parsed[gapsIdx].content),
+            }
+        }
+
+        return parsed
     }, [analysis.raw_analysis_text])
 
     const handleToggle = useCallback(async (itemId: string, newChecked: boolean) => {
