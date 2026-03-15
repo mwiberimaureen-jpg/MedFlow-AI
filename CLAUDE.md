@@ -22,6 +22,13 @@ Agentic workflows detail automation pipelines for lead scraping, proposal genera
   - **SIRS vs Sepsis**: Do NOT diagnose "sepsis" without documented end-organ damage (SOFA criteria). Use "SIRS secondary to [source]" if no organ damage. See prompt in `lib/openrouter/client.ts`.
   - **Anemia grading (WHO)**: Moderate 8-10.9 g/dL, Severe <8 g/dL. For pregnant/postpartum: Moderate 7-9.9, Severe <7. Never call HB ≥8 "severe anemia".
   - **Source**: AMBOSS only. No UpToDate, Medscape, BMJ, or WHO guidelines references.
+- **Clinical summary writing style**:
+  - Describe **symptoms** first, not diagnostic labels. Say "patient developed hotness of body and drenching sweats from day 3, with temperatures of 39.3°C" NOT "she has developed post-abortion sepsis."
+  - Always name **specific drugs** with dose/route/frequency. Say "patient was on IV ceftriaxone 1g BD from day 1-3, changed to IV ceftazidime 1g BD on day 4" NOT "despite 4 days of antibiotic therapy."
+  - When recommending drug changes, be specific: "Plan: change from IV ceftazidime 1g BD to IV meropenem 1g TDS" NOT "requires escalation to broad-spectrum antibiotics."
+  - Report investigation results factually: "normal chest X-ray" NOT "chest X-ray remains normal despite respiratory symptoms."
+  - Do NOT assume diagnoses without evidence. Normal WBC + normal CXR rules out hospital-acquired pneumonia.
+  - When querying a diagnosis, say "querying sepsis — plan: LFTs, UECs, serum lactate to rule in/out end-organ damage."
 
 # Agent Instructions
 

@@ -112,14 +112,36 @@ ANEMIA GRADING (WHO Classification):
 - For pregnant/postpartum women: Mild 10-10.9, Moderate 7-9.9, Severe <7
 
 CLINICAL SUMMARY WRITING RULES — MANDATORY:
-- When mentioning antibiotic therapy, ALWAYS name the specific drugs, doses, and duration. NEVER say "despite N days of antibiotic therapy" — instead say "patient was on [Drug A] [dose] [route] [frequency] from day [X] to day [Y], changed to [Drug B] [dose] [route] [frequency] on day [Z] which she is currently on"
-- Report investigation results factually. Say "normal chest X-ray" NOT "chest X-ray remains normal despite respiratory symptoms". Do NOT editorialize results.
-- Do NOT assume diagnoses without supporting evidence:
-  - Normal WBC + normal CXR = hospital-acquired pneumonia is RULED OUT. Do NOT suggest it as an impression or differential.
-  - A productive cough with normal CXR and normal WBC needs respiratory system auscultation findings before any pulmonary diagnosis — request chest auscultation in the physical exam checklist.
-  - Do NOT invent diagnoses to fill differentials. Only list differentials supported by actual findings.
-- NEVER use the word "sepsis" or "septic" in the summary unless end-organ damage has been documented (see SIRS vs SEPSIS rules above). Use "SIRS" instead.
-- When exam findings are missing that would change the differential, request them in the physical exam checklist rather than making assumptions.
+
+DESCRIBE SYMPTOMS, NOT DIAGNOSES:
+- The summary paragraph 1 must describe what the patient IS EXPERIENCING (symptoms), not diagnostic labels.
+- WRONG: "She has developed post-abortion sepsis with concerning deterioration"
+- CORRECT: "Patient developed hotness of body and drenching sweats from day 3 of admission, with temperatures persistently elevated at 39.3°C, tachycardia 115bpm, and hypotension 97/56mmHg"
+- Describe symptoms first, then say "querying [condition]" and list the specific tests needed to confirm/rule out.
+- Example: "...querying sepsis. Plan: LFTs, UECs, BGA, serum lactate to rule in/out end-organ damage"
+
+SPECIFIC DRUG NAMES — ALWAYS:
+- ALWAYS name the specific drugs the patient is currently on with dose, route, frequency, and duration.
+- NEVER say "despite N days of antibiotic therapy" or "current antibiotic therapy is insufficient" or "requires escalation to broad-spectrum antibiotics"
+- CORRECT: "Patient was on IV ceftriaxone 1g BD from day 1 to day 3, changed to IV ceftazidime 1g BD on day 4 which she is currently on"
+- If recommending a change, be specific: "Plan: change from IV ceftazidime 1g BD to IV meropenem 1g TDS for broader gram-negative coverage"
+- NEVER use generic phrases like "escalation of care", "broader spectrum coverage", "aggressive fluid resuscitation" — state the EXACT intervention.
+
+FACTUAL REPORTING OF RESULTS:
+- Report investigation results as facts. Say "normal chest X-ray" or "CXR: normal" — do NOT editorialize with "despite symptoms" or add interpretation inline.
+- State the result, then separately state what it means for the differential.
+
+NO UNSUPPORTED DIAGNOSES:
+- Normal WBC + normal CXR = hospital-acquired pneumonia is RULED OUT. Do NOT suggest it.
+- A productive cough with normal CXR and normal WBC needs respiratory auscultation findings before any pulmonary diagnosis — request chest auscultation in physical exam checklist.
+- Do NOT invent diagnoses to fill differentials. Only list differentials supported by actual documented findings.
+
+SEPSIS/SEPTIC — BANNED WORD (see SIRS rules above):
+- NEVER use "sepsis", "septic", "sepsis-induced", "septic shock", "septic cardiomyopathy" in ANY output unless end-organ damage is PROVEN.
+- Instead describe symptoms and say "querying sepsis" with the specific tests to confirm.
+
+MISSING EXAM FINDINGS:
+- When exam findings are missing that would change the differential, request them in the physical exam checklist rather than assuming a diagnosis.
 
 Drug Prescriptions in Management:
 - Include specific drug prescriptions: Drug name, Dose, Route, Frequency
@@ -460,6 +482,12 @@ export async function analyzeDailyProgress(
     `- impressions: ALWAYS provide current clinical impressions.\n` +
     `- differential_diagnoses: ALWAYS provide differentials.\n` +
     `- management_plan: Account for ALL medications and treatments mentioned in previous progress notes. If a drug was reported in a previous day (e.g. ceftriaxone), acknowledge it and build on it — do NOT say the antibiotic choice is unspecified.\n\n` +
+    `SUMMARY WRITING STYLE — MANDATORY:\n` +
+    `Describe SYMPTOMS first, then state what you are querying and what tests confirm/rule out.\n` +
+    `WRONG: "She has developed post-abortion sepsis"\n` +
+    `CORRECT: "Patient developed hotness of body and drenching sweats from day 3, with temperatures of 39.3°C — querying sepsis, plan: LFTs, UECs, serum lactate to rule in/out end-organ damage"\n` +
+    `WRONG: "requires escalation to broad-spectrum antibiotics"\n` +
+    `CORRECT: "Patient was on IV ceftriaxone 1g BD day 1-3, changed to IV ceftazidime 1g BD on day 4. Plan: change to IV meropenem 1g TDS"\n\n` +
     `Apply ALL the same clinical rules from your system instructions (AMBOSS-only, no hallucination, no forbidden phrases, specific drug dosing, etc.)`
 
   const response = await fetchWithRetry(OPENROUTER_API_URL, {
