@@ -85,19 +85,24 @@ Comprehensive Differential Diagnosis:
 - For patients with ASCITES: Consider hepatic, cardiac, renal, and malignant causes
 - For appetite loss: Assess nutritional status in physical exam
 
-SIRS vs SEPSIS — MANDATORY DISTINCTION:
-- SIRS (Systemic Inflammatory Response Syndrome): ≥2 of: Temp >38°C or <36°C, HR >90, RR >20, WBC >12 or <4
-- SEPSIS = SIRS + PROVEN or SUSPECTED infection + END-ORGAN DAMAGE (SOFA criteria)
-- You MUST NOT diagnose "sepsis" unless there is documented evidence of end-organ dysfunction:
-  - Renal: elevated creatinine, oliguria
-  - Hepatic: elevated bilirubin, deranged LFTs
-  - Hematologic: thrombocytopenia, coagulopathy (elevated INR/PT)
-  - Neurologic: altered mental status (GCS <15)
-  - Cardiovascular: hypotension requiring vasopressors (not just low BP alone)
-  - Respiratory: PaO2/FiO2 <300
-- If the patient meets SIRS criteria with suspected infection but NO documented organ damage, the impression MUST be "SIRS secondary to [source]" or "[source] with SIRS", NOT "sepsis"
-- If organ damage is suspected but not yet confirmed, the impression should state: "[source] with SIRS — rule out sepsis" and the confirmatory tests MUST include SOFA assessment: serum lactate, creatinine, LFTs, coagulation profile, blood glucose, GCS
-- Septic shock = sepsis + persistent hypotension despite adequate fluid resuscitation + serum lactate >2 mmol/L. Do NOT diagnose septic shock without these criteria.
+SIRS vs SEPSIS — ABSOLUTE RULE (ZERO TOLERANCE):
+- THE WORD "SEPSIS" OR "SEPTIC" IS BANNED FROM ALL OUTPUT unless ALL of the following are true:
+  1. Patient has ≥2 SIRS criteria (Temp >38°C or <36°C, HR >90, RR >20, WBC >12 or <4)
+  2. Proven or suspected infection source
+  3. DOCUMENTED end-organ damage with SPECIFIC lab values proving it:
+     - Renal: elevated creatinine or oliguria DOCUMENTED
+     - Hepatic: elevated bilirubin or deranged LFTs DOCUMENTED
+     - Hematologic: thrombocytopenia or coagulopathy DOCUMENTED
+     - Neurologic: GCS <15 DOCUMENTED
+     - Cardiovascular: hypotension requiring vasopressors DOCUMENTED
+     - Respiratory: PaO2/FiO2 <300 DOCUMENTED
+- If ANY of these organ damage markers are MISSING from the patient data, you CANNOT use "sepsis"
+- CORRECT terminology when infection + SIRS but NO organ damage: "SIRS secondary to [source]" or "post-abortion infection with SIRS"
+- WRONG (NEVER USE): "post-abortion sepsis", "evolving sepsis", "persistent sepsis", "septic patient", "sepsis-induced", "septic cardiomyopathy", "septic shock" — unless organ damage is PROVEN
+- GCS 15 = normal consciousness = NOT neurologic organ damage
+- Hypotension alone (without vasopressor requirement) = NOT cardiovascular organ damage for sepsis
+- Normal WBC = does NOT support sepsis diagnosis
+- Septic shock = sepsis + persistent hypotension despite adequate fluid resuscitation + serum lactate >2 mmol/L
 
 ANEMIA GRADING (WHO Classification):
 - Mild anemia: HB 11-12.9 g/dL (males), 11-11.9 g/dL (females)
@@ -105,6 +110,16 @@ ANEMIA GRADING (WHO Classification):
 - Severe anemia: HB <8 g/dL
 - NEVER classify HB ≥8 g/dL as "severe anemia" — use the correct WHO grade
 - For pregnant/postpartum women: Mild 10-10.9, Moderate 7-9.9, Severe <7
+
+CLINICAL SUMMARY WRITING RULES — MANDATORY:
+- When mentioning antibiotic therapy, ALWAYS name the specific drugs, doses, and duration. NEVER say "despite N days of antibiotic therapy" — instead say "patient was on [Drug A] [dose] [route] [frequency] from day [X] to day [Y], changed to [Drug B] [dose] [route] [frequency] on day [Z] which she is currently on"
+- Report investigation results factually. Say "normal chest X-ray" NOT "chest X-ray remains normal despite respiratory symptoms". Do NOT editorialize results.
+- Do NOT assume diagnoses without supporting evidence:
+  - Normal WBC + normal CXR = hospital-acquired pneumonia is RULED OUT. Do NOT suggest it as an impression or differential.
+  - A productive cough with normal CXR and normal WBC needs respiratory system auscultation findings before any pulmonary diagnosis — request chest auscultation in the physical exam checklist.
+  - Do NOT invent diagnoses to fill differentials. Only list differentials supported by actual findings.
+- NEVER use the word "sepsis" or "septic" in the summary unless end-organ damage has been documented (see SIRS vs SEPSIS rules above). Use "SIRS" instead.
+- When exam findings are missing that would change the differential, request them in the physical exam checklist rather than making assumptions.
 
 Drug Prescriptions in Management:
 - Include specific drug prescriptions: Drug name, Dose, Route, Frequency
@@ -353,6 +368,9 @@ function sanitizeAnalysis(parsed: any): any {
         return 'Monitor specific parameters'
       })
     }
+    // Strip editorial language from investigation results
+    cleaned = cleaned.replace(/\s*despite\s+(respiratory\s+)?symptoms/gi, '')
+    cleaned = cleaned.replace(/\s*despite\s+\d+\s+days?\s+of\s+antibiotic\s+therapy/gi, '')
     // Strip AMBOSS references from user-facing output
     cleaned = cleaned.replace(/\s*\(?according to AMBOSS\s*(guidelines)?\)?/gi, '')
     cleaned = cleaned.replace(/\s*\(?based on AMBOSS\s*(guidelines)?\)?/gi, '')
