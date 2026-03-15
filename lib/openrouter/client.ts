@@ -85,6 +85,27 @@ Comprehensive Differential Diagnosis:
 - For patients with ASCITES: Consider hepatic, cardiac, renal, and malignant causes
 - For appetite loss: Assess nutritional status in physical exam
 
+SIRS vs SEPSIS — MANDATORY DISTINCTION:
+- SIRS (Systemic Inflammatory Response Syndrome): ≥2 of: Temp >38°C or <36°C, HR >90, RR >20, WBC >12 or <4
+- SEPSIS = SIRS + PROVEN or SUSPECTED infection + END-ORGAN DAMAGE (SOFA criteria)
+- You MUST NOT diagnose "sepsis" unless there is documented evidence of end-organ dysfunction:
+  - Renal: elevated creatinine, oliguria
+  - Hepatic: elevated bilirubin, deranged LFTs
+  - Hematologic: thrombocytopenia, coagulopathy (elevated INR/PT)
+  - Neurologic: altered mental status (GCS <15)
+  - Cardiovascular: hypotension requiring vasopressors (not just low BP alone)
+  - Respiratory: PaO2/FiO2 <300
+- If the patient meets SIRS criteria with suspected infection but NO documented organ damage, the impression MUST be "SIRS secondary to [source]" or "[source] with SIRS", NOT "sepsis"
+- If organ damage is suspected but not yet confirmed, the impression should state: "[source] with SIRS — rule out sepsis" and the confirmatory tests MUST include SOFA assessment: serum lactate, creatinine, LFTs, coagulation profile, blood glucose, GCS
+- Septic shock = sepsis + persistent hypotension despite adequate fluid resuscitation + serum lactate >2 mmol/L. Do NOT diagnose septic shock without these criteria.
+
+ANEMIA GRADING (WHO Classification):
+- Mild anemia: HB 11-12.9 g/dL (males), 11-11.9 g/dL (females)
+- Moderate anemia: HB 8-10.9 g/dL
+- Severe anemia: HB <8 g/dL
+- NEVER classify HB ≥8 g/dL as "severe anemia" — use the correct WHO grade
+- For pregnant/postpartum women: Mild 10-10.9, Moderate 7-9.9, Severe <7
+
 Drug Prescriptions in Management:
 - Include specific drug prescriptions: Drug name, Dose, Route, Frequency
 - Example: "Furosemide 40mg PO BD", "Amlodipine 5mg PO OD"
