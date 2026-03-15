@@ -68,7 +68,7 @@ export async function POST(
 
             const { data: allAnalyses } = await supabase
                 .from('analyses')
-                .select('id, analysis_version, summary, created_at')
+                .select('id, analysis_version, summary, raw_analysis_text, user_feedback, created_at')
                 .eq('patient_history_id', existingAnalysis.patient_history_id)
                 .neq('id', analysisId) // exclude this one
                 .order('created_at', { ascending: true })
@@ -85,7 +85,9 @@ export async function POST(
                 })
                 .map(a => ({
                     version: a.analysis_version || 'unknown',
-                    summary: a.summary || ''
+                    summary: a.summary || '',
+                    rawText: a.raw_analysis_text || '',
+                    userNotes: a.user_feedback || ''
                 }))
 
             const progressNotes = existingAnalysis.user_feedback || ''
@@ -122,26 +124,40 @@ export async function POST(
             reportSections.push(gapText)
         }
 
-        if (analysisResponse.test_interpretation?.length) {
+        {
             let testText = '## Test Interpretation\n\n'
-            for (const t of analysisResponse.test_interpretation) {
-                testText += `**${t.number}. ${t.test_name}**\n`
-                testText += `Deranged: ${t.deranged_parameters.join(', ')}\n`
-                testText += `Interpretation: ${t.interpretation}\n\n`
+            if (analysisResponse.test_interpretation?.length) {
+                for (const t of analysisResponse.test_interpretation) {
+                    testText += `**${t.number}. ${t.test_name}**\n`
+                    testText += `Deranged: ${t.deranged_parameters.join(', ')}\n`
+                    testText += `Interpretation: ${t.interpretation}\n\n`
+                }
+            } else {
+                testText += 'No test results to interpret at this stage.\n'
             }
             reportSections.push(testText)
         }
 
-        if (analysisResponse.impressions?.length) {
-            reportSections.push('## Impression(s)\n\n' + analysisResponse.impressions.map((imp: string, i: number) => `${i + 1}. ${imp}`).join('\n'))
+        {
+            let impText = '## Impression(s)\n\n'
+            if (analysisResponse.impressions?.length) {
+                impText += analysisResponse.impressions.map((imp: string, i: number) => `${i + 1}. ${imp}`).join('\n')
+            } else {
+                impText += 'Clinical impression pending further assessment.\n'
+            }
+            reportSections.push(impText)
         }
 
-        if (analysisResponse.differential_diagnoses?.length) {
+        {
             let ddxText = '## Differential Diagnoses\n\n'
-            for (const d of analysisResponse.differential_diagnoses) {
-                ddxText += `**${d.diagnosis}**\n`
-                ddxText += `- For: ${d.supporting_evidence}\n`
-                ddxText += `- Against: ${d.against_evidence}\n\n`
+            if (analysisResponse.differential_diagnoses?.length) {
+                for (const d of analysisResponse.differential_diagnoses) {
+                    ddxText += `**${d.diagnosis}**\n`
+                    ddxText += `- For: ${d.supporting_evidence}\n`
+                    ddxText += `- Against: ${d.against_evidence}\n\n`
+                }
+            } else {
+                ddxText += 'Differential diagnoses pending further workup.\n'
             }
             reportSections.push(ddxText)
         }
@@ -171,11 +187,15 @@ export async function POST(
             reportSections.push(planText)
         }
 
-        if (analysisResponse.complications?.length) {
+        {
             let compText = '## Possible Complications & Prevention\n\n'
-            for (const c of analysisResponse.complications) {
-                compText += `**${c.complication}**\n`
-                compText += `Prevention: ${c.prevention_plan}\n\n`
+            if (analysisResponse.complications?.length) {
+                for (const c of analysisResponse.complications) {
+                    compText += `**${c.complication}**\n`
+                    compText += `Prevention: ${c.prevention_plan}\n\n`
+                }
+            } else {
+                compText += 'No complications identified at this stage. Will be reassessed on subsequent days.\n'
             }
             reportSections.push(compText)
         }

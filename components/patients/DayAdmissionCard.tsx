@@ -297,6 +297,7 @@ export function DayAdmissionCard({
     const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set())
     const autoCheckedRef = useRef<Set<string>>(new Set())
     const [editedNotes, setEditedNotes] = useState<string | null>(null) // null = auto-generated, string = user edited
+    const [regenerating, setRegenerating] = useState(false)
 
     // Persist submitted sections in localStorage
     const submittedKey = `submitted-sections-${patientId}`
@@ -398,6 +399,20 @@ export function DayAdmissionCard({
         })
     }, [submittedKey])
 
+    const handleRegenerate = useCallback(async () => {
+        if (!confirm('Regenerate AI analysis for the current day? This will re-run the AI with improved prompts to fill in missing sections (test interpretation, differentials, complications).')) return
+        setRegenerating(true)
+        try {
+            const res = await fetch(`/api/analyses/${analysis.id}/regenerate`, { method: 'POST' })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || 'Failed to regenerate')
+            window.location.reload()
+        } catch (err: any) {
+            alert(err.message || 'Failed to regenerate analysis')
+            setRegenerating(false)
+        }
+    }, [analysis.id])
+
     // Submit uses the displayNotes (which the user can edit)
     const handleSubmit = async () => {
         const notes = displayNotes.trim()
@@ -464,6 +479,21 @@ export function DayAdmissionCard({
 
                     {assessmentOpen && (
                         <div className="p-4 space-y-3">
+                            {/* Regenerate button — shown when AI sections are missing */}
+                            {(!analysisSections['complications'] || !analysisSections['test_interpretation'] || !analysisSections['differential_diagnoses']) && (
+                                <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                                    <span className="text-xs text-amber-700 dark:text-amber-300 flex-1">
+                                        Some AI sections are missing. Regenerate to fill them in.
+                                    </span>
+                                    <button
+                                        onClick={handleRegenerate}
+                                        disabled={regenerating}
+                                        className="px-3 py-1 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 text-white text-xs font-medium rounded transition-colors whitespace-nowrap"
+                                    >
+                                        {regenerating ? 'Regenerating...' : 'Regenerate Analysis'}
+                                    </button>
+                                </div>
+                            )}
                             <DaySection
                                 title="Follow-up Questions"
                                 icon="🔍"
