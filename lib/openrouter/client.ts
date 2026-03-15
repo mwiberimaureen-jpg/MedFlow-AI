@@ -230,7 +230,7 @@ Return ONLY a valid JSON response with this structure:
       "prevention_plan": "Specific prevention steps"
     }
   ],
-  "summary": "A ward-round-ready clinical summary (2 paragraphs). Paragraph 1: Open with patient identification (age, sex, parity if OB/GYN, day N of admission, original admission diagnosis), then synthesize today's key findings into a clinical narrative — do NOT copy-paste the assessment inputs, weave them into flowing prose highlighting what changed from the previous day. Paragraph 2: Clinical interpretation and immediate priorities — what the findings mean, what needs to happen next. Keep it concise but complete enough to present at the bedside without referring to other documents.",
+  "summary": "A ward-round presentation summary (2 paragraphs). MANDATORY FORMAT — Paragraph 1 MUST follow this exact structure: 'This is [Name], a [age]-year-old [sex], [parity if OB/GYN e.g. Para 3+1], on day [N] of admission following [original admission diagnosis with brief context — e.g. incomplete abortion at 31 weeks gestation in a now para 3+1 woman who experienced fetal expulsion at home followed by manual removal of retained placenta on admission]. [Then describe current status: chief complaints on this day, key vital signs, significant exam findings, and relevant lab results — woven into a flowing clinical narrative, NOT a bullet-point copy-paste of the assessment].' Paragraph 2: Clinical interpretation — what the findings mean, the working impression, and the immediate management priorities. The summary must be SELF-CONTAINED: a doctor reading ONLY this summary should know who the patient is, why they are admitted, and what is happening today.",
   "todo_items": [
     {
       "title": "Brief action item title",
