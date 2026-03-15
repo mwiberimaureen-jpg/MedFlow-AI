@@ -230,7 +230,7 @@ Return ONLY a valid JSON response with this structure:
       "prevention_plan": "Specific prevention steps"
     }
   ],
-  "summary": "A concise clinical summary (2-3 paragraphs)",
+  "summary": "A ward-round-ready clinical summary (2 paragraphs). Paragraph 1: Open with patient identification (age, sex, parity if OB/GYN, day N of admission, original admission diagnosis), then synthesize today's key findings into a clinical narrative — do NOT copy-paste the assessment inputs, weave them into flowing prose highlighting what changed from the previous day. Paragraph 2: Clinical interpretation and immediate priorities — what the findings mean, what needs to happen next. Keep it concise but complete enough to present at the bedside without referring to other documents.",
   "todo_items": [
     {
       "title": "Brief action item title",
