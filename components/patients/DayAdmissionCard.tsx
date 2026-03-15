@@ -37,6 +37,7 @@ interface DayAdmissionCardProps {
     onSubmitDay: (notes: string) => Promise<void>
     submitting: boolean
     dayLabel: string
+    fallbackComplications?: string
 }
 
 function formatSectionContent(content: string): string {
@@ -285,6 +286,7 @@ export function DayAdmissionCard({
     onSubmitDay,
     submitting,
     dayLabel,
+    fallbackComplications,
 }: DayAdmissionCardProps) {
     const [error, setError] = useState<string | null>(null)
     const [assessmentOpen, setAssessmentOpen] = useState(true)
@@ -554,7 +556,7 @@ export function DayAdmissionCard({
                             <DaySection
                                 title="Possible Complications & Prevention"
                                 icon="⚠️"
-                                aiContent={analysisSections['complications'] || 'Potential complications and preventive measures will be outlined here.'}
+                                aiContent={analysisSections['complications'] || fallbackComplications || 'Potential complications and preventive measures will be outlined here.'}
                             />
                         </div>
                     )}

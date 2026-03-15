@@ -174,6 +174,16 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
     // Past analyses = all regular analyses shown as collapsible reference sections
     const pastAnalyses = regularAnalyses
 
+    // Find complications from any past analysis to use as fallback for current day card
+    const fallbackComplications = (() => {
+        for (let i = regularAnalyses.length - 1; i >= 0; i--) {
+            const sections = parseAnalysisText(regularAnalyses[i].raw_analysis_text)
+            const compSection = sections.find(s => s.title.toLowerCase().includes('complication'))
+            if (compSection?.content?.trim()) return compSection.content
+        }
+        return null
+    })()
+
     const handleDailyAnalysisComplete = (newAnalysis: Analysis) => {
         setAnalyses(prev => [...prev, newAnalysis])
         setSectionAnswers({})
@@ -319,6 +329,7 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
                         onSubmitDay={handleSubmitDay}
                         submitting={submitting}
                         dayLabel={dayLabel}
+                        fallbackComplications={fallbackComplications || undefined}
                     />
                 </div>
             )}

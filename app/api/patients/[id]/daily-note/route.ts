@@ -157,11 +157,15 @@ export async function POST(
             reportSections.push(planText)
         }
 
-        if (analysisResponse.complications?.length) {
+        {
             let compText = '## Possible Complications & Prevention\n\n'
-            for (const c of analysisResponse.complications) {
-                compText += `**${c.complication}**\n`
-                compText += `Prevention: ${c.prevention_plan}\n\n`
+            if (analysisResponse.complications?.length) {
+                for (const c of analysisResponse.complications) {
+                    compText += `**${c.complication}**\n`
+                    compText += `Prevention: ${c.prevention_plan}\n\n`
+                }
+            } else {
+                compText += 'No complications identified at this stage. Will be reassessed on subsequent days.\n'
             }
             reportSections.push(compText)
         }
