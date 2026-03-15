@@ -393,6 +393,13 @@ function sanitizeAnalysis(parsed: any): any {
     // Strip editorial language from investigation results
     cleaned = cleaned.replace(/\s*despite\s+(respiratory\s+)?symptoms/gi, '')
     cleaned = cleaned.replace(/\s*despite\s+\d+\s+days?\s+of\s+antibiotic\s+therapy/gi, '')
+    cleaned = cleaned.replace(/\s*despite\s+normal\s+(chest\s+)?X-?ray/gi, '')
+    // Replace banned sepsis-related terms (when not preceded by "querying")
+    cleaned = cleaned.replace(/(?<!querying\s)(?:post-abortion\s+)?sepsis-induced/gi, 'infection-related')
+    cleaned = cleaned.replace(/(?<!querying\s)septic\s+cardiomyopathy/gi, 'tachycardia with cardiac murmur')
+    cleaned = cleaned.replace(/(?<!querying\s)septic\s+shock/gi, 'hemodynamic instability')
+    cleaned = cleaned.replace(/hospital[- ]acquired\s+(respiratory\s+)?infection/gi, 'respiratory symptoms requiring further workup')
+    cleaned = cleaned.replace(/hospital[- ]acquired\s+pneumonia/gi, 'respiratory symptoms — request chest auscultation')
     // Strip AMBOSS references from user-facing output
     cleaned = cleaned.replace(/\s*\(?according to AMBOSS\s*(guidelines)?\)?/gi, '')
     cleaned = cleaned.replace(/\s*\(?based on AMBOSS\s*(guidelines)?\)?/gi, '')
