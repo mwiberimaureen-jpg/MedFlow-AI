@@ -5,20 +5,27 @@
 import { AnalysisSection } from '@/lib/types/analysis';
 
 /**
- * Parses raw analysis text into structured sections
- * Supports multiple header formats:
- * - Markdown headers: ## Section Title
- * - Bold headers: **Section Title**
- * - Plain headers: SECTION TITLE:
+ * Parses raw analysis text into structured sections.
+ *
+ * Only `## Markdown headers` start new sections. Bold lines (`**Title**`) and
+ * uppercase lines (`TITLE:`) are treated as content within sections — they are
+ * sub-headers used inside Test Interpretation, Differential Diagnoses,
+ * Complications, etc. and must NOT split those sections apart.
+ *
+ * For legacy text that has no `##` headers, falls back to bold / uppercase
+ * header detection.
  */
 export function parseAnalysisText(raw: string): AnalysisSection[] {
   if (!raw || raw.trim().length === 0) {
     return [];
   }
 
-  const sections: AnalysisSection[] = [];
   const lines = raw.split('\n');
 
+  // Detect whether the text uses ## markdown headers at all
+  const hasMarkdownHeaders = lines.some(l => /^#{1,3}\s+/.test(l.trim()));
+
+  const sections: AnalysisSection[] = [];
   let currentSection: { title: string; content: string[] } | null = null;
   let order = 0;
 
@@ -26,23 +33,24 @@ export function parseAnalysisText(raw: string): AnalysisSection[] {
     const line = lines[i];
     const trimmedLine = line.trim();
 
-    // Check if line is a header
-    let headerMatch =
-      // Markdown headers: ## Title or ### Title
-      trimmedLine.match(/^#{1,3}\s+(.+)$/) ||
-      // Bold headers: **Title** or **Title:**
-      trimmedLine.match(/^\*\*(.+?)\*\*:?\s*$/);
+    let headerMatch: RegExpMatchArray | null = null;
 
-    // Uppercase headers: TITLE: or TITLE (but not single/double letters)
-    if (!headerMatch) {
-      const uppercaseMatch = trimmedLine.match(/^([A-Z][A-Z\s]{2,}):?\s*$/);
-      if (uppercaseMatch && !trimmedLine.match(/^[A-Z]{1,3}\s/)) {
-        headerMatch = uppercaseMatch;
+    // Primary: Markdown headers (## Title or ### Title)
+    headerMatch = trimmedLine.match(/^#{1,3}\s+(.+)$/);
+
+    // Fallback: only use bold / uppercase headers when the text has NO ## headers
+    if (!headerMatch && !hasMarkdownHeaders) {
+      headerMatch = trimmedLine.match(/^\*\*(.+?)\*\*:?\s*$/);
+      if (!headerMatch) {
+        const uppercaseMatch = trimmedLine.match(/^([A-Z][A-Z\s]{2,}):?\s*$/);
+        if (uppercaseMatch && !trimmedLine.match(/^[A-Z]{1,3}\s/)) {
+          headerMatch = uppercaseMatch;
+        }
       }
     }
 
     if (headerMatch && headerMatch[1]) {
-      // Save previous section if exists
+      // Save previous section
       if (currentSection) {
         sections.push({
           title: currentSection.title,
@@ -50,29 +58,22 @@ export function parseAnalysisText(raw: string): AnalysisSection[] {
           order: order++,
         });
       }
-
-      // Start new section
       currentSection = {
         title: headerMatch[1].trim().replace(/:$/, ''),
         content: [],
       };
     } else if (currentSection) {
-      // Add line to current section
       if (trimmedLine.length > 0 || currentSection.content.length > 0) {
         currentSection.content.push(line);
       }
     } else if (trimmedLine.length > 0) {
-      // Content before first header - create "Summary" section
-      if (!currentSection) {
-        currentSection = {
-          title: 'Summary',
-          content: [line],
-        };
-      }
+      currentSection = {
+        title: 'Summary',
+        content: [line],
+      };
     }
   }
 
-  // Don't forget the last section
   if (currentSection) {
     sections.push({
       title: currentSection.title,
