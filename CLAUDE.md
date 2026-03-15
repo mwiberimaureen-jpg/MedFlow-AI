@@ -14,6 +14,14 @@ Agentic workflows detail automation pipelines for lead scraping, proposal genera
   3. **Day Notes Summary** (collapsible) — editable textarea formatted as proper clinical documentation. HPI flows as narrative (no header), then each section has its own header on a new line: "Review of Systems:", "Vital Signs:", "Physical Examination:", "Investigations:", "PLAN:" (caps). Matches the format of a clinical history document. Final submit button lives here. Does NOT auto-submit — user reviews and edits before submitting.
 - **Always show clinical reasoning sections**: Impression, Test Interpretation, Differential Diagnoses, and Complications sections must always be visible (not conditional). Show fallback text if AI content is not available.
 - **Day number calculation**: Day 1 = admission day. Use `Math.floor(diffDays) + 1` from admission date.
+- **AI Clinical Summary format (ward-round presentation)**: The AI-generated summary MUST be a self-contained ward-round presentation. Mandatory structure:
+  - **Paragraph 1**: "This is [Name], a [age]-year-old [sex], [parity if OB/GYN], on day [N] of admission following [original admission diagnosis with brief context — e.g. incomplete abortion at 31 weeks gestation in a now para 3+1 woman who experienced fetal expulsion at home followed by manual removal of retained placenta on admission]. [Current status: chief complaints today, key vital signs, significant exam findings, relevant lab results — woven into flowing clinical prose, NOT a copy-paste of assessment inputs]."
+  - **Paragraph 2**: Clinical interpretation — what the findings mean, the working impression, and immediate management priorities.
+  - A doctor reading ONLY this summary should know: who the patient is, why they are admitted, what happened today, and what needs to happen next.
+- **Clinical reasoning rules**:
+  - **SIRS vs Sepsis**: Do NOT diagnose "sepsis" without documented end-organ damage (SOFA criteria). Use "SIRS secondary to [source]" if no organ damage. See prompt in `lib/openrouter/client.ts`.
+  - **Anemia grading (WHO)**: Moderate 8-10.9 g/dL, Severe <8 g/dL. For pregnant/postpartum: Moderate 7-9.9, Severe <7. Never call HB ≥8 "severe anemia".
+  - **Source**: AMBOSS only. No UpToDate, Medscape, BMJ, or WHO guidelines references.
 
 # Agent Instructions
 
