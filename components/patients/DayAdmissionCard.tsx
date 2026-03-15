@@ -38,6 +38,7 @@ interface DayAdmissionCardProps {
     submitting: boolean
     dayLabel: string
     fallbackComplications?: string
+    clinicalSummary?: string
 }
 
 function formatSectionContent(content: string): string {
@@ -222,7 +223,7 @@ const SUMMARY_SECTIONS: Array<{ key: string; label: string }> = [
  *   - Each subsequent section has its own header on a separate line
  *   - PLAN: in caps with content below
  */
-function buildClinicalNotes(sectionAnswers: Record<string, string>, dayLabel: string, submittedSections: Set<string>): string {
+function buildClinicalNotes(sectionAnswers: Record<string, string>, dayLabel: string, submittedSections: Set<string>, clinicalSummary?: string): string {
     const get = (key: string) => submittedSections.has(key) ? sectionAnswers[key]?.trim() || '' : ''
 
     const hpi = get('follow_up_questions')
@@ -237,8 +238,11 @@ function buildClinicalNotes(sectionAnswers: Record<string, string>, dayLabel: st
 
     const blocks: string[] = []
 
-    // HPI — the clinical narrative (Dx, status, new symptoms)
-    if (hpi) {
+    // HPI — Use AI clinical summary as the ward-round narrative if available,
+    // otherwise fall back to the user's raw follow-up questions input
+    if (clinicalSummary) {
+        blocks.push(clinicalSummary)
+    } else if (hpi) {
         blocks.push(hpi)
     }
 
@@ -287,6 +291,7 @@ export function DayAdmissionCard({
     submitting,
     dayLabel,
     fallbackComplications,
+    clinicalSummary,
 }: DayAdmissionCardProps) {
     const [error, setError] = useState<string | null>(null)
     const [assessmentOpen, setAssessmentOpen] = useState(true)
@@ -432,7 +437,7 @@ export function DayAdmissionCard({
     const filledSections = SUMMARY_SECTIONS.filter(({ key }) => sectionAnswers[key]?.trim())
 
     // Auto-generated clinical notes from assessment inputs
-    const autoNotes = useMemo(() => buildClinicalNotes(sectionAnswers, dayLabel, submittedSections), [sectionAnswers, dayLabel, submittedSections])
+    const autoNotes = useMemo(() => buildClinicalNotes(sectionAnswers, dayLabel, submittedSections, clinicalSummary), [sectionAnswers, dayLabel, submittedSections, clinicalSummary])
 
     // The displayed notes: user-edited version takes priority, otherwise auto-generated
     const displayNotes = editedNotes !== null ? editedNotes : autoNotes

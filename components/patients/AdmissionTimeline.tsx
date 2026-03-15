@@ -330,6 +330,7 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
                         submitting={submitting}
                         dayLabel={dayLabel}
                         fallbackComplications={fallbackComplications || undefined}
+                        clinicalSummary={clinicalSummary || undefined}
                     />
                 </div>
             )}
