@@ -288,13 +288,13 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
                         const versionLabel = getVersionLabel(analysis.analysis_version, index)
                         return (
                             <PastDaySection key={analysis.id} label={versionLabel}>
-                                {analysis.user_feedback && (
+                                {(analysis.summary || analysis.user_feedback) && (
                                     <Card className="border-l-4 border-blue-400 bg-blue-50 dark:bg-blue-900/20">
                                         <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-2">
-                                            📝 Progress Notes
+                                            Progress Notes
                                         </h4>
                                         <p className="text-sm text-blue-900 dark:text-blue-200 whitespace-pre-wrap leading-relaxed">
-                                            {analysis.user_feedback}
+                                            {analysis.summary || analysis.user_feedback}
                                         </p>
                                     </Card>
                                 )}
