@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Badge } from '@/components/ui/Badge'
 import { getTriageFromRiskLevel, getTriageBadgeVariant, getTriageLabel } from '@/lib/utils/triage'
 import Link from 'next/link'
+import { DailyLearningSpark } from '@/components/learning-spark/DailyLearningSpark'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -89,6 +90,9 @@ export default async function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Daily Learning Spark */}
+      <DailyLearningSpark />
 
       {/* Welcome card */}
       <div className="bg-gradient-to-r from-blue-500 to-green-500 rounded-lg shadow-lg p-8 text-white">

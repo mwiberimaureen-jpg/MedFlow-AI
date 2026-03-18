@@ -1,4 +1,5 @@
 import { AnalysisResponse, DischargeSummaryResponse } from '@/lib/types/patient'
+import type { SparkFormat, SparkContent } from '@/lib/types/learning-spark'
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions'
 
@@ -639,4 +640,155 @@ export async function generateDischargeSummary(
     console.error('Failed to parse AI discharge response:', content)
     throw new Error('Failed to parse AI discharge summary response')
   }
+}
+
+// === Daily Learning Spark ===
+
+const SPARK_PROMPTS: Record<SparkFormat, string> = {
+  quiz: `You are a medical educator creating a fun daily MCQ quiz for doctors.
+
+INPUT: Medical conditions seen today.
+OUTPUT: ONE multiple-choice question focused on clinical decision-making, differential diagnosis, or management.
+
+Return ONLY valid JSON:
+{
+  "question": "Clinical question here",
+  "options": ["Option A", "Option B", "Option C", "Option D"],
+  "correct_index": 0,
+  "explanation": "Detailed explanation of why the correct answer is right and others are wrong",
+  "clinical_pearl": "One memorable clinical takeaway",
+  "topic": "Condition name"
+}
+
+Rules:
+- Question must be clinically relevant and test reasoning, not trivia
+- All 4 options should be plausible distractors
+- Explanation must teach — explain WHY each wrong answer fails
+- Clinical pearl should be memorable and quotable
+- AMBOSS-level clinical reasoning
+- Make it engaging — imagine a doctor on a coffee break
+- Return ONLY the JSON object, no markdown fences`,
+
+  mystery: `You are a medical educator creating a detective-style clinical mystery.
+
+INPUT: Medical conditions seen today.
+OUTPUT: A case-of-the-day with progressive clues leading to diagnosis.
+
+Return ONLY valid JSON:
+{
+  "title": "Brief catchy title (e.g. 'The Case of the Midnight Fever')",
+  "patient_presentation": "Initial presentation: age, sex, chief complaint (2-3 sentences, set the scene)",
+  "clues": [
+    { "order": 1, "clue": "History detail or vital sign that starts narrowing" },
+    { "order": 2, "clue": "Physical exam finding that adds a twist" },
+    { "order": 3, "clue": "Lab result that narrows the differential" },
+    { "order": 4, "clue": "The clincher — imaging or confirmatory finding" }
+  ],
+  "diagnosis": "Final diagnosis with brief reasoning",
+  "key_pearls": ["Pearl 1", "Pearl 2", "Pearl 3"],
+  "topic": "Condition name"
+}
+
+Rules:
+- Write like a medical thriller — build suspense with each clue
+- Each clue progressively narrows the differential
+- Clues must use realistic clinical findings
+- Key pearls should be memorable clinical lessons
+- Return ONLY the JSON object, no markdown fences`,
+
+  myth: `You are a medical myth buster — debunking common clinical misconceptions with wit and evidence.
+
+INPUT: Medical conditions seen today.
+OUTPUT: ONE common clinical myth and its correction.
+
+Return ONLY valid JSON:
+{
+  "myth": "The common misconception stated as a confident claim (e.g. 'All fevers need antibiotics')",
+  "reality": "The evidence-based truth, explained clearly and concisely",
+  "why_it_matters": "Clinical impact — what goes wrong when doctors believe this myth",
+  "clinical_context": "When and where this myth commonly appears in practice",
+  "topic": "Condition name"
+}
+
+Rules:
+- Pick a myth that practicing doctors ACTUALLY believe or act on
+- Reality should cite AMBOSS-level evidence
+- Why-it-matters should connect to patient outcomes
+- Be direct and slightly provocative — this should make someone go "wait, really?"
+- Return ONLY the JSON object, no markdown fences`,
+
+  flashcards: `You are creating spaced-repetition flashcards for medical professionals.
+
+INPUT: Medical conditions seen today.
+OUTPUT: 4-5 flashcards covering different clinical aspects.
+
+Return ONLY valid JSON:
+{
+  "topic": "Condition name",
+  "cards": [
+    { "id": "1", "front": "Question or prompt", "back": "Concise answer (2-3 sentences max)", "category": "pathophysiology" },
+    { "id": "2", "front": "Question", "back": "Answer", "category": "diagnosis" },
+    { "id": "3", "front": "Question", "back": "Answer", "category": "management" },
+    { "id": "4", "front": "Question", "back": "Answer", "category": "complications" }
+  ]
+}
+
+Rules:
+- Front: clear question or fill-in-the-blank
+- Back: concise flashcard-format answer (not paragraphs)
+- 4-5 cards covering pathophysiology, diagnosis, management, and complications
+- Each card tests ONE concept
+- Make fronts specific enough to have ONE correct answer
+- Return ONLY the JSON object, no markdown fences`,
+}
+
+/**
+ * Generate a daily learning spark based on conditions seen today.
+ */
+export async function generateLearningSpark(
+  format: SparkFormat,
+  conditions: string[],
+  config?: OpenRouterConfig
+): Promise<SparkContent> {
+  const apiKey = config?.apiKey || process.env.OPENROUTER_API_KEY
+
+  if (!apiKey) {
+    throw new Error('OpenRouter API key is required')
+  }
+
+  const userMessage = `Medical conditions analyzed today: ${conditions.join(', ')}\n\nPick the most interesting condition and generate educational content about it.`
+
+  const response = await fetchWithRetry(OPENROUTER_API_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+      'X-Title': 'MedFlow AI - Learning Spark',
+    },
+    body: JSON.stringify({
+      model: config?.model || 'anthropic/claude-sonnet-4',
+      messages: [
+        { role: 'system', content: SPARK_PROMPTS[format] },
+        { role: 'user', content: userMessage }
+      ],
+      temperature: 0.7,
+      max_tokens: 2000,
+    })
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(`OpenRouter API Error: ${response.status} - ${JSON.stringify(errorData)}`)
+  }
+
+  const data = await response.json()
+
+  if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+    throw new Error('Invalid response from OpenRouter API')
+  }
+
+  const content = data.choices[0].message.content
+  const cleanContent = content.replace(/```json\n?|\n?```/g, '').trim()
+  return JSON.parse(cleanContent) as SparkContent
 }
