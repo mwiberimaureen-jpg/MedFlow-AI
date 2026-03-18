@@ -91,9 +91,6 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Daily Learning Spark */}
-      <DailyLearningSpark />
-
       {/* Welcome card */}
       <div className="bg-gradient-to-r from-blue-500 to-green-500 rounded-lg shadow-lg p-8 text-white">
         <h3 className="text-2xl font-bold mb-2">Welcome to MedFlow AI</h3>
@@ -156,6 +153,9 @@ export default async function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Daily Learning Spark */}
+      <DailyLearningSpark />
     </div>
   )
 }
