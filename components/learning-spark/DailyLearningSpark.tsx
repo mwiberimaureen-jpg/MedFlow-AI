@@ -71,7 +71,7 @@ function calculateStreak(state: LearningSparkState, todayISO: string, sparkId: s
 export function DailyLearningSpark() {
   const [spark, setSpark] = useState<SparkType | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [state, setState] = useState<LearningSparkState>(getDefaultSparkState)
 
   // Load state from localStorage after mount
@@ -85,14 +85,18 @@ export function DailyLearningSpark() {
     async function fetchSpark() {
       try {
         const res = await fetch('/api/learning-spark/today')
-        if (!res.ok) throw new Error('Failed to fetch')
         const data = await res.json()
+
+        if (!res.ok) {
+          throw new Error(data?.message || data?.error || `API error ${res.status}`)
+        }
 
         if (!cancelled && data.spark) {
           setSpark(data.spark)
         }
-      } catch {
-        if (!cancelled) setError(true)
+      } catch (err: any) {
+        console.error('Learning Spark error:', err)
+        if (!cancelled) setError(err.message || 'Unknown error')
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -127,7 +131,18 @@ export function DailyLearningSpark() {
     )
   }
 
-  if (error) return null
+  if (error) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          Daily Learning Spark
+        </h3>
+        <p className="text-sm text-red-500 dark:text-red-400 text-center py-4">
+          Failed to load: {error}
+        </p>
+      </div>
+    )
+  }
 
   // No analyses yet
   if (!spark) {
