@@ -155,6 +155,9 @@ export default async function PatientsPage() {
       )}
 
       {/* Daily Learning Spark */}
+      <div className="bg-yellow-100 dark:bg-yellow-900/30 rounded-lg p-4 text-yellow-800 dark:text-yellow-200 text-sm font-medium">
+        Spark section loading below...
+      </div>
       <DailyLearningSpark />
     </div>
   )
