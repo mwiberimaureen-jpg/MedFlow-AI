@@ -51,6 +51,9 @@ export default async function PatientsPage() {
         </Link>
       </div>
 
+      {/* Daily Learning Spark */}
+      <DailyLearningSpark />
+
       {!patients || patients.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
           <div className="text-6xl mb-4">📋</div>
@@ -154,11 +157,6 @@ export default async function PatientsPage() {
         </>
       )}
 
-      {/* Daily Learning Spark */}
-      <div className="bg-yellow-100 dark:bg-yellow-900/30 rounded-lg p-4 text-yellow-800 dark:text-yellow-200 text-sm font-medium">
-        Spark section loading below...
-      </div>
-      <DailyLearningSpark />
     </div>
   )
 }
