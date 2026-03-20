@@ -767,18 +767,21 @@ export async function generateLearningSpark(
       'X-Title': 'MedFlow AI - Learning Spark',
     },
     body: JSON.stringify({
-      model: config?.model || 'anthropic/claude-sonnet-4',
+      model: config?.model || 'anthropic/claude-haiku-4',
       messages: [
         { role: 'system', content: SPARK_PROMPTS[format] },
         { role: 'user', content: userMessage }
       ],
       temperature: 0.7,
-      max_tokens: 2000,
+      max_tokens: 800,
     })
   })
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
+    if (response.status === 402) {
+      throw new Error('Insufficient OpenRouter credits. Add credits at openrouter.ai/settings/credits')
+    }
     throw new Error(`OpenRouter API Error: ${response.status} - ${JSON.stringify(errorData)}`)
   }
 
