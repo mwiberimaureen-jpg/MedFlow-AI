@@ -767,7 +767,7 @@ export async function generateLearningSpark(
       'X-Title': 'MedFlow AI - Learning Spark',
     },
     body: JSON.stringify({
-      model: config?.model || 'anthropic/claude-haiku-4',
+      model: config?.model || 'anthropic/claude-3.5-haiku',
       messages: [
         { role: 'system', content: SPARK_PROMPTS[format] },
         { role: 'user', content: userMessage }

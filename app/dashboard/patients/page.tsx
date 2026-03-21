@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import { Badge } from '@/components/ui/Badge'
 import { getTriageFromRiskLevel, getTriageBadgeVariant, getTriageLabel } from '@/lib/utils/triage'
 import Link from 'next/link'
-import { DailyLearningSparkWrapper } from '@/components/learning-spark/DailyLearningSparkWrapper'
 
 export default async function PatientsPage() {
   const supabase = await createClient()
@@ -50,9 +49,6 @@ export default async function PatientsPage() {
           </button>
         </Link>
       </div>
-
-      {/* Daily Learning Spark */}
-      <DailyLearningSparkWrapper />
 
       {!patients || patients.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
