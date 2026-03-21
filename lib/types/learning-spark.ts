@@ -1,44 +1,51 @@
-// === Content schemas for each spark format ===
+// === Senior Peer Review format types ===
 
-export type SparkFormat = 'quiz' | 'mystery' | 'myth' | 'flashcards'
+export type SparkFormat = 'senior_asks' | 'quick_teach' | 'know_your_drugs' | 'clinical_twist'
 
-export interface QuizContent {
+export interface SeniorAsksContent {
   question: string
-  options: string[] // 4 options
-  correct_index: number // 0-3
-  explanation: string
+  context: string // brief setup: "Your patient has X..."
+  answer: string
+  teaching_point: string
   clinical_pearl: string
   topic: string
 }
 
-export interface MysteryContent {
-  title: string
-  patient_presentation: string
-  clues: Array<{ order: number; clue: string }>
-  diagnosis: string
-  key_pearls: string[]
+export interface QuickTeachContent {
   topic: string
-}
-
-export interface MythContent {
-  myth: string
-  reality: string
-  why_it_matters: string
-  clinical_context: string
-  topic: string
-}
-
-export interface FlashcardContent {
-  topic: string
+  intro: string // "Since you have a patient with X, let's review..."
+  teach_type: 'classification' | 'mnemonic' | 'pathophysiology' | 'criteria'
   cards: Array<{
     id: string
-    front: string
-    back: string
-    category: 'pathophysiology' | 'diagnosis' | 'management' | 'complications'
+    title: string
+    content: string
   }>
+  summary_pearl: string
 }
 
-export type SparkContent = QuizContent | MysteryContent | MythContent | FlashcardContent
+export interface KnowYourDrugsContent {
+  topic: string
+  context: string // "Your patient is on X..."
+  drugs: Array<{
+    name: string
+    mechanism: string
+    when_to_use: string
+    key_point: string
+  }>
+  clinical_pearl: string
+}
+
+export interface ClinicalTwistContent {
+  topic: string
+  scenario: string // "Your patient with X is stable. What changes if..."
+  twist: string // The variable change
+  original_plan: string
+  revised_plan: string
+  reasoning: string
+  clinical_pearl: string
+}
+
+export type SparkContent = SeniorAsksContent | QuickTeachContent | KnowYourDrugsContent | ClinicalTwistContent
 
 // === Database row type ===
 
@@ -58,9 +65,6 @@ export interface LearningSparkState {
   currentStreak: number
   lastInteractionDate: string // YYYY-MM-DD
   longestStreak: number
-  quizHistory: Array<{ date: string; correct: boolean; topic: string }>
-  mysteryProgress: Record<string, { cluesRevealed: number; solved: boolean }>
-  flashcardProgress: Record<string, { knewIt: string[]; reviewLater: string[] }>
   seenSparks: string[] // spark IDs
 }
 
@@ -69,9 +73,6 @@ export function getDefaultSparkState(): LearningSparkState {
     currentStreak: 0,
     lastInteractionDate: '',
     longestStreak: 0,
-    quizHistory: [],
-    mysteryProgress: {},
-    flashcardProgress: {},
     seenSparks: [],
   }
 }

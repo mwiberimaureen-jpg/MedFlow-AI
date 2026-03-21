@@ -5,7 +5,7 @@ import type { SparkFormat } from '@/lib/types/learning-spark'
 
 export const dynamic = 'force-dynamic'
 
-const FORMATS: SparkFormat[] = ['quiz', 'mystery', 'myth', 'flashcards']
+const FORMATS: SparkFormat[] = ['senior_asks', 'quick_teach', 'know_your_drugs', 'clinical_twist']
 
 function getDailyFormat(date: Date): SparkFormat {
   const start = new Date(date.getFullYear(), 0, 0)

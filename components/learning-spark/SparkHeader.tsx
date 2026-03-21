@@ -4,10 +4,10 @@ import { Badge } from '@/components/ui/Badge'
 import type { SparkFormat } from '@/lib/types/learning-spark'
 
 const FORMAT_LABELS: Record<SparkFormat, { label: string; variant: 'info' | 'warning' | 'danger' | 'success' }> = {
-  quiz: { label: 'Quiz', variant: 'info' },
-  mystery: { label: 'Mystery Case', variant: 'warning' },
-  myth: { label: 'Myth Buster', variant: 'danger' },
-  flashcards: { label: 'Flashcards', variant: 'success' },
+  senior_asks: { label: 'The Senior Asks', variant: 'info' },
+  quick_teach: { label: 'Quick Teach', variant: 'warning' },
+  know_your_drugs: { label: 'Know Your Drugs', variant: 'success' },
+  clinical_twist: { label: 'Clinical Twist', variant: 'danger' },
 }
 
 interface SparkHeaderProps {
@@ -17,13 +17,13 @@ interface SparkHeaderProps {
 }
 
 export function SparkHeader({ format, streak, topic }: SparkHeaderProps) {
-  const { label, variant } = FORMAT_LABELS[format]
+  const { label, variant } = FORMAT_LABELS[format] || { label: format, variant: 'info' as const }
 
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Daily Learning Spark
+          Senior Peer Review
         </h3>
         <Badge variant={variant}>{label}</Badge>
       </div>

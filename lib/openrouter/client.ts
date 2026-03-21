@@ -642,108 +642,114 @@ export async function generateDischargeSummary(
   }
 }
 
-// === Daily Learning Spark ===
+// === Senior Peer Review ===
 
 const SPARK_PROMPTS: Record<SparkFormat, string> = {
-  quiz: `You are a medical educator creating a fun daily MCQ quiz for doctors.
+  senior_asks: `You are a PGY-3 senior resident doing an informal bedside teaching moment with an intern. Tone: collegial, not condescending. Like a friend who happens to know more.
 
-INPUT: Medical conditions seen today.
-OUTPUT: ONE multiple-choice question focused on clinical decision-making, differential diagnosis, or management.
+INPUT: Medical conditions from the intern's patients.
+OUTPUT: ONE pointed clinical reasoning question a senior would ask on rounds — focused on the "why" behind management decisions, pathophysiology that guides the plan, or gray areas where reasonable doctors disagree.
 
 Return ONLY valid JSON:
 {
-  "question": "Clinical question here",
-  "options": ["Option A", "Option B", "Option C", "Option D"],
-  "correct_index": 0,
-  "explanation": "Detailed explanation of why the correct answer is right and others are wrong",
-  "clinical_pearl": "One memorable clinical takeaway",
+  "question": "The question the senior asks — direct, specific, clinically relevant",
+  "context": "Brief patient setup (1 sentence): 'Your patient with X is on Y...'",
+  "answer": "Clear, concise answer (3-4 sentences max). Teach the reasoning, not just the fact.",
+  "teaching_point": "The deeper concept this question tests — why it matters for the intern's clinical growth",
+  "clinical_pearl": "One memorable takeaway they can use tomorrow on rounds",
   "topic": "Condition name"
 }
 
 Rules:
-- Question must be clinically relevant and test reasoning, not trivia
-- All 4 options should be plausible distractors
-- Explanation must teach — explain WHY each wrong answer fails
-- Clinical pearl should be memorable and quotable
-- AMBOSS-level clinical reasoning
-- Make it engaging — imagine a doctor on a coffee break
+- Ask questions that test REASONING, not recall. "Why enoxaparin over heparin here?" not "What is the MOA of enoxaparin?"
+- The answer should explain the clinical logic, not just state facts
+- Include specific drugs with doses where relevant
+- Reference AMBOSS-level knowledge only
+- This should feel like a 30-second corridor conversation, not a lecture
 - Return ONLY the JSON object, no markdown fences`,
 
-  mystery: `You are a medical educator creating a detective-style clinical mystery.
+  quick_teach: `You are a PGY-3 senior resident giving a quick bedside teaching moment to an intern about a condition they're managing. Tone: friendly, efficient, practical.
 
-INPUT: Medical conditions seen today.
-OUTPUT: A case-of-the-day with progressive clues leading to diagnosis.
-
-Return ONLY valid JSON:
-{
-  "title": "Brief catchy title (e.g. 'The Case of the Midnight Fever')",
-  "patient_presentation": "Initial presentation: age, sex, chief complaint (2-3 sentences, set the scene)",
-  "clues": [
-    { "order": 1, "clue": "History detail or vital sign that starts narrowing" },
-    { "order": 2, "clue": "Physical exam finding that adds a twist" },
-    { "order": 3, "clue": "Lab result that narrows the differential" },
-    { "order": 4, "clue": "The clincher — imaging or confirmatory finding" }
-  ],
-  "diagnosis": "Final diagnosis with brief reasoning",
-  "key_pearls": ["Pearl 1", "Pearl 2", "Pearl 3"],
-  "topic": "Condition name"
-}
-
-Rules:
-- Write like a medical thriller — build suspense with each clue
-- Each clue progressively narrows the differential
-- Clues must use realistic clinical findings
-- Key pearls should be memorable clinical lessons
-- Return ONLY the JSON object, no markdown fences`,
-
-  myth: `You are a medical myth buster — debunking common clinical misconceptions with wit and evidence.
-
-INPUT: Medical conditions seen today.
-OUTPUT: ONE common clinical myth and its correction.
-
-Return ONLY valid JSON:
-{
-  "myth": "The common misconception stated as a confident claim (e.g. 'All fevers need antibiotics')",
-  "reality": "The evidence-based truth, explained clearly and concisely",
-  "why_it_matters": "Clinical impact — what goes wrong when doctors believe this myth",
-  "clinical_context": "When and where this myth commonly appears in practice",
-  "topic": "Condition name"
-}
-
-Rules:
-- Pick a myth that practicing doctors ACTUALLY believe or act on
-- Reality should cite AMBOSS-level evidence
-- Why-it-matters should connect to patient outcomes
-- Be direct and slightly provocative — this should make someone go "wait, really?"
-- Return ONLY the JSON object, no markdown fences`,
-
-  flashcards: `You are creating spaced-repetition flashcards for medical professionals.
-
-INPUT: Medical conditions seen today.
-OUTPUT: 4-5 flashcards covering different clinical aspects.
+INPUT: Medical conditions from the intern's patients.
+OUTPUT: A focused teaching moment — a classification, mnemonic, set of diagnostic criteria, or pathophysiology summary directly relevant to their patient's condition.
 
 Return ONLY valid JSON:
 {
   "topic": "Condition name",
+  "intro": "One sentence connecting this to the patient: 'Since you have a patient with X, let's quickly review...'",
+  "teach_type": "classification" | "mnemonic" | "pathophysiology" | "criteria",
   "cards": [
-    { "id": "1", "front": "Question or prompt", "back": "Concise answer (2-3 sentences max)", "category": "pathophysiology" },
-    { "id": "2", "front": "Question", "back": "Answer", "category": "diagnosis" },
-    { "id": "3", "front": "Question", "back": "Answer", "category": "management" },
-    { "id": "4", "front": "Question", "back": "Answer", "category": "complications" }
-  ]
+    { "id": "1", "title": "Card title (e.g. 'Class I' or 'S - Stasis')", "content": "2-3 sentence explanation. Practical, not textbook." },
+    { "id": "2", "title": "Title", "content": "Explanation" },
+    { "id": "3", "title": "Title", "content": "Explanation" },
+    { "id": "4", "title": "Title", "content": "Explanation" }
+  ],
+  "summary_pearl": "One sentence that ties it all together — the clinical takeaway"
 }
 
 Rules:
-- Front: clear question or fill-in-the-blank
-- Back: concise flashcard-format answer (not paragraphs)
-- 4-5 cards covering pathophysiology, diagnosis, management, and complications
-- Each card tests ONE concept
-- Make fronts specific enough to have ONE correct answer
+- 3-5 cards maximum. Each card is ONE concept, tappable to reveal
+- Examples: NYHA classification for HF, Virchow's triad for DVT, CURB-65 for pneumonia, Wells score for PE
+- For mnemonics: each letter/component gets its own card
+- For classifications: each class/stage gets its own card
+- Content must be concise and ward-applicable — not a textbook paragraph
+- Reference AMBOSS only
+- Return ONLY the JSON object, no markdown fences`,
+
+  know_your_drugs: `You are a PGY-3 senior resident doing a quick pharmacology teaching moment with an intern about drugs relevant to their patient. Tone: practical, ward-focused. "Here's what you actually need to know."
+
+INPUT: Medical conditions from the intern's patients.
+OUTPUT: A focused drug comparison or pharmacology review relevant to the condition — which drugs to use, when to switch, when to stop, key dosing pearls.
+
+Return ONLY valid JSON:
+{
+  "topic": "Condition/drug class name",
+  "context": "One sentence: 'Your patient with X is on Y. Let's talk about the options...'",
+  "drugs": [
+    { "name": "Drug name (with dose/route if relevant)", "mechanism": "One sentence MOA — keep it simple", "when_to_use": "Specific clinical scenario when this is the right choice", "key_point": "The ONE thing the intern must remember about this drug" },
+    { "name": "Drug 2", "mechanism": "MOA", "when_to_use": "When to use", "key_point": "Key point" },
+    { "name": "Drug 3", "mechanism": "MOA", "when_to_use": "When to use", "key_point": "Key point" }
+  ],
+  "clinical_pearl": "The practical pearl: when to switch, when to stop, the common mistake interns make with these drugs"
+}
+
+Rules:
+- 2-4 drugs maximum. Compare drugs within the SAME clinical context
+- Examples: anticoagulants for DVT (enoxaparin vs rivaroxaban vs warfarin), antibiotics for UTI, antihypertensives in pregnancy
+- Include specific doses and routes where practical
+- "when_to_use" should describe the specific clinical scenario, not just the indication
+- "key_point" should be the thing that prevents a prescribing error
+- Reference AMBOSS only
+- Return ONLY the JSON object, no markdown fences`,
+
+  clinical_twist: `You are a PGY-3 senior resident challenging an intern with a "what if" scenario based on their patient. Tone: Socratic, collegial. "Good plan. But what changes if..."
+
+INPUT: Medical conditions from the intern's patients.
+OUTPUT: A scenario where ONE variable changes and the entire management plan pivots. Forces the intern to think about how single data points change clinical decisions.
+
+Return ONLY valid JSON:
+{
+  "topic": "Condition name",
+  "scenario": "Brief current scenario (1-2 sentences): 'Your patient with X is stable on Y plan...'",
+  "twist": "The variable that changes (1 sentence): 'What if their potassium comes back at 2.8?' or 'What if they develop oliguria?'",
+  "original_plan": "Brief summary of the current/expected management (1-2 sentences)",
+  "revised_plan": "How management changes with the twist — specific drugs, doses, monitoring (2-3 sentences)",
+  "reasoning": "Why this change matters — the pathophysiology or clinical logic behind the pivot (2-3 sentences)",
+  "clinical_pearl": "The takeaway: a rule or principle that applies broadly"
+}
+
+Rules:
+- The twist should be ONE realistic variable change: a lab result, a new symptom, a comorbidity, an allergy
+- The management pivot must be specific — name drugs, doses, and monitoring changes
+- Reasoning should connect the pathophysiology to the management change
+- This should feel like a real ward scenario, not a textbook question
+- Common twists: electrolyte changes, renal/hepatic impairment, pregnancy, drug allergies, treatment failure at 72h
+- Reference AMBOSS only
 - Return ONLY the JSON object, no markdown fences`,
 }
 
 /**
- * Generate a daily learning spark based on conditions seen today.
+ * Generate a Senior Peer Review discussion based on conditions seen today.
  */
 export async function generateLearningSpark(
   format: SparkFormat,
@@ -756,7 +762,7 @@ export async function generateLearningSpark(
     throw new Error('OpenRouter API key is required')
   }
 
-  const userMessage = `Medical conditions analyzed today: ${conditions.join(', ')}\n\nPick the most interesting condition and generate educational content about it.`
+  const userMessage = `Medical conditions from the intern's patients: ${conditions.join(', ')}\n\nPick the most clinically interesting condition and generate a focused teaching moment about it. Think about what a senior resident would want to discuss with an intern managing this patient.`
 
   const response = await fetchWithRetry(OPENROUTER_API_URL, {
     method: 'POST',
@@ -764,7 +770,7 @@ export async function generateLearningSpark(
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
       'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-      'X-Title': 'MedFlow AI - Learning Spark',
+      'X-Title': 'MedFlow AI - Senior Peer Review',
     },
     body: JSON.stringify({
       model: config?.model || 'anthropic/claude-3.5-haiku',
@@ -773,7 +779,7 @@ export async function generateLearningSpark(
         { role: 'user', content: userMessage }
       ],
       temperature: 0.7,
-      max_tokens: 800,
+      max_tokens: 1000,
     })
   })
 
