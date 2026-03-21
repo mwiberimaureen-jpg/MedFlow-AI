@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Badge } from '@/components/ui/Badge'
 import { getTriageFromRiskLevel, getTriageBadgeVariant, getTriageLabel } from '@/lib/utils/triage'
 import Link from 'next/link'
+import { DeletePatientButton } from '@/components/patients/DeletePatientButton'
 
 export default async function PatientsPage() {
   const supabase = await createClient()
@@ -83,6 +84,7 @@ export default async function PatientsPage() {
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 ml-3">
                   {renderTriageBadge(patient)}
+                  <DeletePatientButton patientId={patient.id} patientName={patient.patient_name} variant="icon" />
                   <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
@@ -138,12 +140,15 @@ export default async function PatientsPage() {
                       {new Date(patient.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Link
-                        href={`/dashboard/patients/${patient.id}`}
-                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                      >
-                        View Details
-                      </Link>
+                      <div className="flex items-center justify-end gap-3">
+                        <Link
+                          href={`/dashboard/patients/${patient.id}`}
+                          className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                        >
+                          View Details
+                        </Link>
+                        <DeletePatientButton patientId={patient.id} patientName={patient.patient_name} variant="icon" />
+                      </div>
                     </td>
                   </tr>
                 ))}

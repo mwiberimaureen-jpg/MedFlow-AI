@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Badge } from '@/components/ui/Badge'
 import { getTriageFromRiskLevel, getTriageBadgeVariant, getTriageLabel } from '@/lib/utils/triage'
 import Link from 'next/link'
+import { TrashSection } from '@/components/patients/TrashSection'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -40,6 +41,18 @@ export default async function DashboardPage() {
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(5)
+
+  // Fetch trashed patients (deleted within last 7 days)
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+
+  const { data: trashedPatients } = await supabase
+    .from('patient_histories')
+    .select('id, patient_name, deleted_at')
+    .eq('user_id', user!.id)
+    .not('deleted_at', 'is', null)
+    .gte('deleted_at', sevenDaysAgo.toISOString())
+    .order('deleted_at', { ascending: false })
 
   const getLatestRiskLevel = (analyses: Array<{ risk_level: string; analysis_version: string | null; created_at: string }> | null) => {
     if (!analyses || analyses.length === 0) return null
@@ -152,6 +165,9 @@ export default async function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Trash */}
+      <TrashSection patients={trashedPatients || []} />
     </div>
   )
 }

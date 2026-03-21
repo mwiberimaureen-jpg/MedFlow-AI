@@ -9,6 +9,7 @@ import { AdmissionTimeline } from '@/components/patients/AdmissionTimeline'
 import { getTriageFromRiskLevel, getTriageBadgeVariant, getTriageLabel } from '@/lib/utils/triage'
 import { AnalysisPoller } from '@/components/patients/AnalysisPoller'
 import Link from 'next/link'
+import { DeletePatientButton } from '@/components/patients/DeletePatientButton'
 
 export default async function PatientDetailPage({
   params,
@@ -79,6 +80,7 @@ export default async function PatientDetailPage({
                 {patient.status}
               </Badge>
             ) : null}
+            <DeletePatientButton patientId={id} patientName={patient.patient_name} variant="icon" />
           </div>
         </div>
       </div>
