@@ -48,20 +48,16 @@ export async function GET() {
       .gte('created_at', startOfDay.toISOString())
 
     if (!todayAnalyses || todayAnalyses.length === 0) {
-      // Fallback: use recent analyses (last 7 days) so the feature still works
-      const weekAgo = new Date()
-      weekAgo.setDate(weekAgo.getDate() - 7)
-
+      // Fallback: use most recent analyses regardless of date
       const { data: recentAnalyses } = await supabase
         .from('analyses')
         .select('raw_analysis_text, summary')
         .eq('user_id', user.id)
-        .gte('created_at', weekAgo.toISOString())
         .order('created_at', { ascending: false })
         .limit(5)
 
       if (!recentAnalyses || recentAnalyses.length === 0) {
-        return NextResponse.json({ spark: null, message: 'No recent analyses found' })
+        return NextResponse.json({ spark: null, message: 'Complete a patient analysis to unlock today\'s discussion!' })
       }
 
       // Use recent analyses instead
