@@ -10,6 +10,7 @@ const navigation = [
   { name: 'Patients', href: '/dashboard/patients', icon: '👥' },
   { name: 'Rounds', href: '/dashboard/rounds', icon: '🏥' },
   { name: 'Learning', href: '/dashboard/learning', icon: '💡' },
+  { name: 'Notes', href: '/dashboard/notes', icon: '📝' },
   { name: 'Settings', href: '/dashboard/settings', icon: '⚙️' },
 ]
 

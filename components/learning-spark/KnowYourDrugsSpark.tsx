@@ -1,14 +1,18 @@
 'use client'
 
 import { useState } from 'react'
+import { StarButton } from './StarButton'
 import type { KnowYourDrugsContent } from '@/lib/types/learning-spark'
 
 interface KnowYourDrugsSparkProps {
   content: KnowYourDrugsContent
   onInteraction: () => void
+  onStar: () => void
+  isStarred: boolean
+  starSaving: boolean
 }
 
-export function KnowYourDrugsSpark({ content, onInteraction }: KnowYourDrugsSparkProps) {
+export function KnowYourDrugsSpark({ content, onInteraction, onStar, isStarred, starSaving }: KnowYourDrugsSparkProps) {
   const [expandedDrug, setExpandedDrug] = useState<number | null>(null)
   const [hasInteracted, setHasInteracted] = useState(false)
   const [showPearl, setShowPearl] = useState(false)
@@ -20,8 +24,6 @@ export function KnowYourDrugsSpark({ content, onInteraction }: KnowYourDrugsSpar
       onInteraction()
     }
   }
-
-  const allExpanded = content.drugs.every((_, i) => expandedDrug === i || showPearl)
 
   return (
     <div className="space-y-4">
@@ -82,10 +84,16 @@ export function KnowYourDrugsSpark({ content, onInteraction }: KnowYourDrugsSpar
 
       {/* Clinical pearl */}
       {showPearl && (
-        <div className="bg-green-50 dark:bg-green-900/15 rounded-lg p-3 border border-green-200 dark:border-green-800/50">
-          <p className="text-xs font-bold text-green-700 dark:text-green-400 uppercase tracking-wide mb-1">Clinical Pearl</p>
-          <p className="text-sm text-gray-700 dark:text-gray-300 italic">{content.clinical_pearl}</p>
-        </div>
+        <>
+          <div className="bg-green-50 dark:bg-green-900/15 rounded-lg p-3 border border-green-200 dark:border-green-800/50">
+            <p className="text-xs font-bold text-green-700 dark:text-green-400 uppercase tracking-wide mb-1">Clinical Pearl</p>
+            <p className="text-sm text-gray-700 dark:text-gray-300 italic">{content.clinical_pearl}</p>
+          </div>
+
+          <div className="flex justify-end">
+            <StarButton isStarred={isStarred} saving={starSaving} onClick={onStar} />
+          </div>
+        </>
       )}
     </div>
   )

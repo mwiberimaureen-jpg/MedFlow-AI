@@ -140,3 +140,42 @@ create policy "Users can insert own learning sparks"
 create policy "Users can update own learning sparks"
   on public.daily_learning_sparks for update
   using (auth.uid() = user_id);
+
+-- 14. Clinical Notes table
+create table if not exists public.clinical_notes (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  title text not null,
+  content text not null,
+  source text not null default 'manual' check (source in ('manual', 'senior_asks', 'quick_teach', 'know_your_drugs', 'clinical_twist')),
+  spark_id text,
+  tags text[],
+  created_at timestamp with time zone default now(),
+  updated_at timestamp with time zone default now()
+);
+
+create index if not exists idx_clinical_notes_user
+  on public.clinical_notes(user_id, created_at desc);
+
+alter table public.clinical_notes enable row level security;
+
+create policy "Users can view own clinical notes"
+  on public.clinical_notes for select
+  using (auth.uid() = user_id);
+
+create policy "Users can insert own clinical notes"
+  on public.clinical_notes for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can update own clinical notes"
+  on public.clinical_notes for update
+  using (auth.uid() = user_id);
+
+create policy "Users can delete own clinical notes"
+  on public.clinical_notes for delete
+  using (auth.uid() = user_id);
+
+drop trigger if exists update_clinical_notes_updated_at on public.clinical_notes;
+create trigger update_clinical_notes_updated_at
+  before update on public.clinical_notes
+  for each row execute procedure public.update_updated_at_column();

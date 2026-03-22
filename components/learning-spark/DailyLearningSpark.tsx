@@ -66,11 +66,43 @@ function calculateStreak(state: LearningSparkState, todayISO: string, sparkId: s
   }
 }
 
+function formatSparkAsNote(spark: SparkType): { title: string; content: string } {
+  const c = spark.content as any
+  const topic = c.topic || 'Clinical Note'
+
+  switch (spark.format_type) {
+    case 'senior_asks':
+      return {
+        title: topic,
+        content: `Q: ${c.question}\n\nA: ${c.answer}\n\nTeaching Point: ${c.teaching_point}\n\nClinical Pearl: ${c.clinical_pearl}`,
+      }
+    case 'quick_teach':
+      return {
+        title: topic,
+        content: `${c.intro}\n\n${c.cards.map((card: any) => `${card.title}: ${card.content}`).join('\n\n')}\n\nKey Takeaway: ${c.summary_pearl}`,
+      }
+    case 'know_your_drugs':
+      return {
+        title: topic,
+        content: `${c.context}\n\n${c.drugs.map((d: any) => `${d.name}\n  Mechanism: ${d.mechanism}\n  When to use: ${d.when_to_use}\n  Key point: ${d.key_point}`).join('\n\n')}\n\nClinical Pearl: ${c.clinical_pearl}`,
+      }
+    case 'clinical_twist':
+      return {
+        title: topic,
+        content: `Scenario: ${c.scenario}\n\nOriginal Plan: ${c.original_plan}\n\nTwist: ${c.twist}\n\nRevised Plan: ${c.revised_plan}\n\nReasoning: ${c.reasoning}\n\nClinical Pearl: ${c.clinical_pearl}`,
+      }
+    default:
+      return { title: topic, content: JSON.stringify(c, null, 2) }
+  }
+}
+
 export function DailyLearningSpark() {
   const [spark, setSpark] = useState<SparkType | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [state, setState] = useState<LearningSparkState>(getDefaultSparkState)
+  const [isStarred, setIsStarred] = useState(false)
+  const [starSaving, setStarSaving] = useState(false)
 
   useEffect(() => {
     setState(loadState())
@@ -103,6 +135,26 @@ export function DailyLearningSpark() {
     return () => { cancelled = true }
   }, [])
 
+  // Check if current spark is already starred
+  useEffect(() => {
+    if (!spark) return
+    let cancelled = false
+
+    async function checkStarred() {
+      try {
+        const res = await fetch('/api/notes')
+        const data = await res.json()
+        if (!cancelled && data.notes) {
+          const found = data.notes.some((n: any) => n.spark_id === spark!.id)
+          setIsStarred(found)
+        }
+      } catch { /* ignore */ }
+    }
+
+    checkStarred()
+    return () => { cancelled = true }
+  }, [spark])
+
   const handleInteraction = useCallback(() => {
     if (!spark) return
     const today = new Date().toISOString().split('T')[0]
@@ -110,6 +162,32 @@ export function DailyLearningSpark() {
     setState(newState)
     saveState(newState)
   }, [spark, state])
+
+  const handleStar = useCallback(async () => {
+    if (!spark || isStarred || starSaving) return
+    setStarSaving(true)
+
+    try {
+      const { title, content } = formatSparkAsNote(spark)
+      const res = await fetch('/api/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          content,
+          source: spark.format_type,
+          spark_id: spark.id,
+        }),
+      })
+
+      if (!res.ok) throw new Error('Failed to save')
+      setIsStarred(true)
+    } catch (err) {
+      console.error('Failed to star spark:', err)
+    } finally {
+      setStarSaving(false)
+    }
+  }, [spark, isStarred, starSaving])
 
   if (loading) {
     return (
@@ -165,16 +243,16 @@ export function DailyLearningSpark() {
 
       <div className="mt-4">
         {spark.format_type === 'senior_asks' && (
-          <SeniorAsksSpark content={spark.content as SeniorAsksContent} onInteraction={handleInteraction} />
+          <SeniorAsksSpark content={spark.content as SeniorAsksContent} onInteraction={handleInteraction} onStar={handleStar} isStarred={isStarred} starSaving={starSaving} />
         )}
         {spark.format_type === 'quick_teach' && (
-          <QuickTeachSpark content={spark.content as QuickTeachContent} onInteraction={handleInteraction} />
+          <QuickTeachSpark content={spark.content as QuickTeachContent} onInteraction={handleInteraction} onStar={handleStar} isStarred={isStarred} starSaving={starSaving} />
         )}
         {spark.format_type === 'know_your_drugs' && (
-          <KnowYourDrugsSpark content={spark.content as KnowYourDrugsContent} onInteraction={handleInteraction} />
+          <KnowYourDrugsSpark content={spark.content as KnowYourDrugsContent} onInteraction={handleInteraction} onStar={handleStar} isStarred={isStarred} starSaving={starSaving} />
         )}
         {spark.format_type === 'clinical_twist' && (
-          <ClinicalTwistSpark content={spark.content as ClinicalTwistContent} onInteraction={handleInteraction} />
+          <ClinicalTwistSpark content={spark.content as ClinicalTwistContent} onInteraction={handleInteraction} onStar={handleStar} isStarred={isStarred} starSaving={starSaving} />
         )}
       </div>
     </div>

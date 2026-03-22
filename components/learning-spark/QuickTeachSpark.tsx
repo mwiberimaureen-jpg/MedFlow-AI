@@ -1,11 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import { StarButton } from './StarButton'
 import type { QuickTeachContent } from '@/lib/types/learning-spark'
 
 interface QuickTeachSparkProps {
   content: QuickTeachContent
   onInteraction: () => void
+  onStar: () => void
+  isStarred: boolean
+  starSaving: boolean
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -22,7 +26,7 @@ const TYPE_COLORS: Record<string, string> = {
   criteria: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
 }
 
-export function QuickTeachSpark({ content, onInteraction }: QuickTeachSparkProps) {
+export function QuickTeachSpark({ content, onInteraction, onStar, isStarred, starSaving }: QuickTeachSparkProps) {
   const [revealedCards, setRevealedCards] = useState<Set<string>>(new Set())
   const [hasInteracted, setHasInteracted] = useState(false)
 
@@ -80,10 +84,16 @@ export function QuickTeachSpark({ content, onInteraction }: QuickTeachSparkProps
 
       {/* Summary pearl — shown when all cards revealed */}
       {allRevealed && (
-        <div className="bg-green-50 dark:bg-green-900/15 rounded-lg p-3 border border-green-200 dark:border-green-800/50">
-          <p className="text-xs font-bold text-green-700 dark:text-green-400 uppercase tracking-wide mb-1">Key Takeaway</p>
-          <p className="text-sm text-gray-700 dark:text-gray-300 italic">{content.summary_pearl}</p>
-        </div>
+        <>
+          <div className="bg-green-50 dark:bg-green-900/15 rounded-lg p-3 border border-green-200 dark:border-green-800/50">
+            <p className="text-xs font-bold text-green-700 dark:text-green-400 uppercase tracking-wide mb-1">Key Takeaway</p>
+            <p className="text-sm text-gray-700 dark:text-gray-300 italic">{content.summary_pearl}</p>
+          </div>
+
+          <div className="flex justify-end">
+            <StarButton isStarred={isStarred} saving={starSaving} onClick={onStar} />
+          </div>
+        </>
       )}
     </div>
   )
