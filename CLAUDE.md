@@ -20,7 +20,7 @@ Agentic workflows detail automation pipelines for lead scraping, proposal genera
   - A doctor reading ONLY this summary should know: who the patient is, why they are admitted, what happened today, and what needs to happen next.
 - **Clinical reasoning rules**:
   - **SIRS vs Sepsis**: Do NOT diagnose "sepsis" without documented end-organ damage (SOFA criteria). Use "SIRS secondary to [source]" if no organ damage. See prompt in `lib/openrouter/client.ts`.
-  - **Anemia grading (WHO)**: Moderate 8-10.9 g/dL, Severe <8 g/dL. For pregnant/postpartum: Moderate 7-9.9, Severe <7. Never call HB ≥8 "severe anemia".
+  - **Anemia diagnosis (AMBOSS/WHO)**: Non-pregnant women: anemia = HB < 12.0 (HB ≥ 12 is NORMAL, not anemia). Men: HB < 13.0. Pregnant: HB < 11.0. Severity grading — Women: Mild 11-11.9, Moderate 8-10.9, Severe <8. Pregnant: Mild 10-10.9, Moderate 7-9.9, Severe <7. Men: Mild 11-12.9, Moderate 8-10.9, Severe <8. Never call HB ≥8 "severe anemia". Never call HB above the diagnostic threshold "anemia" at all.
   - **Source**: AMBOSS only. No UpToDate, Medscape, BMJ, or WHO guidelines references.
 - **Clinical summary writing style**:
   - Describe **symptoms** first, not diagnostic labels. Say "patient developed hotness of body and drenching sweats from day 3, with temperatures of 39.3°C" NOT "she has developed post-abortion sepsis."
