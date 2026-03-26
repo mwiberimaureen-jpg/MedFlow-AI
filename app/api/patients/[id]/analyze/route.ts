@@ -67,8 +67,22 @@ export async function POST(
       .eq('id', id)
 
     try {
+      // Fetch user's clinical notes for AI context
+      const { data: clinicalNotes } = await supabase
+        .from('clinical_notes')
+        .select('title, content, rotation')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(30)
+
+      const personalNotes = (clinicalNotes || []).map((n: any) => ({
+        title: n.title,
+        content: n.content,
+        rotation: n.rotation,
+      }))
+
       // Call OpenRouter API for analysis
-      const analysisResponse = await analyzePatientHistory(patient.history_text)
+      const analysisResponse = await analyzePatientHistory(patient.history_text, undefined, personalNotes)
 
       const processingTime = Date.now() - startTime
 

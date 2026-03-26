@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { title, content, source, spark_id, tags } = body
+    const { title, content, source, spark_id, tags, rotation } = body
 
     if (!title || !content) {
       return NextResponse.json({ error: 'Title and content are required' }, { status: 400 })
@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
         content,
         source: source || 'manual',
         spark_id: spark_id || null,
+        rotation: rotation || null,
         tags: tags || null,
       })
       .select()

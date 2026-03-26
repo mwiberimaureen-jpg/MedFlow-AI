@@ -5,6 +5,7 @@ export interface ClinicalNote {
   content: string
   source: 'manual' | 'senior_asks' | 'quick_teach' | 'know_your_drugs' | 'clinical_twist'
   spark_id: string | null
+  rotation: string | null
   tags: string[] | null
   created_at: string
   updated_at: string

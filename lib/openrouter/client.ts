@@ -304,14 +304,46 @@ IMPORTANT FOR todo_items:
 
 Return ONLY the JSON object. No markdown code fences, no additional text.`
 
+/**
+ * Format the user's personal clinical notes as context for the AI.
+ * These are the user's own study notes, clinical pearls, and drug references
+ * that should inform (but not override) clinical reasoning.
+ */
+function formatPersonalNotesContext(
+  notes: Array<{ title: string; content: string; rotation?: string | null }>
+): string {
+  if (!notes.length) return ''
+
+  const formatted = notes.map(n => {
+    const rotLabel = n.rotation ? ` [${n.rotation}]` : ''
+    return `- ${n.title}${rotLabel}:\n${n.content}`
+  }).join('\n\n')
+
+  return (
+    '\n\n--- CLINICIAN PERSONAL NOTES (for reference) ---\n' +
+    'The following are the clinician\'s own study notes, clinical pearls, and drug references from their rotations. ' +
+    'Use these as supplementary context when relevant to the patient\'s condition. ' +
+    'These notes may contain classification systems, drug protocols, or clinical pearls that should inform your analysis. ' +
+    'Do NOT quote these notes directly in your output — integrate the knowledge naturally.\n\n' +
+    formatted +
+    '\n--- END PERSONAL NOTES ---'
+  )
+}
+
 export async function analyzePatientHistory(
   historyText: string,
-  config?: OpenRouterConfig
+  config?: OpenRouterConfig,
+  personalNotes?: Array<{ title: string; content: string; rotation?: string | null }>
 ): Promise<AnalysisResponse> {
   const apiKey = config?.apiKey || process.env.OPENROUTER_API_KEY
 
   if (!apiKey) {
     throw new Error('OpenRouter API key is required')
+  }
+
+  let userContent = historyText
+  if (personalNotes && personalNotes.length > 0) {
+    userContent += formatPersonalNotesContext(personalNotes)
   }
 
   const response = await fetchWithRetry(OPENROUTER_API_URL, {
@@ -331,7 +363,7 @@ export async function analyzePatientHistory(
         },
         {
           role: 'user',
-          content: historyText
+          content: userContent
         }
       ],
       temperature: 0.3,
@@ -452,7 +484,8 @@ export async function analyzeDailyProgress(
   previousSummaries: Array<{ version: string; summary: string; rawText?: string; userNotes?: string }>,
   progressNotes: string,
   dayNumber: number,
-  config?: OpenRouterConfig
+  config?: OpenRouterConfig,
+  personalNotes?: Array<{ title: string; content: string; rotation?: string | null }>
 ): Promise<AnalysisResponse> {
   const apiKey = config?.apiKey || process.env.OPENROUTER_API_KEY
 
@@ -490,9 +523,13 @@ export async function analyzeDailyProgress(
     '\n--- END PREVIOUS ANALYSES ---'
     : ''
 
+  const notesContext = personalNotes && personalNotes.length > 0
+    ? formatPersonalNotesContext(personalNotes)
+    : ''
+
   const userMessage =
     `=== ORIGINAL ADMISSION HISTORY ===\n${admissionHistoryText}\n=== END ADMISSION HISTORY ===${previousContext}\n\n` +
-    `=== ${dayLabel.toUpperCase()} OF ADMISSION PROGRESS NOTES ===\n${progressNotes}\n=== END PROGRESS NOTES ===\n\n` +
+    `=== ${dayLabel.toUpperCase()} OF ADMISSION PROGRESS NOTES ===\n${progressNotes}\n=== END PROGRESS NOTES ===${notesContext}\n\n` +
     `You are generating the ${dayLabel} of Admission clinical analysis.\n` +
     `Focus on:\n` +
     `1. Changes from the previous day (improving/deteriorating/stable)\n` +

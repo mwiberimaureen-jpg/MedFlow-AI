@@ -6,6 +6,7 @@ import { SeniorAsksSpark } from './SeniorAsksSpark'
 import { QuickTeachSpark } from './QuickTeachSpark'
 import { KnowYourDrugsSpark } from './KnowYourDrugsSpark'
 import { ClinicalTwistSpark } from './ClinicalTwistSpark'
+import { DEFAULT_ROTATIONS } from '@/lib/constants/rotations'
 import type {
   DailyLearningSpark as SparkType,
   LearningSparkState,
@@ -17,6 +18,7 @@ import type {
 import { getDefaultSparkState } from '@/lib/types/learning-spark'
 
 const STORAGE_KEY = 'medflow_learning_spark_state'
+const LAST_ROTATION_KEY = 'medflow_last_star_rotation'
 
 function loadState(): LearningSparkState {
   if (typeof window === 'undefined') return getDefaultSparkState()
@@ -32,6 +34,18 @@ function saveState(state: LearningSparkState) {
   if (typeof window === 'undefined') return
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  } catch { /* ignore */ }
+}
+
+function getLastRotation(): string {
+  if (typeof window === 'undefined') return ''
+  return localStorage.getItem(LAST_ROTATION_KEY) || ''
+}
+
+function saveLastRotation(rotation: string) {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(LAST_ROTATION_KEY, rotation)
   } catch { /* ignore */ }
 }
 
@@ -103,9 +117,12 @@ export function DailyLearningSpark() {
   const [state, setState] = useState<LearningSparkState>(getDefaultSparkState)
   const [isStarred, setIsStarred] = useState(false)
   const [starSaving, setStarSaving] = useState(false)
+  const [showRotationPicker, setShowRotationPicker] = useState(false)
+  const [selectedRotation, setSelectedRotation] = useState('')
 
   useEffect(() => {
     setState(loadState())
+    setSelectedRotation(getLastRotation())
   }, [])
 
   useEffect(() => {
@@ -163,12 +180,20 @@ export function DailyLearningSpark() {
     saveState(newState)
   }, [spark, state])
 
-  const handleStar = useCallback(async () => {
+  const handleStarClick = useCallback(() => {
+    if (!spark || isStarred || starSaving) return
+    setShowRotationPicker(true)
+  }, [spark, isStarred, starSaving])
+
+  const handleConfirmStar = useCallback(async () => {
     if (!spark || isStarred || starSaving) return
     setStarSaving(true)
+    setShowRotationPicker(false)
 
     try {
       const { title, content } = formatSparkAsNote(spark)
+      const rotation = selectedRotation || null
+
       const res = await fetch('/api/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -177,17 +202,19 @@ export function DailyLearningSpark() {
           content,
           source: spark.format_type,
           spark_id: spark.id,
+          rotation,
         }),
       })
 
       if (!res.ok) throw new Error('Failed to save')
       setIsStarred(true)
+      if (selectedRotation) saveLastRotation(selectedRotation)
     } catch (err) {
       console.error('Failed to star spark:', err)
     } finally {
       setStarSaving(false)
     }
-  }, [spark, isStarred, starSaving])
+  }, [spark, isStarred, starSaving, selectedRotation])
 
   if (loading) {
     return (
@@ -243,18 +270,49 @@ export function DailyLearningSpark() {
 
       <div className="mt-4">
         {spark.format_type === 'senior_asks' && (
-          <SeniorAsksSpark content={spark.content as SeniorAsksContent} onInteraction={handleInteraction} onStar={handleStar} isStarred={isStarred} starSaving={starSaving} />
+          <SeniorAsksSpark content={spark.content as SeniorAsksContent} onInteraction={handleInteraction} onStar={handleStarClick} isStarred={isStarred} starSaving={starSaving} />
         )}
         {spark.format_type === 'quick_teach' && (
-          <QuickTeachSpark content={spark.content as QuickTeachContent} onInteraction={handleInteraction} onStar={handleStar} isStarred={isStarred} starSaving={starSaving} />
+          <QuickTeachSpark content={spark.content as QuickTeachContent} onInteraction={handleInteraction} onStar={handleStarClick} isStarred={isStarred} starSaving={starSaving} />
         )}
         {spark.format_type === 'know_your_drugs' && (
-          <KnowYourDrugsSpark content={spark.content as KnowYourDrugsContent} onInteraction={handleInteraction} onStar={handleStar} isStarred={isStarred} starSaving={starSaving} />
+          <KnowYourDrugsSpark content={spark.content as KnowYourDrugsContent} onInteraction={handleInteraction} onStar={handleStarClick} isStarred={isStarred} starSaving={starSaving} />
         )}
         {spark.format_type === 'clinical_twist' && (
-          <ClinicalTwistSpark content={spark.content as ClinicalTwistContent} onInteraction={handleInteraction} onStar={handleStar} isStarred={isStarred} starSaving={starSaving} />
+          <ClinicalTwistSpark content={spark.content as ClinicalTwistContent} onInteraction={handleInteraction} onStar={handleStarClick} isStarred={isStarred} starSaving={starSaving} />
         )}
       </div>
+
+      {/* Rotation picker modal */}
+      {showRotationPicker && (
+        <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+          <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Save to rotation:</p>
+          <select
+            value={selectedRotation}
+            onChange={e => setSelectedRotation(e.target.value)}
+            className="w-full px-2 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white mb-2"
+          >
+            <option value="">No rotation</option>
+            {DEFAULT_ROTATIONS.map(r => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setShowRotationPicker(false)}
+              className="px-2 py-1 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirmStar}
+              className="px-2 py-1 text-xs bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors font-medium"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

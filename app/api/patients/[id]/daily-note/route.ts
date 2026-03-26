@@ -81,12 +81,28 @@ export async function POST(
             userNotes: a.user_feedback || ''
         }))
 
+        // Fetch user's clinical notes for AI context
+        const { data: clinicalNotes } = await supabase
+            .from('clinical_notes')
+            .select('title, content, rotation')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(30)
+
+        const personalNotes = (clinicalNotes || []).map((n: any) => ({
+            title: n.title,
+            content: n.content,
+            rotation: n.rotation,
+        }))
+
         // Call OpenRouter AI for daily progress analysis
         const analysisResponse = await analyzeDailyProgress(
             patient.history_text,
             previousSummaries,
             progress_notes.trim(),
-            day_number
+            day_number,
+            undefined,
+            personalNotes
         )
 
         const processingTime = Date.now() - startTime
