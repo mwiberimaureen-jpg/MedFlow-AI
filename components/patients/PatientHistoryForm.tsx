@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { CharacterCounter } from './CharacterCounter'
 import { saveDraft, loadDraft, clearDraft } from '@/lib/utils/draft'
+import { DEFAULT_ROTATIONS } from '@/lib/constants/rotations'
 
 const MAX_HISTORY_LENGTH = 10000
 const MIN_HISTORY_LENGTH = 50
@@ -22,8 +23,11 @@ export function PatientHistoryForm() {
     patient_age: '',
     patient_gender: '',
     patient_identifier: '',
-    history_text: ''
+    history_text: '',
+    rotation: ''
   })
+  const [customRotation, setCustomRotation] = useState('')
+  const [showCustomRotation, setShowCustomRotation] = useState(false)
 
   // Load draft on mount
   useEffect(() => {
@@ -34,7 +38,8 @@ export function PatientHistoryForm() {
         patient_age: draft.patient_age || '',
         patient_gender: draft.patient_gender || '',
         patient_identifier: draft.patient_identifier || '',
-        history_text: draft.history_text || ''
+        history_text: draft.history_text || '',
+        rotation: draft.rotation || ''
       })
       if (draft.savedAt) {
         setLastSaved(new Date(draft.savedAt))
@@ -56,6 +61,15 @@ export function PatientHistoryForm() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
+    if (name === 'rotation') {
+      if (value === '__custom__') {
+        setShowCustomRotation(true)
+        setFormData(prev => ({ ...prev, rotation: '' }))
+        return
+      }
+      setShowCustomRotation(false)
+      setCustomRotation('')
+    }
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -115,7 +129,10 @@ export function PatientHistoryForm() {
           patient_gender: formData.patient_gender || undefined,
           patient_identifier: formData.patient_identifier.trim() || undefined,
           history_text: formData.history_text.trim(),
-          status: status === 'submitted' ? 'analyzing' : 'draft'
+          status: status === 'submitted' ? 'analyzing' : 'draft',
+          metadata: {
+            rotation: (showCustomRotation ? customRotation.trim() : formData.rotation) || null
+          }
         }),
       })
 
@@ -209,6 +226,35 @@ export function PatientHistoryForm() {
               <option value="female">Female</option>
               <option value="other">Other</option>
             </select>
+          </div>
+
+          <div>
+            <label htmlFor="rotation" className="block text-sm font-medium text-gray-700 mb-2">
+              Rotation (Optional)
+            </label>
+            <select
+              id="rotation"
+              name="rotation"
+              value={showCustomRotation ? '__custom__' : formData.rotation}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">No rotation</option>
+              {DEFAULT_ROTATIONS.map(r => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+              <option value="__custom__">+ Add new rotation...</option>
+            </select>
+            {showCustomRotation && (
+              <input
+                type="text"
+                value={customRotation}
+                onChange={e => setCustomRotation(e.target.value)}
+                placeholder="Enter rotation name..."
+                autoFocus
+                className="w-full mt-2 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            )}
           </div>
         </div>
 

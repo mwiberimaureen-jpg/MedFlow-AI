@@ -168,6 +168,38 @@ export async function PATCH(
       return NextResponse.json({ message: 'Patient restored' })
     }
 
+    // Update rotation (stored in metadata JSONB)
+    if (body.rotation !== undefined) {
+      // Fetch current metadata to merge
+      const { data: patient, error: fetchError } = await supabase
+        .from('patient_histories')
+        .select('metadata')
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .is('deleted_at', null)
+        .single()
+
+      if (fetchError || !patient) {
+        return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
+      }
+
+      const updatedMetadata = { ...(patient.metadata || {}), rotation: body.rotation || null }
+
+      const { data: updated, error: updateError } = await supabase
+        .from('patient_histories')
+        .update({ metadata: updatedMetadata })
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single()
+
+      if (updateError) {
+        return NextResponse.json({ error: 'Failed to update rotation' }, { status: 500 })
+      }
+
+      return NextResponse.json({ patient: updated })
+    }
+
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
   } catch (error: any) {
     console.error('Error in PATCH /api/patients/[id]:', error)
