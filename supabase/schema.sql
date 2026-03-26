@@ -149,6 +149,7 @@ create table if not exists public.clinical_notes (
   content text not null,
   source text not null default 'manual' check (source in ('manual', 'senior_asks', 'quick_teach', 'know_your_drugs', 'clinical_twist')),
   spark_id text,
+  rotation text,
   tags text[],
   created_at timestamp with time zone default now(),
   updated_at timestamp with time zone default now()
