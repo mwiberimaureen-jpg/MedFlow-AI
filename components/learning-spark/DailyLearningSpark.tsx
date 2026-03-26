@@ -19,6 +19,7 @@ import { getDefaultSparkState } from '@/lib/types/learning-spark'
 
 const STORAGE_KEY = 'medflow_learning_spark_state'
 const LAST_ROTATION_KEY = 'medflow_last_star_rotation'
+const SPARK_READ_KEY = 'medflow_spark_read'
 
 function loadState(): LearningSparkState {
   if (typeof window === 'undefined') return getDefaultSparkState()
@@ -130,7 +131,16 @@ export function DailyLearningSpark() {
 
     async function fetchSpark() {
       try {
-        const res = await fetch('/api/learning-spark/today')
+        // Check if the user already read the last spark — if so, get a new one
+        const sparkRead = localStorage.getItem(SPARK_READ_KEY) === 'true'
+        const url = sparkRead
+          ? '/api/learning-spark/today?refresh=true'
+          : '/api/learning-spark/today'
+
+        // Clear the read flag now — the new spark starts unread
+        if (sparkRead) localStorage.removeItem(SPARK_READ_KEY)
+
+        const res = await fetch(url)
         const data = await res.json()
 
         if (!res.ok) {
@@ -178,6 +188,8 @@ export function DailyLearningSpark() {
     const newState = calculateStreak(state, today, spark.id)
     setState(newState)
     saveState(newState)
+    // Mark as read so next visit generates a fresh review
+    try { localStorage.setItem(SPARK_READ_KEY, 'true') } catch { /* ignore */ }
   }, [spark, state])
 
   const handleStarClick = useCallback(() => {

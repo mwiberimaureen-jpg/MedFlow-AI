@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { generateLearningSpark } from '@/lib/openrouter/client'
 import type { SparkFormat } from '@/lib/types/learning-spark'
@@ -14,7 +14,12 @@ function getDailyFormat(date: Date): SparkFormat {
   return FORMATS[dayOfYear % FORMATS.length]
 }
 
-export async function GET() {
+function getRandomFormat(excludeFormat?: string): SparkFormat {
+  const options = excludeFormat ? FORMATS.filter(f => f !== excludeFormat) : FORMATS
+  return options[Math.floor(Math.random() * options.length)]
+}
+
+export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -23,6 +28,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const refresh = request.nextUrl.searchParams.get('refresh') === 'true'
     const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
 
     // Check for cached spark
@@ -33,8 +39,16 @@ export async function GET() {
       .eq('spark_date', today)
       .single()
 
-    if (existingSpark) {
+    if (existingSpark && !refresh) {
       return NextResponse.json({ spark: existingSpark })
+    }
+
+    // If refreshing, delete the old spark so we generate a fresh one
+    if (existingSpark && refresh) {
+      await supabase
+        .from('daily_learning_sparks')
+        .delete()
+        .eq('id', existingSpark.id)
     }
 
     // Get today's analyses to extract conditions
@@ -46,6 +60,11 @@ export async function GET() {
       .select('raw_analysis_text, summary')
       .eq('user_id', user.id)
       .gte('created_at', startOfDay.toISOString())
+
+    // On refresh, pick a different format than the previous one
+    const formatOverride = (refresh && existingSpark)
+      ? getRandomFormat(existingSpark.format_type)
+      : undefined
 
     if (!todayAnalyses || todayAnalyses.length === 0) {
       // Fallback: use most recent analyses regardless of date
@@ -61,10 +80,10 @@ export async function GET() {
       }
 
       // Use recent analyses instead
-      return await generateAndStore(supabase, user.id, today, recentAnalyses)
+      return await generateAndStore(supabase, user.id, today, recentAnalyses, formatOverride)
     }
 
-    return await generateAndStore(supabase, user.id, today, todayAnalyses)
+    return await generateAndStore(supabase, user.id, today, todayAnalyses, formatOverride)
   } catch (error: any) {
     console.error('Error in GET /api/learning-spark/today:', error)
     return NextResponse.json(
@@ -78,7 +97,8 @@ async function generateAndStore(
   supabase: any,
   userId: string,
   today: string,
-  analyses: Array<{ raw_analysis_text: string; summary: string }>
+  analyses: Array<{ raw_analysis_text: string; summary: string }>,
+  formatOverride?: SparkFormat
 ) {
   // Extract conditions from analyses
   const conditions = extractConditions(analyses)
@@ -87,7 +107,7 @@ async function generateAndStore(
     return NextResponse.json({ spark: null, message: 'No conditions found in analyses' })
   }
 
-  const format = getDailyFormat(new Date())
+  const format = formatOverride || getDailyFormat(new Date())
 
   try {
     const content = await generateLearningSpark(format, conditions)
