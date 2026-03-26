@@ -131,16 +131,18 @@ export function DailyLearningSpark() {
 
     async function fetchSpark() {
       try {
-        // Check if the user already read the last spark — if so, get a new one
-        const sparkRead = localStorage.getItem(SPARK_READ_KEY) === 'true'
-        const url = sparkRead
+        // Step 1: Check the explicit read flag first
+        const sparkReadFlag = localStorage.getItem(SPARK_READ_KEY) === 'true'
+        if (sparkReadFlag) {
+          localStorage.removeItem(SPARK_READ_KEY)
+        }
+
+        // Step 2: Fetch cached spark (or generate if none exists)
+        const firstUrl = sparkReadFlag
           ? '/api/learning-spark/today?refresh=true'
           : '/api/learning-spark/today'
 
-        // Clear the read flag now — the new spark starts unread
-        if (sparkRead) localStorage.removeItem(SPARK_READ_KEY)
-
-        const res = await fetch(url)
+        const res = await fetch(firstUrl)
         const data = await res.json()
 
         if (!res.ok) {
@@ -148,6 +150,17 @@ export function DailyLearningSpark() {
         }
 
         if (!cancelled && data.spark) {
+          // Step 3: If we didn't already refresh via flag, check seenSparks
+          const currentState = loadState()
+          if (!sparkReadFlag && currentState.seenSparks.includes(data.spark.id)) {
+            // User already read this spark — fetch a fresh one
+            const refreshRes = await fetch('/api/learning-spark/today?refresh=true')
+            const refreshData = await refreshRes.json()
+            if (!cancelled && refreshData.spark) {
+              setSpark(refreshData.spark)
+              return
+            }
+          }
           setSpark(data.spark)
         }
       } catch (err: any) {
