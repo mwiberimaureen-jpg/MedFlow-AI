@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { analyzePatientHistory, analyzeDailyProgress } from '@/lib/openrouter/client'
+import { analyzePatientHistoryFanOut, analyzeDailyProgress } from '@/lib/openrouter/client'
 
 export const dynamic = 'force-dynamic'
 
@@ -60,8 +60,8 @@ export async function POST(
         let analysisResponse
 
         if (version === 'admission') {
-            // Re-run admission analysis
-            analysisResponse = await analyzePatientHistory(patient.history_text)
+            // Re-run admission analysis (fan-out: parallel clinical + management agents, then synthesis + QA)
+            analysisResponse = await analyzePatientHistoryFanOut(patient.history_text)
         } else if (version.startsWith('day_')) {
             // Re-run daily analysis — need previous summaries
             const dayNumber = parseInt(version.replace('day_', ''), 10)

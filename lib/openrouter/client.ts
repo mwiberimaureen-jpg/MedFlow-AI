@@ -285,7 +285,7 @@ Return ONLY a valid JSON response with this structure:
       "prevention_plan": "Specific prevention steps"
     }
   ],
-  "summary": "A ward-round presentation summary (2 paragraphs). MANDATORY FORMAT — Paragraph 1 MUST follow this exact structure: 'This is [Name], a [age]-year-old [sex], [parity if OB/GYN e.g. Para 3+1], on day [N] of admission following [original admission diagnosis with brief context — e.g. incomplete abortion at 31 weeks gestation in a now para 3+1 woman who experienced fetal expulsion at home followed by manual removal of retained placenta on admission]. [Then describe current status: chief complaints on this day, key vital signs, significant exam findings, and relevant lab results — woven into a flowing clinical narrative, NOT a bullet-point copy-paste of the assessment].' Paragraph 2: Clinical interpretation — what the findings mean, the working impression, and the immediate management priorities. The summary must be SELF-CONTAINED: a doctor reading ONLY this summary should know who the patient is, why they are admitted, and what is happening today.",
+  "summary": "A ward-round presentation summary in SOAP-compatible format. Follow this EXACT order: 1) '[Name], [age]-year-old [sex], [parity if OB/GYN], doing day [N] of admission.' 2) 'Came in experiencing [chief complaint with context].' 3) 'On examination: [key vitals and physical exam findings].' 4) 'Results: [test results and interpretation].' 5) 'Impression: [working diagnosis].' 6) 'Current plan: [specific drugs with dose/route/frequency, monitoring, pending tests].' LENGTH: Simple cases (<3 problems) = 1 concise paragraph. Complex cases = 2 paragraphs. ALWAYS name specific drugs with dose/route/frequency. NEVER use vague terms like 'antibiotics' or 'IV fluids'. The summary must be SELF-CONTAINED: a doctor reading ONLY this summary should know who the patient is, why they are admitted, and what is happening today.",
   "todo_items": [
     {
       "title": "Brief action item title",
@@ -398,7 +398,10 @@ export async function analyzePatientHistory(
     // Sanitize output: remove forbidden phrases that may have slipped through
     const sanitized = sanitizeAnalysis(parsed)
 
-    return sanitized as AnalysisResponse
+    // QA check: fast Haiku pass to catch clinical rule violations
+    const qaChecked = await qaCheckAnalysis(sanitized as AnalysisResponse, historyText, config)
+
+    return qaChecked
   } catch (error) {
     console.error('Failed to parse AI response:', content)
     throw new Error('Failed to parse AI analysis response')
@@ -592,7 +595,9 @@ export async function analyzeDailyProgress(
       throw new Error('Invalid response structure from AI')
     }
 
-    return sanitizeAnalysis(parsed) as AnalysisResponse
+    const sanitized = sanitizeAnalysis(parsed) as AnalysisResponse
+    const qaChecked = await qaCheckAnalysis(sanitized, admissionHistoryText + '\n' + progressNotes, config)
+    return qaChecked
   } catch (error) {
     console.error('Failed to parse AI daily response:', content)
     throw new Error('Failed to parse AI daily analysis response')
@@ -694,6 +699,407 @@ export async function generateDischargeSummary(
     console.error('Failed to parse AI discharge response:', content)
     throw new Error('Failed to parse AI discharge summary response')
   }
+}
+
+// === Fan-Out/Fan-In Analysis ===
+
+const CLINICAL_ASSESSMENT_PROMPT = `You are a Clinical Assessment Specialist. Analyze the patient history and provide ONLY the clinical assessment components.
+
+REFERENCE SOURCE: AMBOSS ONLY. No UpToDate, Medscape, BMJ, or WHO guidelines.
+
+STRICTLY NO HALLUCINATION — use ONLY information in the history provided. Do NOT invent symptoms or findings.
+
+${SYSTEM_PROMPT.slice(SYSTEM_PROMPT.indexOf('SIRS vs SEPSIS'), SYSTEM_PROMPT.indexOf('Drug Prescriptions in Management'))}
+
+${SYSTEM_PROMPT.slice(SYSTEM_PROMPT.indexOf('LAB & TEST INTERPRETATION'), SYSTEM_PROMPT.indexOf('ORTHOPEDIC'))}
+
+Return ONLY valid JSON:
+{
+  "test_interpretation": [
+    { "number": 1, "test_name": "Name", "deranged_parameters": ["values"], "interpretation": "Clinical significance" }
+  ],
+  "impressions": ["Short diagnosis-style, numbered if multiple"],
+  "differential_diagnoses": [
+    { "diagnosis": "Name", "supporting_evidence": "Evidence for", "against_evidence": "Evidence against" }
+  ],
+  "gaps_in_history": {
+    "follow_up_questions": ["Specific questions"],
+    "physical_exam_checklist": ["Specific exams with REASON"]
+  },
+  "complications": [
+    { "complication": "Possible complication", "prevention_plan": "Prevention steps" }
+  ]
+}
+
+Return ONLY the JSON object. No markdown code fences.`
+
+const MANAGEMENT_PLANNING_PROMPT = `You are a Management Planning Specialist. Analyze the patient history and provide ONLY the management plan components.
+
+REFERENCE SOURCE: AMBOSS ONLY.
+
+STRICTLY NO HALLUCINATION — use ONLY information in the history provided.
+
+${SYSTEM_PROMPT.slice(SYSTEM_PROMPT.indexOf('Comorbidity-Aware Analysis'), SYSTEM_PROMPT.indexOf('Impression Format'))}
+
+Drug Prescriptions in Management:
+- Include specific drug prescriptions: Drug name, Dose, Route, Frequency
+- Example: "Furosemide 40mg PO BD", "Amlodipine 5mg PO OD"
+- Include medications for comorbidities
+- Adjust doses for renal/hepatic impairment
+
+NEVER say "if indicated" or "consider if needed" — BE SPECIFIC.
+
+Return ONLY valid JSON:
+{
+  "risk_level": "low" | "medium" | "high",
+  "management_plan": {
+    "current_plan_analysis": "Analysis of current management",
+    "recommended_plan": [
+      { "step": "Drug name, Dose, Route, Frequency", "rationale": "Why indicated" }
+    ],
+    "adjustments_based_on_status": "How plan should adjust"
+  },
+  "confirmatory_tests": [
+    { "test": "Test name — ONLY new tests not already done", "rationale": "Specific reason" }
+  ],
+  "todo_items": [
+    {
+      "title": "Brief action",
+      "description": "Specific details with drug doses",
+      "priority": "low" | "medium" | "high" | "urgent",
+      "category": "physical_examination" | "investigations" | "differential_diagnosis" | "management_plan" | "complications" | "follow_up"
+    }
+  ]
+}
+
+Return ONLY the JSON object. No markdown code fences.`
+
+const SYNTHESIS_PROMPT = `You are a Clinical Synthesis Specialist. You receive two partial analyses of the same patient and must produce a unified ward-round summary in SOAP-compatible format.
+
+CLINICAL SUMMARY WRITING RULES — MANDATORY:
+${SYSTEM_PROMPT.slice(SYSTEM_PROMPT.indexOf('DESCRIBE SYMPTOMS, NOT DIAGNOSES'), SYSTEM_PROMPT.indexOf('MISSING EXAM FINDINGS'))}
+
+Given:
+- The original patient history
+- Clinical assessment (impressions, differentials, test interpretation, complications)
+- Management plan (risk level, management plan, confirmatory tests, todo items)
+
+Write a ward-round presentation summary following this EXACT order:
+1. "[Name], [age]-year-old [sex], [parity if OB/GYN], doing day [N] of admission."
+2. "Came in experiencing [chief complaint with brief context]."
+3. "On examination: [key findings from vitals and physical exam]."
+4. "Results: [test results and interpretation]."
+5. "Impression: [working diagnosis/differential]."
+6. "Current plan: [specific drugs with dose/route/frequency, monitoring, pending tests]."
+
+LENGTH RULES:
+- Simple cases (<3 active problems): Keep to 1 concise paragraph covering all 6 points.
+- Complex cases (3+ active problems or significant changes): Use 2 paragraphs. Paragraph 1 = points 1-4. Paragraph 2 = points 5-6 with detailed reasoning.
+
+DRUG SPECIFICITY: ALWAYS name every drug with dose/route/frequency. NEVER say "antibiotics", "escalation of care", or "IV fluids". Say "IV ceftriaxone 1g BD", "Normal saline 1L over 8 hours".
+
+Return ONLY valid JSON:
+{
+  "summary": "The ward-round summary following the structure above"
+}
+
+Return ONLY the JSON object. No markdown code fences.`
+
+/**
+ * QA Agent — fast Haiku check to catch clinical rule violations.
+ * Runs AFTER the main analysis, before saving to DB.
+ */
+const QA_PROMPT = `You are a Clinical QA Reviewer. Check the following AI-generated clinical analysis for violations of these ABSOLUTE rules:
+
+ANEMIA RULES:
+- Non-pregnant women: anemia = HB < 12.0. HB >= 12.0 is NORMAL, NOT anemia.
+- Men: anemia = HB < 13.0. HB >= 13.0 is NORMAL.
+- Pregnant women: anemia = HB < 11.0. HB >= 11.0 is NORMAL.
+- Severity: Women: Mild 11-11.9, Moderate 8-10.9, Severe <8. Pregnant: Mild 10-10.9, Moderate 7-9.9, Severe <7.
+- NEVER call HB >= 8 "severe anemia". NEVER call HB above threshold "anemia".
+
+SEPSIS RULES:
+- "Sepsis" is BANNED unless ALL of: >=2 SIRS criteria + infection + DOCUMENTED end-organ damage (elevated creatinine, elevated bilirubin, thrombocytopenia, GCS <15, hypotension needing vasopressors, PaO2/FiO2 <300).
+- Without documented organ damage, use "SIRS secondary to [source]" or "querying sepsis."
+- NEVER: "post-abortion sepsis", "evolving sepsis", "septic patient", "sepsis-induced", "septic cardiomyopathy", "septic shock" — unless organ damage PROVEN.
+
+DRUG SPECIFICITY:
+- NEVER use vague phrases: "antibiotic therapy", "escalation of care", "broad-spectrum antibiotics", "aggressive fluid resuscitation"
+- ALWAYS name specific drugs with dose/route/frequency
+
+FORBIDDEN PHRASES:
+- "Complete CBC", "Full blood count", "Comprehensive LFTs", "Renal function tests", "Repeat [panel]"
+- "despite symptoms", "despite antibiotic therapy", "if indicated", "consider if needed"
+
+INVESTIGATION RULES:
+- If ANY parameter from a panel is mentioned, the ENTIRE panel is done. Don't request the panel again.
+- Only request NEW tests that provide DIFFERENT information.
+
+NO HALLUCINATION:
+- Only use information provided. Don't invent symptoms or findings.
+- Normal WBC + normal CXR rules out hospital-acquired pneumonia.
+
+Review the analysis below and return ONLY valid JSON:
+{
+  "violations_found": true/false,
+  "corrections": [
+    {
+      "field": "path to the field (e.g. 'summary', 'impressions[0]', 'management_plan.recommended_plan[2].step')",
+      "original": "the problematic text",
+      "corrected": "the fixed text",
+      "rule_violated": "brief description of the rule"
+    }
+  ]
+}
+
+If no violations, return: { "violations_found": false, "corrections": [] }
+Return ONLY the JSON object. No markdown code fences.`
+
+/**
+ * Run a fast QA check on the analysis output using Haiku.
+ * Returns the corrected analysis, or the original if QA passes / fails.
+ */
+async function qaCheckAnalysis(
+  analysis: AnalysisResponse,
+  historyText: string,
+  config?: OpenRouterConfig
+): Promise<AnalysisResponse> {
+  const apiKey = config?.apiKey || process.env.OPENROUTER_API_KEY
+  if (!apiKey) return analysis
+
+  try {
+    const analysisJson = JSON.stringify(analysis, null, 2)
+    const userMessage = `PATIENT HISTORY:\n${historyText.slice(0, 2000)}\n\nAI ANALYSIS OUTPUT:\n${analysisJson}`
+
+    const response = await fetchWithRetry(OPENROUTER_API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+        'X-Title': 'MedFlow AI - QA',
+      },
+      body: JSON.stringify({
+        model: 'anthropic/claude-3.5-haiku',
+        messages: [
+          { role: 'system', content: QA_PROMPT },
+          { role: 'user', content: userMessage }
+        ],
+        temperature: 0.1,
+        max_tokens: 2000,
+      })
+    })
+
+    if (!response.ok) {
+      console.warn('QA check failed with status', response.status, '— using original analysis')
+      return analysis
+    }
+
+    const data = await response.json()
+    const content = data.choices?.[0]?.message?.content
+    if (!content) return analysis
+
+    const cleanContent = content.replace(/```json\n?|\n?```/g, '').trim()
+    const qaResult = JSON.parse(cleanContent)
+
+    if (!qaResult.violations_found || !qaResult.corrections?.length) {
+      console.log('QA check passed — no violations found')
+      return analysis
+    }
+
+    console.log(`QA check found ${qaResult.corrections.length} violation(s), applying corrections`)
+
+    // Apply corrections to the analysis
+    let correctedAnalysis = JSON.parse(JSON.stringify(analysis)) // deep clone
+
+    for (const correction of qaResult.corrections) {
+      try {
+        applyCorrection(correctedAnalysis, correction)
+      } catch (e) {
+        console.warn('Failed to apply QA correction:', correction.field, e)
+      }
+    }
+
+    return correctedAnalysis as AnalysisResponse
+  } catch (error) {
+    console.warn('QA check error — using original analysis:', error)
+    return analysis
+  }
+}
+
+/**
+ * Apply a single QA correction to the analysis object.
+ * Handles simple paths like 'summary' and array paths like 'impressions[0]'.
+ */
+function applyCorrection(obj: any, correction: { field: string; original: string; corrected: string }) {
+  const { field, original, corrected } = correction
+
+  // Simple string replacement across the whole object if field path is complex
+  const jsonStr = JSON.stringify(obj)
+  if (jsonStr.includes(original)) {
+    const fixed = jsonStr.replace(original, corrected)
+    const parsed = JSON.parse(fixed)
+    Object.assign(obj, parsed)
+    return
+  }
+
+  // Try navigating the field path
+  const parts = field.split('.')
+  let current = obj
+  for (let i = 0; i < parts.length - 1; i++) {
+    const part = parts[i]
+    const arrayMatch = part.match(/^(.+)\[(\d+)\]$/)
+    if (arrayMatch) {
+      current = current[arrayMatch[1]][parseInt(arrayMatch[2])]
+    } else {
+      current = current[part]
+    }
+    if (!current) return
+  }
+
+  const lastPart = parts[parts.length - 1]
+  const lastArrayMatch = lastPart.match(/^(.+)\[(\d+)\]$/)
+  if (lastArrayMatch) {
+    const arr = current[lastArrayMatch[1]]
+    const idx = parseInt(lastArrayMatch[2])
+    if (typeof arr[idx] === 'string') {
+      arr[idx] = corrected
+    }
+  } else if (typeof current[lastPart] === 'string') {
+    current[lastPart] = corrected
+  }
+}
+
+/**
+ * Fan-Out/Fan-In analysis: runs clinical assessment and management planning
+ * in parallel, then synthesizes into a unified result with QA check.
+ */
+export async function analyzePatientHistoryFanOut(
+  historyText: string,
+  config?: OpenRouterConfig,
+  personalNotes?: Array<{ title: string; content: string; rotation?: string | null }>
+): Promise<AnalysisResponse> {
+  const apiKey = config?.apiKey || process.env.OPENROUTER_API_KEY
+  if (!apiKey) throw new Error('OpenRouter API key is required')
+
+  let userContent = historyText
+  if (personalNotes && personalNotes.length > 0) {
+    userContent += formatPersonalNotesContext(personalNotes)
+  }
+
+  const headers = {
+    'Authorization': `Bearer ${apiKey}`,
+    'Content-Type': 'application/json',
+    'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+    'X-Title': 'MedFlow AI',
+  }
+
+  // Fan-Out: run clinical assessment and management planning in parallel
+  const [clinicalResult, managementResult] = await Promise.all([
+    fetchWithRetry(OPENROUTER_API_URL, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: config?.model || 'anthropic/claude-sonnet-4',
+        messages: [
+          { role: 'system', content: CLINICAL_ASSESSMENT_PROMPT },
+          { role: 'user', content: userContent }
+        ],
+        temperature: 0.3,
+        max_tokens: 5000,
+      })
+    }),
+    fetchWithRetry(OPENROUTER_API_URL, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: config?.model || 'anthropic/claude-sonnet-4',
+        messages: [
+          { role: 'system', content: MANAGEMENT_PLANNING_PROMPT },
+          { role: 'user', content: userContent }
+        ],
+        temperature: 0.3,
+        max_tokens: 5000,
+      })
+    })
+  ])
+
+  if (!clinicalResult.ok || !managementResult.ok) {
+    // Fallback to single-call analysis
+    console.warn('Fan-out sub-agent failed, falling back to single-call analysis')
+    return analyzePatientHistory(historyText, config, personalNotes)
+  }
+
+  const [clinicalData, managementData] = await Promise.all([
+    clinicalResult.json(),
+    managementResult.json()
+  ])
+
+  let clinical: any, management: any
+  try {
+    const clinicalContent = clinicalData.choices[0].message.content.replace(/```json\n?|\n?```/g, '').trim()
+    clinical = JSON.parse(clinicalContent)
+  } catch {
+    console.warn('Failed to parse clinical assessment, falling back to single-call')
+    return analyzePatientHistory(historyText, config, personalNotes)
+  }
+
+  try {
+    const managementContent = managementData.choices[0].message.content.replace(/```json\n?|\n?```/g, '').trim()
+    management = JSON.parse(managementContent)
+  } catch {
+    console.warn('Failed to parse management plan, falling back to single-call')
+    return analyzePatientHistory(historyText, config, personalNotes)
+  }
+
+  // Synthesis: generate the ward-round summary using both outputs
+  const synthesisInput = `PATIENT HISTORY:\n${historyText}\n\nCLINICAL ASSESSMENT:\n${JSON.stringify(clinical, null, 2)}\n\nMANAGEMENT PLAN:\n${JSON.stringify(management, null, 2)}`
+
+  const synthesisResult = await fetchWithRetry(OPENROUTER_API_URL, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      model: config?.model || 'anthropic/claude-sonnet-4',
+      messages: [
+        { role: 'system', content: SYNTHESIS_PROMPT },
+        { role: 'user', content: synthesisInput }
+      ],
+      temperature: 0.3,
+      max_tokens: 2000,
+    })
+  })
+
+  let summary = ''
+  if (synthesisResult.ok) {
+    const synthesisData = await synthesisResult.json()
+    try {
+      const synthContent = synthesisData.choices[0].message.content.replace(/```json\n?|\n?```/g, '').trim()
+      const synthParsed = JSON.parse(synthContent)
+      summary = synthParsed.summary || ''
+    } catch {
+      summary = ''
+    }
+  }
+
+  // Merge all results into the final AnalysisResponse
+  const merged: any = {
+    risk_level: management.risk_level || 'medium',
+    gaps_in_history: clinical.gaps_in_history || { follow_up_questions: [], physical_exam_checklist: [] },
+    test_interpretation: clinical.test_interpretation || [],
+    impressions: clinical.impressions || [],
+    differential_diagnoses: clinical.differential_diagnoses || [],
+    confirmatory_tests: management.confirmatory_tests || [],
+    management_plan: management.management_plan || { current_plan_analysis: '', recommended_plan: [], adjustments_based_on_status: '' },
+    complications: clinical.complications || [],
+    summary: summary || 'Summary generation failed — please review the individual sections.',
+    todo_items: management.todo_items || [],
+  }
+
+  // Sanitize then QA check
+  const sanitized = sanitizeAnalysis(merged)
+  const qaChecked = await qaCheckAnalysis(sanitized as AnalysisResponse, historyText, config)
+
+  return qaChecked
 }
 
 // === Senior Peer Review ===

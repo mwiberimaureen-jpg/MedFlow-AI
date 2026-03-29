@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { analyzePatientHistory } from '@/lib/openrouter/client'
+import { analyzePatientHistoryFanOut } from '@/lib/openrouter/client'
 
 export const dynamic = 'force-dynamic'
 
@@ -81,8 +81,8 @@ export async function POST(
         rotation: n.rotation,
       }))
 
-      // Call OpenRouter API for analysis
-      const analysisResponse = await analyzePatientHistory(patient.history_text, undefined, personalNotes)
+      // Call OpenRouter API for analysis (fan-out: parallel clinical + management agents, then synthesis + QA)
+      const analysisResponse = await analyzePatientHistoryFanOut(patient.history_text, undefined, personalNotes)
 
       const processingTime = Date.now() - startTime
 

@@ -126,3 +126,39 @@ You sit between human intent (directives) and deterministic execution (Python sc
 Be pragmatic. Be reliable. Self-anneal.
 
 Also, use Opus-4.5 for everything while building. It came out a few days ago and is an order of magnitude better than Sonnet and other models. If you can't find it, look it up first.
+
+## Lab Notes — Known Pitfalls
+
+> Accumulated learnings from past sessions. Every entry here prevents a repeat mistake.
+
+1. **Supabase metadata JSONB null safety**: When updating JSONB fields, always use `COALESCE(metadata, '{}')` in raw SQL or spread `{ ...(patient.metadata || {}), rotation: value }` in JS. Bare `jsonb_set` on NULL column = NULL result.
+
+2. **Senior Peer Review refresh — dual-check pattern**: Checking only a localStorage flag misses sparks interacted with before the code change was deployed. Always also check the `seenSparks` array in persisted state. Pattern: explicit flag (SPARK_READ_KEY) + fallback check against seenSparks array.
+
+3. **Anemia threshold enforcement**: The AI still occasionally labels HB ≥ 12.0 in non-pregnant women as "mild anemia." The system prompt alone is not sufficient — the `sanitizeAnalysis()` function must also catch this. Currently relies on prompt rules + QA agent.
+
+4. **Sepsis terminology slip-through**: Even with the SIRS vs Sepsis absolute rule in the system prompt, the AI occasionally uses "evolving sepsis" or "septic" without documented organ damage. The `sanitizeAnalysis()` regex catches most cases, but edge phrases like "sepsis-like picture" can slip through.
+
+5. **Patient rotation assignment**: Don't assign all patients to the same rotation by default. Always check each patient's working diagnosis / admission reason to determine the correct rotation (Internal Medicine, OB/GYN, Surgery, Pediatrics).
+
+6. **localStorage state persistence**: React state alone resets on navigation. Any UI state that should survive page changes (draft forms, submitted status, user selections) MUST be persisted to localStorage keyed by patient ID.
+
+7. **Vercel deployment lag**: After `git push`, Vercel deployments can take 1-3 minutes. If a user reports "changes aren't showing," verify the deployment timestamp before debugging code.
+
+8. **OpenRouter model names**: Use `anthropic/claude-sonnet-4` (not `claude-sonnet-4`). Use `anthropic/claude-3.5-haiku` for fast, cheap tasks like QA checks and learning sparks.
+
+## Lab Notes — What Works
+
+> Patterns and approaches that have proven reliable.
+
+1. **Clickable folder cards for grouping**: Users prefer visual folder cards (icon + name + count) over dropdown filters or badges for organizing items by category. Pattern: folder grid view → click to open → patient list inside → back button.
+
+2. **metadata JSONB for extensible fields**: Store soft attributes like `rotation` in an existing JSONB column instead of adding schema migrations. Works well for `patient_histories.metadata` and avoids ALTER TABLE.
+
+3. **Personal notes as AI context**: Fetching the user's clinical notes (up to 30) and passing them to the AI as supplementary context improves analysis quality. Format them clearly with rotation labels and a "do not quote directly" instruction.
+
+4. **Sanitize + QA dual defense**: Regex-based `sanitizeAnalysis()` catches known forbidden phrases deterministically. The QA agent catches semantic violations (wrong anemia grade, unsupported diagnoses). Both layers together provide robust output quality.
+
+5. **`fetchWithRetry` with exponential backoff**: 3 retries with 1s initial backoff handles transient OpenRouter 5xx errors without user intervention.
+
+6. **Day number calculation**: `Math.floor((today - admissionDate) / 86400000) + 1` — Day 1 = admission day. Consistent and simple.
