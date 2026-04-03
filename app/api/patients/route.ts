@@ -96,6 +96,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Validate consent for analysis submissions (not drafts)
+    // The form sends status 'analyzing' (cast from 'submitted'), which is outside the TS type
+    // but is the actual runtime value when submitting for analysis
+    if (status && status !== 'draft') {
+      if (!metadata?.ai_consent || !metadata?.third_party_consent) {
+        return NextResponse.json(
+          { error: 'Patient consent for AI analysis and third-party processing is required' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Create patient history record
     const { data: patient, error: createError } = await supabase
       .from('patient_histories')

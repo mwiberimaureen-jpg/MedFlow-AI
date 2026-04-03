@@ -26,6 +26,10 @@ export function PatientHistoryForm() {
     history_text: '',
     rotation: ''
   })
+  const [consent, setConsent] = useState({
+    ai_consent: false,
+    third_party_consent: false
+  })
   const [customRotation, setCustomRotation] = useState('')
   const [showCustomRotation, setShowCustomRotation] = useState(false)
 
@@ -41,6 +45,12 @@ export function PatientHistoryForm() {
         history_text: draft.history_text || '',
         rotation: draft.rotation || ''
       })
+      if (draft.ai_consent !== undefined) {
+        setConsent({
+          ai_consent: draft.ai_consent || false,
+          third_party_consent: draft.third_party_consent || false
+        })
+      }
       if (draft.savedAt) {
         setLastSaved(new Date(draft.savedAt))
       }
@@ -51,13 +61,13 @@ export function PatientHistoryForm() {
   useEffect(() => {
     const interval = setInterval(() => {
       if (formData.patient_name || formData.history_text) {
-        saveDraft(formData)
+        saveDraft({ ...formData, ...consent })
         setLastSaved(new Date())
       }
     }, 30000) // 30 seconds
 
     return () => clearInterval(interval)
-  }, [formData])
+  }, [formData, consent])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -98,8 +108,18 @@ export function PatientHistoryForm() {
       return false
     }
 
+    if (!consent.ai_consent) {
+      setError('Patient consent for AI analysis is required before submitting')
+      return false
+    }
+
+    if (!consent.third_party_consent) {
+      setError('Patient consent for third-party AI processing is required before submitting')
+      return false
+    }
+
     return true
-  }, [formData])
+  }, [formData, consent])
 
   const handleSubmit = async (status: 'draft' | 'submitted') => {
     setError(null)
@@ -131,7 +151,12 @@ export function PatientHistoryForm() {
           history_text: formData.history_text.trim(),
           status: status === 'submitted' ? 'analyzing' : 'draft',
           metadata: {
-            rotation: (showCustomRotation ? customRotation.trim() : formData.rotation) || null
+            rotation: (showCustomRotation ? customRotation.trim() : formData.rotation) || null,
+            ...(status === 'submitted' ? {
+              ai_consent: consent.ai_consent,
+              third_party_consent: consent.third_party_consent,
+              consent_recorded_at: new Date().toISOString()
+            } : {})
           }
         }),
       })
@@ -255,6 +280,35 @@ export function PatientHistoryForm() {
                 className="w-full mt-2 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             )}
+          </div>
+        </div>
+
+        {/* Patient Consent Section */}
+        <div className="border border-amber-200 bg-amber-50 rounded-lg p-4">
+          <h3 className="text-sm font-semibold text-amber-800 mb-3">Patient Consent (Required for Analysis)</h3>
+          <div className="space-y-3">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={consent.ai_consent}
+                onChange={(e) => setConsent(prev => ({ ...prev, ai_consent: e.target.checked }))}
+                className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">
+                I confirm the patient has been informed that AI tools will assist in their clinical analysis.
+              </span>
+            </label>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={consent.third_party_consent}
+                onChange={(e) => setConsent(prev => ({ ...prev, third_party_consent: e.target.checked }))}
+                className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">
+                I confirm consent for clinical data to be processed by a third-party AI service. Patient identifiers are de-identified before transmission.
+              </span>
+            </label>
           </div>
         </div>
 

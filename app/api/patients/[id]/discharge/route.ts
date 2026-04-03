@@ -29,7 +29,7 @@ export async function PATCH(
         // Fetch patient with history text
         const { data: patient, error: patientError } = await supabase
             .from('patient_histories')
-            .select('id, user_id, metadata, history_text, patient_name, patient_age, patient_gender')
+            .select('id, user_id, metadata, history_text, patient_name, patient_age, patient_gender, patient_identifier')
             .eq('id', id)
             .eq('user_id', user.id)
             .is('deleted_at', null)
@@ -37,6 +37,15 @@ export async function PATCH(
 
         if (patientError || !patient) {
             return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
+        }
+
+        // Consent gate: verify patient consent before AI analysis
+        const meta = patient.metadata || {}
+        if (!meta.ai_consent || !meta.third_party_consent) {
+            return NextResponse.json(
+                { error: 'Patient consent for AI analysis has not been recorded. Please update consent before generating discharge summary.' },
+                { status: 403 }
+            )
         }
 
         // Mark patient as discharged
@@ -76,10 +85,13 @@ export async function PATCH(
         }))
 
         // Generate AI discharge summary
+        // Patient identifiers are de-identified before transmission to the AI API
         const startTime = Date.now()
         const dischargeSummary = await generateDischargeSummary(
             patient.history_text,
-            analysisSummaries
+            analysisSummaries,
+            undefined,
+            { patientName: patient.patient_name, patientIdentifier: patient.patient_identifier }
         )
         const processingTime = Date.now() - startTime
 

@@ -45,6 +45,15 @@ export async function POST(
       )
     }
 
+    // Consent gate: verify patient consent before AI analysis
+    const meta = patient.metadata || {}
+    if (!meta.ai_consent || !meta.third_party_consent) {
+      return NextResponse.json(
+        { error: 'Patient consent for AI analysis has not been recorded. Please update consent before analyzing.' },
+        { status: 403 }
+      )
+    }
+
     // Check if admission analysis already exists (allow day analyses for the same patient)
     const { data: existingAdmissionAnalysis } = await supabase
       .from('analyses')
@@ -82,7 +91,13 @@ export async function POST(
       }))
 
       // Call OpenRouter API for analysis (fan-out: parallel clinical + management agents, then synthesis + QA)
-      const analysisResponse = await analyzePatientHistoryFanOut(patient.history_text, undefined, personalNotes)
+      // Patient identifiers are de-identified before transmission to the AI API
+      const analysisResponse = await analyzePatientHistoryFanOut(
+        patient.history_text,
+        undefined,
+        personalNotes,
+        { patientName: patient.patient_name, patientIdentifier: patient.patient_identifier }
+      )
 
       const processingTime = Date.now() - startTime
 

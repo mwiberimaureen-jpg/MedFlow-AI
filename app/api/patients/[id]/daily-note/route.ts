@@ -55,6 +55,15 @@ export async function POST(
             return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
         }
 
+        // Consent gate: verify patient consent before AI analysis
+        const meta = patient.metadata || {}
+        if (!meta.ai_consent || !meta.third_party_consent) {
+            return NextResponse.json(
+                { error: 'Patient consent for AI analysis has not been recorded. Please update consent before analyzing.' },
+                { status: 403 }
+            )
+        }
+
         // Fetch all existing analyses ordered chronologically (include raw text for full context)
         const { data: existingAnalyses } = await supabase
             .from('analyses')
@@ -96,13 +105,15 @@ export async function POST(
         }))
 
         // Call OpenRouter AI for daily progress analysis
+        // Patient identifiers are de-identified before transmission to the AI API
         const analysisResponse = await analyzeDailyProgress(
             patient.history_text,
             previousSummaries,
             progress_notes.trim(),
             day_number,
             undefined,
-            personalNotes
+            personalNotes,
+            { patientName: patient.patient_name, patientIdentifier: patient.patient_identifier }
         )
 
         const processingTime = Date.now() - startTime

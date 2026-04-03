@@ -1,5 +1,6 @@
 import { AnalysisResponse, DischargeSummaryResponse } from '@/lib/types/patient'
 import type { SparkFormat, SparkContent } from '@/lib/types/learning-spark'
+import { anonymize, deAnonymizeResponse, type PatientIdentifiers } from '@/lib/phi/anonymizer'
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions'
 
@@ -333,7 +334,8 @@ function formatPersonalNotesContext(
 export async function analyzePatientHistory(
   historyText: string,
   config?: OpenRouterConfig,
-  personalNotes?: Array<{ title: string; content: string; rotation?: string | null }>
+  personalNotes?: Array<{ title: string; content: string; rotation?: string | null }>,
+  identifiers?: PatientIdentifiers
 ): Promise<AnalysisResponse> {
   const apiKey = config?.apiKey || process.env.OPENROUTER_API_KEY
 
@@ -344,6 +346,14 @@ export async function analyzePatientHistory(
   let userContent = historyText
   if (personalNotes && personalNotes.length > 0) {
     userContent += formatPersonalNotesContext(personalNotes)
+  }
+
+  // PHI de-identification: mask patient name/identifier before sending to AI
+  let tokenMap = new Map<string, string>()
+  if (identifiers) {
+    const anon = anonymize(userContent, identifiers)
+    userContent = anon.masked
+    tokenMap = anon.tokenMap
   }
 
   const response = await fetchWithRetry(OPENROUTER_API_URL, {
@@ -401,7 +411,8 @@ export async function analyzePatientHistory(
     // QA check: fast Haiku pass to catch clinical rule violations
     const qaChecked = await qaCheckAnalysis(sanitized as AnalysisResponse, historyText, config)
 
-    return qaChecked
+    // Restore PHI in AI response so UI displays real patient names
+    return deAnonymizeResponse(qaChecked, tokenMap)
   } catch (error) {
     console.error('Failed to parse AI response:', content)
     throw new Error('Failed to parse AI analysis response')
@@ -488,7 +499,8 @@ export async function analyzeDailyProgress(
   progressNotes: string,
   dayNumber: number,
   config?: OpenRouterConfig,
-  personalNotes?: Array<{ title: string; content: string; rotation?: string | null }>
+  personalNotes?: Array<{ title: string; content: string; rotation?: string | null }>,
+  identifiers?: PatientIdentifiers
 ): Promise<AnalysisResponse> {
   const apiKey = config?.apiKey || process.env.OPENROUTER_API_KEY
 
@@ -555,6 +567,15 @@ export async function analyzeDailyProgress(
     `CORRECT: "Patient was on IV ceftriaxone 1g BD day 1-3, changed to IV ceftazidime 1g BD on day 4. Plan: change to IV meropenem 1g TDS"\n\n` +
     `Apply ALL the same clinical rules from your system instructions (AMBOSS-only, no hallucination, no forbidden phrases, specific drug dosing, etc.)`
 
+  // PHI de-identification: mask patient name/identifier before sending to AI
+  let maskedMessage = userMessage
+  let tokenMap = new Map<string, string>()
+  if (identifiers) {
+    const anon = anonymize(userMessage, identifiers)
+    maskedMessage = anon.masked
+    tokenMap = anon.tokenMap
+  }
+
   const response = await fetchWithRetry(OPENROUTER_API_URL, {
     method: 'POST',
     headers: {
@@ -567,7 +588,7 @@ export async function analyzeDailyProgress(
       model: config?.model || 'anthropic/claude-sonnet-4',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: userMessage }
+        { role: 'user', content: maskedMessage }
       ],
       temperature: 0.3,
       max_tokens: 8000,
@@ -597,7 +618,8 @@ export async function analyzeDailyProgress(
 
     const sanitized = sanitizeAnalysis(parsed) as AnalysisResponse
     const qaChecked = await qaCheckAnalysis(sanitized, admissionHistoryText + '\n' + progressNotes, config)
-    return qaChecked
+    // Restore PHI in AI response so UI displays real patient names
+    return deAnonymizeResponse(qaChecked, tokenMap)
   } catch (error) {
     console.error('Failed to parse AI daily response:', content)
     throw new Error('Failed to parse AI daily analysis response')
@@ -635,7 +657,8 @@ Return ONLY the JSON object. No markdown code fences, no additional text.`
 export async function generateDischargeSummary(
   admissionHistoryText: string,
   analysisSummaries: Array<{ version: string; summary: string; rawText?: string }>,
-  config?: OpenRouterConfig
+  config?: OpenRouterConfig,
+  identifiers?: PatientIdentifiers
 ): Promise<DischargeSummaryResponse> {
   const apiKey = config?.apiKey || process.env.OPENROUTER_API_KEY
 
@@ -649,10 +672,18 @@ export async function generateDischargeSummary(
     return `${label}:\n${s.summary}`
   }).join('\n\n')
 
-  const userMessage =
+  let userMessage =
     `=== ADMISSION HISTORY ===\n${admissionHistoryText}\n=== END ADMISSION HISTORY ===\n\n` +
     `=== CLINICAL ANALYSES DURING STAY ===\n${analysisContext}\n=== END ANALYSES ===\n\n` +
     `Generate a comprehensive discharge summary based on the above admission history and clinical analyses.`
+
+  // PHI de-identification: mask patient name/identifier before sending to AI
+  let tokenMap = new Map<string, string>()
+  if (identifiers) {
+    const anon = anonymize(userMessage, identifiers)
+    userMessage = anon.masked
+    tokenMap = anon.tokenMap
+  }
 
   const response = await fetchWithRetry(OPENROUTER_API_URL, {
     method: 'POST',
@@ -694,7 +725,8 @@ export async function generateDischargeSummary(
       throw new Error('Invalid discharge summary structure from AI')
     }
 
-    return parsed as DischargeSummaryResponse
+    // Restore PHI in AI response so UI displays real patient names
+    return deAnonymizeResponse(parsed as DischargeSummaryResponse, tokenMap)
   } catch (error) {
     console.error('Failed to parse AI discharge response:', content)
     throw new Error('Failed to parse AI discharge summary response')
@@ -977,7 +1009,8 @@ function applyCorrection(obj: any, correction: { field: string; original: string
 export async function analyzePatientHistoryFanOut(
   historyText: string,
   config?: OpenRouterConfig,
-  personalNotes?: Array<{ title: string; content: string; rotation?: string | null }>
+  personalNotes?: Array<{ title: string; content: string; rotation?: string | null }>,
+  identifiers?: PatientIdentifiers
 ): Promise<AnalysisResponse> {
   const apiKey = config?.apiKey || process.env.OPENROUTER_API_KEY
   if (!apiKey) throw new Error('OpenRouter API key is required')
@@ -985,6 +1018,14 @@ export async function analyzePatientHistoryFanOut(
   let userContent = historyText
   if (personalNotes && personalNotes.length > 0) {
     userContent += formatPersonalNotesContext(personalNotes)
+  }
+
+  // PHI de-identification: mask patient name/identifier before sending to AI
+  let tokenMap = new Map<string, string>()
+  if (identifiers) {
+    const anon = anonymize(userContent, identifiers)
+    userContent = anon.masked
+    tokenMap = anon.tokenMap
   }
 
   const headers = {
@@ -1027,7 +1068,7 @@ export async function analyzePatientHistoryFanOut(
   if (!clinicalResult.ok || !managementResult.ok) {
     // Fallback to single-call analysis
     console.warn('Fan-out sub-agent failed, falling back to single-call analysis')
-    return analyzePatientHistory(historyText, config, personalNotes)
+    return analyzePatientHistory(historyText, config, personalNotes, identifiers)
   }
 
   const [clinicalData, managementData] = await Promise.all([
@@ -1041,7 +1082,7 @@ export async function analyzePatientHistoryFanOut(
     clinical = JSON.parse(clinicalContent)
   } catch {
     console.warn('Failed to parse clinical assessment, falling back to single-call')
-    return analyzePatientHistory(historyText, config, personalNotes)
+    return analyzePatientHistory(historyText, config, personalNotes, identifiers)
   }
 
   try {
@@ -1049,11 +1090,17 @@ export async function analyzePatientHistoryFanOut(
     management = JSON.parse(managementContent)
   } catch {
     console.warn('Failed to parse management plan, falling back to single-call')
-    return analyzePatientHistory(historyText, config, personalNotes)
+    return analyzePatientHistory(historyText, config, personalNotes, identifiers)
   }
 
   // Synthesis: generate the ward-round summary using both outputs
-  const synthesisInput = `PATIENT HISTORY:\n${historyText}\n\nCLINICAL ASSESSMENT:\n${JSON.stringify(clinical, null, 2)}\n\nMANAGEMENT PLAN:\n${JSON.stringify(management, null, 2)}`
+  // Anonymize the historyText again for synthesis (userContent was already anonymized above,
+  // but synthesisInput re-uses raw historyText)
+  let maskedHistoryForSynthesis = historyText
+  if (identifiers) {
+    maskedHistoryForSynthesis = anonymize(historyText, identifiers).masked
+  }
+  const synthesisInput = `PATIENT HISTORY:\n${maskedHistoryForSynthesis}\n\nCLINICAL ASSESSMENT:\n${JSON.stringify(clinical, null, 2)}\n\nMANAGEMENT PLAN:\n${JSON.stringify(management, null, 2)}`
 
   const synthesisResult = await fetchWithRetry(OPENROUTER_API_URL, {
     method: 'POST',
@@ -1099,7 +1146,8 @@ export async function analyzePatientHistoryFanOut(
   const sanitized = sanitizeAnalysis(merged)
   const qaChecked = await qaCheckAnalysis(sanitized as AnalysisResponse, historyText, config)
 
-  return qaChecked
+  // Restore PHI in AI response so UI displays real patient names
+  return deAnonymizeResponse(qaChecked, tokenMap)
 }
 
 // === Senior Peer Review ===

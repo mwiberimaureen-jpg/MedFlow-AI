@@ -67,6 +67,14 @@ export interface PatientWithAnalysis extends PatientHistory {
   analyses: (Analysis & { todo_items: TodoItem[] })[]
 }
 
+export interface PatientMetadata {
+  rotation?: string | null
+  ai_consent?: boolean
+  third_party_consent?: boolean
+  consent_recorded_at?: string
+  [key: string]: any
+}
+
 export interface CreatePatientRequest {
   patient_name: string
   patient_age?: number
@@ -74,7 +82,7 @@ export interface CreatePatientRequest {
   patient_identifier?: string
   history_text: string
   status?: 'draft' | 'submitted'
-  metadata?: Record<string, any>
+  metadata?: PatientMetadata
 }
 
 export interface GapsInHistory {
