@@ -6,11 +6,11 @@ import { DEFAULT_ROTATIONS } from '@/lib/constants/rotations'
 import type { ClinicalNote } from '@/lib/types/clinical-note'
 
 const SOURCE_LABELS: Record<string, { label: string; variant: 'info' | 'warning' | 'success' | 'danger' | 'default' }> = {
-  manual: { label: 'Manual', variant: 'default' },
-  senior_asks: { label: 'The Senior Asks', variant: 'info' },
-  quick_teach: { label: 'Quick Teach', variant: 'warning' },
-  know_your_drugs: { label: 'Know Your Drugs', variant: 'success' },
-  clinical_twist: { label: 'Clinical Twist', variant: 'danger' },
+  manual: { label: '✏️ Manual', variant: 'default' },
+  senior_asks: { label: '🩺 The Senior Asks', variant: 'info' },
+  quick_teach: { label: '⚡ Quick Teach', variant: 'warning' },
+  know_your_drugs: { label: '💊 Know Your Drugs', variant: 'success' },
+  clinical_twist: { label: '🔬 Clinical Twist', variant: 'danger' },
 }
 
 interface NoteCardProps {
