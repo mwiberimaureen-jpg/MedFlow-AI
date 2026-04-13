@@ -63,6 +63,10 @@ export function PatientRoundCard({ patient, latestAnalysis, allAnalyses, analysi
     ? extractSectionFromAnalysis(latestAnalysis.raw_analysis_text, 'test_interpretation')
     : ''
 
+  // For older plain-text analyses where section extraction fails, use the summary as fallback
+  const hasStructuredData = !!(currentPlan || impressions || testResults)
+  const fallbackSummary = (!hasStructuredData && latestAnalysis?.summary) ? latestAnalysis.summary : ''
+
   // Build the demographic line
   const demoLine: string[] = []
   if (patient.patient_age) demoLine.push(`${patient.patient_age}y`)
@@ -177,6 +181,14 @@ export function PatientRoundCard({ patient, latestAnalysis, allAnalyses, analysi
           <div>
             <span className="font-semibold text-gray-800 dark:text-gray-200">Current Plan: </span>
             <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap mt-1">{currentPlan}</p>
+          </div>
+        )}
+
+        {/* Fallback: show AI summary inline when no structured sections could be extracted */}
+        {fallbackSummary && (
+          <div>
+            <span className="font-semibold text-gray-800 dark:text-gray-200">Clinical Summary: </span>
+            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap mt-1">{fallbackSummary}</p>
           </div>
         )}
 

@@ -14,6 +14,7 @@ export function extractChiefComplaint(historyText: string): string {
   const patterns = [
     /(?:chief\s+complaint|presenting\s+complaint|reason\s+for\s+admission|complains?\s+of)[:\s]+(.+?)(?:\n|\.(?:\s|$))/i,
     /(?:presents?\s+with|admitted\s+(?:with|for|due\s+to))[:\s]+(.+?)(?:\n|\.(?:\s|$))/i,
+    /(?:c\/o)[:\s]+(.+?)(?:\n|\.(?:\s|$))/i,
   ]
 
   for (const pattern of patterns) {
@@ -98,24 +99,27 @@ export function extractObgynData(historyText: string, gender?: string): {
   if (eddMatch?.[1]) result.edd = eddMatch[1].trim()
 
   // Gestational age (GBD / GBS / weeks of gestation / weeks gestation)
+  // Handles: "GBD: 12w 4d", "GBS: 12w 5d", "32 weeks gestation", "28+3 weeks"
   const gaPatterns = [
-    /\b(\d+)\s*(?:weeks?|wks?)\s*(?:\+\s*\d+\s*(?:days?|d))?\s*(?:gestation(?:al)?|amenorrhea|by\s+dates?|by\s+scan|by\s+uss?)/i,
-    /\b(?:gestational\s+age|ga|gbd|gbs|gestation)[:\s]+(\d+\s*(?:weeks?|wks?)(?:\s*\+?\s*\d+\s*(?:days?|d))?)/i,
-    /\b(?:at|of)\s+(\d+\s*(?:weeks?|wks?)(?:\s*\+?\s*\d+\s*(?:days?|d))?)\s*(?:gestation|amenorrhea)/i,
+    /\b(?:gbd|gbs)[:\s]+([^\n.;]+)/i,
+    /\b(\d+)\s*(?:weeks?|wks?|w)\s*(?:\+?\s*\d+\s*(?:days?|d))?\s*(?:gestation(?:al)?|amenorrhea|by\s+dates?|by\s+scan|by\s+uss?)/i,
+    /\b(?:gestational\s+age|ga|gestation)[:\s]+([^\n.;]+)/i,
+    /\b(?:at|of)\s+(\d+\s*(?:weeks?|wks?|w)(?:\s*\+?\s*\d+\s*(?:days?|d))?)\s*(?:gestation|amenorrhea)/i,
   ]
   for (const pattern of gaPatterns) {
     const match = historyText.match(pattern)
-    if (match) {
-      result.gestationalAge = match[1] ? match[1].trim() : match[0].trim()
+    if (match?.[1]) {
+      result.gestationalAge = match[1].trim()
       break
     }
   }
 
-  // Obstetric formula: G4P3+1, G2P1+0, gravida 3 para 2, etc.
+  // Obstetric formula: G4P3+1, G2P1+0, gravida 3 para 2, primigravida, etc.
   const formulaPatterns = [
     /\b(G\d+\s*P\d+\s*\+?\s*\d*)/i,
     /\b(gravida\s+\d+\s*(?:,?\s*para\s+\d+(?:\s*\+\s*\d+)?))/i,
     /\b(para\s+\d+\s*\+\s*\d+)/i,
+    /\b(primigravida|multigravida|grand\s*multigravida)/i,
   ]
   for (const pattern of formulaPatterns) {
     const match = historyText.match(pattern)
@@ -141,6 +145,7 @@ export function extractChiefComplaintWithDuration(historyText: string): string {
   const durationPatterns = [
     /(?:chief\s+complaint|presenting\s+complaint|complains?\s+of)[:\s]+([\s\S]+?)(?:\n{2}|\n(?=[A-Z]))/i,
     /(?:presents?\s+with|admitted\s+(?:with|for|due\s+to))[:\s]+([\s\S]+?)(?:\n{2}|\n(?=[A-Z]))/i,
+    /(?:c\/o)[:\s]+([\s\S]+?)(?:\n{2}|\n(?=[A-Z]))/i,
   ]
 
   for (const pattern of durationPatterns) {
@@ -324,18 +329,38 @@ export function extractSectionFromAnalysis(rawAnalysisText: string, sectionKey: 
   if (!headerPattern) return ''
 
   const match = rawAnalysisText.match(headerPattern)
-  if (!match) return ''
+  if (match) {
+    const startIdx = match.index! + match[0].length
+    // Find the next ## heading or end of text
+    const nextSection = rawAnalysisText.slice(startIdx).match(/\n##\s/)
+    const endIdx = nextSection ? startIdx + nextSection.index! : rawAnalysisText.length
 
-  const startIdx = match.index! + match[0].length
-  // Find the next ## heading or end of text
-  const nextSection = rawAnalysisText.slice(startIdx).match(/\n##\s/)
-  const endIdx = nextSection ? startIdx + nextSection.index! : rawAnalysisText.length
+    const sectionContent = rawAnalysisText.slice(startIdx, endIdx).trim()
 
-  const sectionContent = rawAnalysisText.slice(startIdx, endIdx).trim()
+    // Clean up markdown formatting for display
+    return sectionContent
+      .replace(/\*\*([^*]+)\*\*/g, '$1')  // Remove bold markers
+      .replace(/^[-•]\s*/gm, '• ')         // Normalize bullet points
+      .trim()
+  }
 
-  // Clean up markdown formatting for display
-  return sectionContent
-    .replace(/\*\*([^*]+)\*\*/g, '$1')  // Remove bold markers
-    .replace(/^[-•]\s*/gm, '• ')         // Normalize bullet points
-    .trim()
+  // Plain text fallback for older analyses without ## headers
+  const plainTextPatterns: Record<string, RegExp> = {
+    management_plan: /(?:management\s+plan|plan|treatment|management)[:\s]+([\s\S]+?)(?=\n\s*(?:impression|differential|complication|test|investigation|follow|$))/i,
+    impressions: /(?:impression|diagnosis|assessment|clinical\s+impression)[:\s]+([\s\S]+?)(?=\n\s*(?:management|plan|treatment|differential|test|investigation|$))/i,
+    test_interpretation: /(?:test\s+interpretation|investigation|lab(?:oratory)?\s+(?:results?|findings?)|results)[:\s]+([\s\S]+?)(?=\n\s*(?:impression|management|plan|differential|complication|$))/i,
+  }
+
+  const plainPattern = plainTextPatterns[sectionKey]
+  if (plainPattern) {
+    const plainMatch = rawAnalysisText.match(plainPattern)
+    if (plainMatch?.[1]) {
+      return plainMatch[1].trim()
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        .replace(/^[-•]\s*/gm, '• ')
+        .trim()
+    }
+  }
+
+  return ''
 }
