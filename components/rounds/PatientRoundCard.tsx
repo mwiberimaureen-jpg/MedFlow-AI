@@ -7,6 +7,10 @@ import {
   calculateDayOfAdmission,
   extractChiefComplaintWithDuration,
   extractKnownConditions,
+  extractObgynData,
+  extractHpiSummary,
+  extractRosPositives,
+  extractPostAdmissionSymptoms,
   extractSectionFromAnalysis,
   buildCourseSummary
 } from '@/lib/utils/rounds-parser'
@@ -43,6 +47,10 @@ export function PatientRoundCard({ patient, latestAnalysis, allAnalyses, analysi
   const dayOfAdmission = calculateDayOfAdmission(patient.created_at)
   const chiefComplaint = extractChiefComplaintWithDuration(patient.history_text)
   const knownConditions = extractKnownConditions(patient.history_text)
+  const obgyn = extractObgynData(patient.history_text, patient.patient_gender)
+  const hpiSummary = extractHpiSummary(patient.history_text)
+  const rosPositives = extractRosPositives(patient.history_text)
+  const postAdmissionSymptoms = extractPostAdmissionSymptoms(allAnalyses)
   const triage = getTriageFromRiskLevel(latestAnalysis?.risk_level)
 
   const currentPlan = latestAnalysis
@@ -55,7 +63,12 @@ export function PatientRoundCard({ patient, latestAnalysis, allAnalyses, analysi
     ? extractSectionFromAnalysis(latestAnalysis.raw_analysis_text, 'test_interpretation')
     : ''
 
-  const courseSummary = buildCourseSummary(allAnalyses)
+  // Build the demographic line
+  const demoLine: string[] = []
+  if (patient.patient_age) demoLine.push(`${patient.patient_age}y`)
+  if (patient.patient_gender) demoLine.push(patient.patient_gender.charAt(0).toUpperCase() + patient.patient_gender.slice(1))
+  if (obgyn.obstetricFormula) demoLine.push(obgyn.obstetricFormula)
+  demoLine.push(`Day ${dayOfAdmission} of Admission`)
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden print:break-inside-avoid print:border-gray-400">
@@ -73,9 +86,7 @@ export function PatientRoundCard({ patient, latestAnalysis, allAnalyses, analysi
               )}
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              {patient.patient_age && `${patient.patient_age}y`}
-              {patient.patient_gender && ` / ${patient.patient_gender.charAt(0).toUpperCase() + patient.patient_gender.slice(1)}`}
-              {` | Day ${dayOfAdmission} of Admission`}
+              {demoLine.join(' | ')}
             </p>
           </div>
         </div>
@@ -93,11 +104,25 @@ export function PatientRoundCard({ patient, latestAnalysis, allAnalyses, analysi
 
       {/* Summary body — always visible */}
       <div className="px-4 py-3 space-y-2 text-sm">
-        {/* Known conditions / background */}
+        {/* OB/GYN data for female patients */}
+        {(obgyn.lmp || obgyn.edd || obgyn.gestationalAge) && (
+          <div>
+            <span className="font-semibold text-gray-800 dark:text-gray-200">OB/GYN: </span>
+            <span className="text-gray-700 dark:text-gray-300">
+              {[
+                obgyn.lmp && `LMP: ${obgyn.lmp}`,
+                obgyn.gestationalAge && `Gestation: ${obgyn.gestationalAge}`,
+                obgyn.edd && `EDD: ${obgyn.edd}`,
+              ].filter(Boolean).join(' | ')}
+            </span>
+          </div>
+        )}
+
+        {/* Known conditions / comorbidities */}
         {knownConditions.length > 0 && (
           <div>
-            <span className="font-semibold text-gray-800 dark:text-gray-200">Background: </span>
-            <span className="text-gray-700 dark:text-gray-300">{knownConditions.join(' | ')}</span>
+            <span className="font-semibold text-gray-800 dark:text-gray-200">Comorbidities: </span>
+            <span className="text-gray-700 dark:text-gray-300">{knownConditions.join(', ')}</span>
           </div>
         )}
 
@@ -107,6 +132,30 @@ export function PatientRoundCard({ patient, latestAnalysis, allAnalyses, analysi
           <span className="text-gray-700 dark:text-gray-300">{chiefComplaint}</span>
         </div>
 
+        {/* HPI summary */}
+        {hpiSummary && (
+          <div>
+            <span className="font-semibold text-gray-800 dark:text-gray-200">HPI: </span>
+            <span className="text-gray-700 dark:text-gray-300">{hpiSummary}</span>
+          </div>
+        )}
+
+        {/* Post-admission symptoms */}
+        {postAdmissionSymptoms && (
+          <div>
+            <span className="font-semibold text-gray-800 dark:text-gray-200">Post-Admission Symptoms: </span>
+            <span className="text-gray-700 dark:text-gray-300">{postAdmissionSymptoms}</span>
+          </div>
+        )}
+
+        {/* ROS positives */}
+        {rosPositives.length > 0 && (
+          <div>
+            <span className="font-semibold text-gray-800 dark:text-gray-200">ROS (+): </span>
+            <span className="text-gray-700 dark:text-gray-300">{rosPositives.join(', ')}</span>
+          </div>
+        )}
+
         {/* Impressions */}
         {impressions && (
           <div>
@@ -115,31 +164,15 @@ export function PatientRoundCard({ patient, latestAnalysis, allAnalyses, analysi
           </div>
         )}
 
-        {/* Course since admission — what has been done */}
-        {courseSummary && (
-          <div>
-            <span className="font-semibold text-gray-800 dark:text-gray-200">Course Since Admission: </span>
-            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap mt-1 ml-0">{courseSummary}</p>
-          </div>
-        )}
-
-        {/* New symptoms / latest progress */}
-        {latestAnalysis?.user_feedback && (
-          <div>
-            <span className="font-semibold text-gray-800 dark:text-gray-200">New Symptoms / Latest Update: </span>
-            <span className="text-gray-700 dark:text-gray-300">{latestAnalysis.user_feedback}</span>
-          </div>
-        )}
-
-        {/* Relevant test results — always visible */}
+        {/* Test results */}
         {testResults && (
           <div>
-            <span className="font-semibold text-gray-800 dark:text-gray-200">Relevant Results: </span>
+            <span className="font-semibold text-gray-800 dark:text-gray-200">Investigations: </span>
             <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap mt-1">{testResults}</p>
           </div>
         )}
 
-        {/* Current management plan — always visible */}
+        {/* Current management plan */}
         {currentPlan && (
           <div>
             <span className="font-semibold text-gray-800 dark:text-gray-200">Current Plan: </span>
@@ -147,12 +180,22 @@ export function PatientRoundCard({ patient, latestAnalysis, allAnalyses, analysi
           </div>
         )}
 
-        {/* Expanded: AI Summary */}
-        {expanded && latestAnalysis?.summary && (
-          <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
-            <span className="font-semibold text-gray-800 dark:text-gray-200">AI Summary: </span>
-            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap mt-1">{latestAnalysis.summary}</p>
-          </div>
+        {/* Expanded: Course since admission + AI Summary */}
+        {expanded && (
+          <>
+            {buildCourseSummary(allAnalyses) && (
+              <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+                <span className="font-semibold text-gray-800 dark:text-gray-200">Course Since Admission: </span>
+                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap mt-1">{buildCourseSummary(allAnalyses)}</p>
+              </div>
+            )}
+            {latestAnalysis?.summary && (
+              <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+                <span className="font-semibold text-gray-800 dark:text-gray-200">AI Summary: </span>
+                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap mt-1">{latestAnalysis.summary}</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

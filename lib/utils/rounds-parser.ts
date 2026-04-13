@@ -6,7 +6,7 @@ export function calculateDayOfAdmission(createdAt: string): number {
   const admission = new Date(createdAt)
   const now = new Date()
   const diffMs = now.getTime() - admission.getTime()
-  return Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))
+  return Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1)
 }
 
 export function extractChiefComplaint(historyText: string): string {
@@ -30,11 +30,10 @@ export function extractChiefComplaint(historyText: string): string {
 
 export function extractKnownConditions(historyText: string): string[] {
   const conditions: string[] = []
-  const text = historyText.toLowerCase()
 
   const conditionPatterns: Array<{ pattern: RegExp; label: string }> = [
-    { pattern: /\b(?:known|diagnosed)\s+(?:case\s+of\s+)?diabet(?:ic|es)/i, label: 'Diabetic' },
-    { pattern: /\b(?:known|diagnosed)\s+(?:case\s+of\s+)?hypertens(?:ive|ion)/i, label: 'Hypertensive' },
+    { pattern: /\b(?:known|diagnosed)\s+(?:case\s+of\s+)?diabet(?:ic|es)/i, label: 'Known Diabetic' },
+    { pattern: /\b(?:known|diagnosed)\s+(?:case\s+of\s+)?hypertens(?:ive|ion)/i, label: 'Known Hypertensive' },
     { pattern: /\bhypertens(?:ive|ion)\b/i, label: 'Hypertensive' },
     { pattern: /\bdiabet(?:ic|es)\b/i, label: 'Diabetic' },
     { pattern: /\basthma(?:tic)?\b/i, label: 'Asthmatic' },
@@ -44,35 +43,97 @@ export function extractKnownConditions(historyText: string): string[] {
     { pattern: /\bckd|chronic\s+kidney/i, label: 'CKD' },
     { pattern: /\bheart\s+failure|cardiac\s+failure/i, label: 'Heart Failure' },
     { pattern: /\btb|tuberculosis/i, label: 'TB' },
+    { pattern: /\brheumatic\s+heart/i, label: 'RHD' },
+    { pattern: /\brenal\s+(?:disease|failure|insufficiency)/i, label: 'Renal Disease' },
+    { pattern: /\bliver\s+(?:disease|cirrhosis|failure)/i, label: 'Liver Disease' },
+    { pattern: /\bpeptic\s+ulcer/i, label: 'PUD' },
   ]
 
   const seen = new Set<string>()
   for (const { pattern, label } of conditionPatterns) {
     if (pattern.test(historyText) && !seen.has(label)) {
-      conditions.push(label)
-      seen.add(label)
-    }
-  }
-
-  // Extract LMP if present
-  const lmpMatch = historyText.match(/\b(?:lmp|last\s+menstrual\s+period)[:\s]+(.+?)(?:\n|\.(?:\s|$))/i)
-  if (lmpMatch?.[1]) {
-    conditions.push(`LMP: ${lmpMatch[1].trim()}`)
-  }
-
-  // Extract medications mentioned
-  const medPatterns = [
-    /(?:on|taking|currently\s+on|medications?)[:\s]+(.+?)(?:\n|\.(?:\s|$))/i,
-  ]
-  for (const pattern of medPatterns) {
-    const match = historyText.match(pattern)
-    if (match?.[1] && match[1].trim().length < 200) {
-      conditions.push(`Meds: ${match[1].trim()}`)
-      break
+      // Prefer "Known X" over bare "X"
+      if (label.startsWith('Known ')) {
+        seen.add(label.replace('Known ', ''))
+      }
+      if (!seen.has(label)) {
+        conditions.push(label)
+        seen.add(label)
+      }
     }
   }
 
   return conditions
+}
+
+/**
+ * Extract OB/GYN-specific data from history text.
+ */
+export function extractObgynData(historyText: string, gender?: string): {
+  lmp: string | null
+  edd: string | null
+  gestationalAge: string | null
+  gravida: string | null
+  parity: string | null
+  obstetricFormula: string | null
+} {
+  const result = {
+    lmp: null as string | null,
+    edd: null as string | null,
+    gestationalAge: null as string | null,
+    gravida: null as string | null,
+    parity: null as string | null,
+    obstetricFormula: null as string | null,
+  }
+
+  // Only extract for female patients
+  if (gender && gender.toLowerCase() !== 'female') return result
+
+  // LMP
+  const lmpMatch = historyText.match(/\b(?:lmp|last\s+menstrual\s+period|l\.m\.p)[:\s]+([^\n.;]+)/i)
+  if (lmpMatch?.[1]) result.lmp = lmpMatch[1].trim()
+
+  // EDD
+  const eddMatch = historyText.match(/\b(?:edd|expected\s+(?:date|delivery)|estimated\s+(?:date|delivery))[:\s]+([^\n.;]+)/i)
+  if (eddMatch?.[1]) result.edd = eddMatch[1].trim()
+
+  // Gestational age (GBD / GBS / weeks of gestation / weeks gestation)
+  const gaPatterns = [
+    /\b(\d+)\s*(?:weeks?|wks?)\s*(?:\+\s*\d+\s*(?:days?|d))?\s*(?:gestation(?:al)?|amenorrhea|by\s+dates?|by\s+scan|by\s+uss?)/i,
+    /\b(?:gestational\s+age|ga|gbd|gbs|gestation)[:\s]+(\d+\s*(?:weeks?|wks?)(?:\s*\+?\s*\d+\s*(?:days?|d))?)/i,
+    /\b(?:at|of)\s+(\d+\s*(?:weeks?|wks?)(?:\s*\+?\s*\d+\s*(?:days?|d))?)\s*(?:gestation|amenorrhea)/i,
+  ]
+  for (const pattern of gaPatterns) {
+    const match = historyText.match(pattern)
+    if (match) {
+      result.gestationalAge = match[1] ? match[1].trim() : match[0].trim()
+      break
+    }
+  }
+
+  // Obstetric formula: G4P3+1, G2P1+0, gravida 3 para 2, etc.
+  const formulaPatterns = [
+    /\b(G\d+\s*P\d+\s*\+?\s*\d*)/i,
+    /\b(gravida\s+\d+\s*(?:,?\s*para\s+\d+(?:\s*\+\s*\d+)?))/i,
+    /\b(para\s+\d+\s*\+\s*\d+)/i,
+  ]
+  for (const pattern of formulaPatterns) {
+    const match = historyText.match(pattern)
+    if (match?.[1]) {
+      result.obstetricFormula = match[1].trim()
+      break
+    }
+  }
+
+  // Gravida standalone
+  const gravidaMatch = historyText.match(/\b(?:gravida|G)\s*(\d+)/i)
+  if (gravidaMatch?.[1]) result.gravida = gravidaMatch[1]
+
+  // Parity standalone
+  const parityMatch = historyText.match(/\b(?:para|P)\s*(\d+\s*\+?\s*\d*)/i)
+  if (parityMatch?.[1]) result.parity = parityMatch[1].trim()
+
+  return result
 }
 
 export function extractChiefComplaintWithDuration(historyText: string): string {
@@ -94,6 +155,95 @@ export function extractChiefComplaintWithDuration(historyText: string): string {
   }
 
   return extractChiefComplaint(historyText)
+}
+
+/**
+ * Extract a brief HPI summary from the history text.
+ * Captures key clinical narrative without the full text.
+ */
+export function extractHpiSummary(historyText: string): string {
+  // Try to find the HPI section
+  const hpiPatterns = [
+    /(?:history\s+of\s+present(?:ing)?\s+illness|hpi|history\s+of\s+illness)[:\s]+([\s\S]+?)(?=\n\s*(?:past\s+medical|review\s+of\s+systems|ros|social\s+history|family\s+history|medications|allergies|physical\s+exam|on\s+examination|$))/i,
+    /(?:presenting\s+history|clinical\s+history)[:\s]+([\s\S]+?)(?=\n\s*(?:past\s+medical|review\s+of\s+systems|ros|social\s+history|medications|physical\s+exam|$))/i,
+  ]
+
+  for (const pattern of hpiPatterns) {
+    const match = historyText.match(pattern)
+    if (match?.[1]) {
+      const text = match[1].trim()
+      // Take first 3 sentences for a concise summary
+      const sentences = text.split(/\.(?:\s|$)/).filter(s => s.trim().length > 5)
+      const summary = sentences.slice(0, 3).join('. ').trim()
+      return summary ? summary + '.' : ''
+    }
+  }
+
+  return ''
+}
+
+/**
+ * Extract positive findings from Review of Systems in the history text.
+ */
+export function extractRosPositives(historyText: string): string[] {
+  const positives: string[] = []
+
+  // Try to find the ROS section
+  const rosMatch = historyText.match(
+    /(?:review\s+of\s+systems|ros|systemic\s+review)[:\s]+([\s\S]+?)(?=\n\s*(?:past\s+medical|social\s+history|family\s+history|medications|allergies|physical\s+exam|on\s+examination|impression|plan|$))/i
+  )
+
+  if (rosMatch?.[1]) {
+    const rosText = rosMatch[1].trim()
+    // Look for positive findings — lines that don't start with "no", "denies", "negative"
+    const lines = rosText.split(/[\n,;]/).map(l => l.trim()).filter(l => l.length > 3)
+    for (const line of lines) {
+      const lower = line.toLowerCase()
+      // Skip negative findings
+      if (/^(no\b|denies|negative|nil|none|unremarkable|normal|nausea\s*-\s*no)/i.test(lower)) continue
+      // Skip system headings alone
+      if (/^(cardiovascular|respiratory|gastrointestinal|neurological|musculoskeletal|genitourinary|constitutional|general)[:\s]*$/i.test(lower)) continue
+      // Include positive findings
+      if (lower.includes('yes') || lower.includes('positive') || lower.includes('present') ||
+          !lower.startsWith('no ') && !lower.startsWith('denies ') && line.length > 5) {
+        // Clean up the line
+        const cleaned = line.replace(/^[•\-\*]\s*/, '').replace(/:\s*yes$/i, '').trim()
+        if (cleaned.length > 3 && !cleaned.toLowerCase().startsWith('no ')) {
+          positives.push(cleaned)
+        }
+      }
+    }
+  }
+
+  return positives.slice(0, 5) // Cap at 5 most relevant
+}
+
+/**
+ * Extract symptoms that arose post-admission from user_feedback / progress notes.
+ */
+export function extractPostAdmissionSymptoms(allAnalyses: Array<{
+  analysis_version: string | null
+  user_feedback?: string | null
+}>): string {
+  // Get the most recent day's progress notes (user_feedback)
+  const dayAnalyses = allAnalyses
+    .filter(a => a.analysis_version?.startsWith('day_') && a.user_feedback)
+    .sort((a, b) => {
+      const dayA = parseInt(a.analysis_version?.replace('day_', '') || '0')
+      const dayB = parseInt(b.analysis_version?.replace('day_', '') || '0')
+      return dayB - dayA
+    })
+
+  if (dayAnalyses.length === 0) return ''
+
+  // Return the latest day's progress notes (these contain today's symptoms)
+  const latest = dayAnalyses[0]
+  if (!latest.user_feedback) return ''
+
+  // Take first 2-3 sentences as a summary of new symptoms
+  const sentences = latest.user_feedback.split(/\.(?:\s|$)/).filter(s => s.trim().length > 5)
+  const summary = sentences.slice(0, 3).join('. ').trim()
+  return summary ? summary + '.' : ''
 }
 
 export function buildCourseSummary(analyses: Array<{
@@ -127,7 +277,12 @@ export function buildCourseSummary(analyses: Array<{
   return parts.join('\n')
 }
 
+/**
+ * Extract a section from the raw analysis text.
+ * Handles both markdown format (## Section) and JSON format.
+ */
 export function extractSectionFromAnalysis(rawAnalysisText: string, sectionKey: string): string {
+  // Try JSON parse first (analyses stored as JSON, e.g. discharge)
   try {
     const parsed = JSON.parse(rawAnalysisText)
 
@@ -152,6 +307,35 @@ export function extractSectionFromAnalysis(rawAnalysisText: string, sectionKey: 
 
     return ''
   } catch {
-    return ''
+    // Not JSON — parse as markdown
   }
+
+  // Markdown format: ## Section Name
+  const sectionHeaders: Record<string, RegExp> = {
+    management_plan: /^##\s*Management\s+Plan/im,
+    impressions: /^##\s*Impression/im,
+    test_interpretation: /^##\s*Test\s+Interpretation/im,
+    summary: /^##\s*Clinical\s+Summary/im,
+    complications: /^##\s*(?:Possible\s+)?Complications/im,
+    differential: /^##\s*Differential\s+Diagnos/im,
+  }
+
+  const headerPattern = sectionHeaders[sectionKey]
+  if (!headerPattern) return ''
+
+  const match = rawAnalysisText.match(headerPattern)
+  if (!match) return ''
+
+  const startIdx = match.index! + match[0].length
+  // Find the next ## heading or end of text
+  const nextSection = rawAnalysisText.slice(startIdx).match(/\n##\s/)
+  const endIdx = nextSection ? startIdx + nextSection.index! : rawAnalysisText.length
+
+  const sectionContent = rawAnalysisText.slice(startIdx, endIdx).trim()
+
+  // Clean up markdown formatting for display
+  return sectionContent
+    .replace(/\*\*([^*]+)\*\*/g, '$1')  // Remove bold markers
+    .replace(/^[-•]\s*/gm, '• ')         // Normalize bullet points
+    .trim()
 }
