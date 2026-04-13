@@ -60,6 +60,12 @@ SAFETY (Non-negotiables):
 
 CORE MISSION: Optimize patient care to reduce hospitalization period. Early diagnosis, prevent complications.
 
+PERSONAL NOTES AS CLINICAL REFERENCE:
+- If the clinician's personal notes are provided, treat them as an ACTIVE reference — not passive context.
+- Cross-reference these notes when interpreting test results, forming impressions, choosing differentials, and recommending management.
+- If a note contains a classification system, drug protocol, or clinical decision pathway relevant to the patient's condition, APPLY it directly.
+- Do NOT quote notes verbatim — integrate the knowledge naturally into your clinical reasoning.
+
 CRITICAL CLINICAL REASONING REQUIREMENTS:
 
 Comorbidity-Aware Analysis:
@@ -321,11 +327,13 @@ function formatPersonalNotesContext(
   }).join('\n\n')
 
   return (
-    '\n\n--- CLINICIAN PERSONAL NOTES (for reference) ---\n' +
-    'The following are the clinician\'s own study notes, clinical pearls, and drug references from their rotations. ' +
-    'Use these as supplementary context when relevant to the patient\'s condition. ' +
-    'These notes may contain classification systems, drug protocols, or clinical pearls that should inform your analysis. ' +
-    'Do NOT quote these notes directly in your output — integrate the knowledge naturally.\n\n' +
+    '\n\n--- CLINICIAN PERSONAL NOTES (ACTIVE REFERENCE) ---\n' +
+    'The following are the clinician\'s own study notes, clinical pearls, drug protocols, and management guidelines from their rotations. ' +
+    'You MUST actively cross-reference these notes when interpreting test results, forming impressions, choosing differentials, and recommending management plans. ' +
+    'If a personal note contains a classification system, drug dosing protocol, or clinical decision pathway relevant to this patient\'s condition, APPLY it directly. ' +
+    'For example: if the notes contain an anemia workup algorithm and the patient has low HB, follow that algorithm. ' +
+    'If the notes contain a drug protocol for a condition matching the patient\'s presentation, use those specific drugs/doses. ' +
+    'Do NOT quote these notes directly in your output — integrate the knowledge naturally into your clinical reasoning.\n\n' +
     formatted +
     '\n--- END PERSONAL NOTES ---'
   )
@@ -741,6 +749,8 @@ REFERENCE SOURCE: AMBOSS ONLY. No UpToDate, Medscape, BMJ, or WHO guidelines.
 
 STRICTLY NO HALLUCINATION — use ONLY information in the history provided. Do NOT invent symptoms or findings.
 
+PERSONAL NOTES: If the clinician's personal notes are included, actively cross-reference them when interpreting test results, forming impressions, and building differentials. Apply any relevant classification systems, clinical decision pathways, or diagnostic criteria from those notes.
+
 ${SYSTEM_PROMPT.slice(SYSTEM_PROMPT.indexOf('SIRS vs SEPSIS'), SYSTEM_PROMPT.indexOf('Drug Prescriptions in Management'))}
 
 ${SYSTEM_PROMPT.slice(SYSTEM_PROMPT.indexOf('LAB & TEST INTERPRETATION'), SYSTEM_PROMPT.indexOf('ORTHOPEDIC'))}
@@ -770,6 +780,8 @@ const MANAGEMENT_PLANNING_PROMPT = `You are a Management Planning Specialist. An
 REFERENCE SOURCE: AMBOSS ONLY.
 
 STRICTLY NO HALLUCINATION — use ONLY information in the history provided.
+
+PERSONAL NOTES: If the clinician's personal notes are included, actively cross-reference them when recommending management plans. Apply any drug protocols, dosing guidelines, or management algorithms from those notes that match the patient's condition.
 
 ${SYSTEM_PROMPT.slice(SYSTEM_PROMPT.indexOf('Comorbidity-Aware Analysis'), SYSTEM_PROMPT.indexOf('Impression Format'))}
 
