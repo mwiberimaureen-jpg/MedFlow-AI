@@ -253,10 +253,7 @@ export async function POST(
   } catch (error: any) {
     console.error('Error in POST /api/patients/[id]/analyze:', error)
     return NextResponse.json(
-      {
-        error: 'Failed to analyze patient history',
-        message: error.message
-      },
+      { error: 'Failed to analyze patient history' },
       { status: 500 }
     )
   }

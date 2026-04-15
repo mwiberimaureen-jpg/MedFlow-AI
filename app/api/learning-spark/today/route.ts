@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Error in GET /api/learning-spark/today:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch learning spark', message: error.message },
+      { error: 'Failed to fetch learning spark' },
       { status: 500 }
     )
   }

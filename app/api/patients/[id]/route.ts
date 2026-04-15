@@ -55,10 +55,7 @@ export async function GET(
   } catch (error: any) {
     console.error('Error in GET /api/patients/[id]:', error)
     return NextResponse.json(
-      {
-        error: 'Failed to fetch patient history',
-        message: error.message
-      },
+      { error: 'Failed to fetch patient history' },
       { status: 500 }
     )
   }
@@ -134,7 +131,7 @@ export async function DELETE(
     }
   } catch (error: any) {
     console.error('Error in DELETE /api/patients/[id]:', error)
-    return NextResponse.json({ error: 'Failed to delete patient', message: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to delete patient' }, { status: 500 })
   }
 }
 
@@ -203,6 +200,6 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
   } catch (error: any) {
     console.error('Error in PATCH /api/patients/[id]:', error)
-    return NextResponse.json({ error: 'Failed to update patient', message: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to update patient' }, { status: 500 })
   }
 }

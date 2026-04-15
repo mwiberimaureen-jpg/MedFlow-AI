@@ -254,7 +254,7 @@ export async function POST(
     } catch (error: any) {
         console.error('Error regenerating analysis:', error)
         return NextResponse.json(
-            { success: false, error: 'Failed to regenerate analysis', message: error.message },
+            { success: false, error: 'Failed to regenerate analysis' },
             { status: 500 }
         )
     }

@@ -45,10 +45,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Error in GET /api/patients:', error)
     return NextResponse.json(
-      {
-        error: 'Failed to fetch patient histories',
-        message: error.message
-      },
+      { error: 'Failed to fetch patient histories' },
       { status: 500 }
     )
   }
@@ -108,6 +105,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Stamp consent timestamp server-side when consent is granted
+    const finalMetadata = metadata ? { ...metadata } : null
+    if (finalMetadata?.ai_consent && finalMetadata?.third_party_consent) {
+      finalMetadata.consent_recorded_at = new Date().toISOString()
+    }
+
     // Create patient history record
     const { data: patient, error: createError } = await supabase
       .from('patient_histories')
@@ -119,7 +122,7 @@ export async function POST(request: NextRequest) {
         patient_identifier: patient_identifier || null,
         history_text: history_text.trim(),
         status: status || 'draft',
-        metadata: metadata || null
+        metadata: finalMetadata
       })
       .select()
       .single()
@@ -140,10 +143,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Error in POST /api/patients:', error)
     return NextResponse.json(
-      {
-        error: 'Failed to create patient history',
-        message: error.message
-      },
+      { error: 'Failed to create patient history' },
       { status: 500 }
     )
   }

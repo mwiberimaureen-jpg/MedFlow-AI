@@ -251,7 +251,7 @@ export async function POST(
     } catch (error: any) {
         console.error('Error in POST /api/patients/[id]/daily-note:', error)
         return NextResponse.json(
-            { error: 'Failed to generate daily analysis', message: error.message },
+            { error: 'Failed to generate daily analysis' },
             { status: 500 }
         )
     }

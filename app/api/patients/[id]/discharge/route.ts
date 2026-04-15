@@ -126,7 +126,7 @@ export async function PATCH(
     } catch (error: any) {
         console.error('Error in PATCH /api/patients/[id]/discharge:', error)
         return NextResponse.json(
-            { error: 'Failed to discharge patient', message: error.message },
+            { error: 'Failed to discharge patient' },
             { status: 500 }
         )
     }

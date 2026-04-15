@@ -97,7 +97,6 @@ export async function PATCH(
       {
         success: false,
         error: 'Failed to update checkbox',
-        message: error.message
       } as ToggleTodoResponse,
       { status: 500 }
     );

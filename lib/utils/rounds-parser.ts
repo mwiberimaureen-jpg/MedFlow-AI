@@ -165,9 +165,10 @@ export function extractChiefComplaintWithDuration(historyText: string): string {
 /**
  * Extract a brief HPI summary from the history text.
  * Captures key clinical narrative without the full text.
+ * Falls back to the first meaningful sentences of the entire history if no HPI header is found.
  */
 export function extractHpiSummary(historyText: string): string {
-  // Try to find the HPI section
+  // Try to find the HPI section by header
   const hpiPatterns = [
     /(?:history\s+of\s+present(?:ing)?\s+illness|hpi|history\s+of\s+illness)[:\s]+([\s\S]+?)(?=\n\s*(?:past\s+medical|review\s+of\s+systems|ros|social\s+history|family\s+history|medications|allergies|physical\s+exam|on\s+examination|$))/i,
     /(?:presenting\s+history|clinical\s+history)[:\s]+([\s\S]+?)(?=\n\s*(?:past\s+medical|review\s+of\s+systems|ros|social\s+history|medications|physical\s+exam|$))/i,
@@ -177,11 +178,91 @@ export function extractHpiSummary(historyText: string): string {
     const match = historyText.match(pattern)
     if (match?.[1]) {
       const text = match[1].trim()
-      // Take first 3 sentences for a concise summary
       const sentences = text.split(/\.(?:\s|$)/).filter(s => s.trim().length > 5)
       const summary = sentences.slice(0, 3).join('. ').trim()
       return summary ? summary + '.' : ''
     }
+  }
+
+  // Fallback: use the first 3 meaningful sentences of the entire history as a narrative summary.
+  // Skip the chief complaint line (already shown separately) and any very short lines.
+  const lines = historyText.split(/\n/).filter(l => l.trim().length > 15)
+  // Skip the first line if it's likely the chief complaint
+  const startIdx = lines.length > 1 ? 1 : 0
+  const narrative = lines.slice(startIdx, startIdx + 5).join(' ')
+  const sentences = narrative.split(/\.(?:\s|$)/).filter(s => s.trim().length > 10)
+  const summary = sentences.slice(0, 3).join('. ').trim()
+  return summary ? summary + '.' : ''
+}
+
+/**
+ * Extract test results / investigations mentioned in the history text.
+ * Looks for lab values, imaging results, and other test findings.
+ */
+export function extractTestsFromHistory(historyText: string): string {
+  // Try structured section first
+  const sectionPatterns = [
+    /(?:investigation|lab(?:oratory)?\s+(?:results?|findings?)|results|tests?\s+(?:done|results?)|workup)[:\s]+([\s\S]+?)(?=\n\s*(?:impression|management|plan|treatment|assessment|diagnosis|medication|$))/i,
+  ]
+
+  for (const pattern of sectionPatterns) {
+    const match = historyText.match(pattern)
+    if (match?.[1]) {
+      const text = match[1].trim()
+      if (text.length > 10) return text.split('\n').slice(0, 8).join('\n').trim()
+    }
+  }
+
+  // Fallback: scan for inline lab values (HB, WBC, platelets, creatinine, etc.)
+  const labFindings: string[] = []
+  const labPatterns = [
+    /\b(?:hb|h[ae]moglobin)[:\s]*(\d+\.?\d*)\s*(?:g\/d?l)?/i,
+    /\b(?:wbc|white\s+(?:blood\s+)?cell(?:s)?)[:\s]*(\d+\.?\d*)\s*(?:×?\s*10[³3])?/i,
+    /\b(?:platelets?|plt)[:\s]*(\d+\.?\d*)/i,
+    /\b(?:creatinine|cr)[:\s]*(\d+\.?\d*)/i,
+    /\b(?:rbs|random\s+blood\s+sugar|blood\s+sugar|glucose)[:\s]*(\d+\.?\d*)/i,
+    /\b(?:bp|blood\s+pressure)[:\s]*(\d+\s*\/\s*\d+)/i,
+    /\b(?:temp(?:erature)?)[:\s]*(\d+\.?\d*)\s*°?[CcFf]?/i,
+    /\b(?:pulse|hr|heart\s+rate)[:\s]*(\d+)/i,
+    /\b(?:rr|respiratory\s+rate)[:\s]*(\d+)/i,
+    /\b(?:spo2|oxygen\s+sat(?:uration)?|o2\s+sat)[:\s]*(\d+)%?/i,
+    /\b(?:urinalysis|urine)[:\s]+([^\n]+)/i,
+    /\b(?:chest\s+x-?ray|cxr)[:\s]+([^\n]+)/i,
+    /\b(?:ultrasound|uss?|u\/s)[:\s]+([^\n]+)/i,
+  ]
+
+  for (const pattern of labPatterns) {
+    const match = historyText.match(pattern)
+    if (match) {
+      labFindings.push(match[0].trim())
+    }
+  }
+
+  return labFindings.length > 0 ? labFindings.join(', ') : ''
+}
+
+/**
+ * Extract current medications / management from the history text.
+ */
+export function extractManagementFromHistory(historyText: string): string {
+  // Try structured section
+  const sectionPatterns = [
+    /(?:current\s+management|management|treatment|plan|medications?\s+(?:given|started|commenced)|drugs?\s+(?:given|started)|currently\s+on|started\s+on|on\s+treatment)[:\s]+([\s\S]+?)(?=\n\s*(?:investigation|results|impression|diagnosis|review|ros|physical|complication|follow|$))/i,
+  ]
+
+  for (const pattern of sectionPatterns) {
+    const match = historyText.match(pattern)
+    if (match?.[1]) {
+      const text = match[1].trim()
+      if (text.length > 5) return text.split('\n').slice(0, 8).join('\n').trim()
+    }
+  }
+
+  // Fallback: scan for drug names with dosing patterns
+  const drugPattern = /\b(?:IV|IM|PO|SC|oral|intravenous)\s+\w+\s+\d+\s*(?:mg|g|ml|units?|iu)\s*(?:BD|TDS|QID|OD|QDS|stat|daily|once|twice|thrice)?/gi
+  const drugs = historyText.match(drugPattern)
+  if (drugs && drugs.length > 0) {
+    return drugs.slice(0, 6).join(', ')
   }
 
   return ''

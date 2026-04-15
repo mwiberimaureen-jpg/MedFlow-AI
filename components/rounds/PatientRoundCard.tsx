@@ -12,6 +12,8 @@ import {
   extractRosPositives,
   extractPostAdmissionSymptoms,
   extractSectionFromAnalysis,
+  extractTestsFromHistory,
+  extractManagementFromHistory,
   buildCourseSummary
 } from '@/lib/utils/rounds-parser'
 
@@ -53,15 +55,19 @@ export function PatientRoundCard({ patient, latestAnalysis, allAnalyses, analysi
   const postAdmissionSymptoms = extractPostAdmissionSymptoms(allAnalyses)
   const triage = getTriageFromRiskLevel(latestAnalysis?.risk_level)
 
-  const currentPlan = latestAnalysis
+  const analysisPlans = latestAnalysis
     ? extractSectionFromAnalysis(latestAnalysis.raw_analysis_text, 'management_plan')
     : ''
+  const currentPlan = analysisPlans || extractManagementFromHistory(patient.history_text)
+
   const impressions = latestAnalysis
     ? extractSectionFromAnalysis(latestAnalysis.raw_analysis_text, 'impressions')
     : ''
-  const testResults = latestAnalysis
+
+  const analysisTests = latestAnalysis
     ? extractSectionFromAnalysis(latestAnalysis.raw_analysis_text, 'test_interpretation')
     : ''
+  const testResults = analysisTests || extractTestsFromHistory(patient.history_text)
 
   // For older plain-text analyses where section extraction fails, use the summary as fallback
   const hasStructuredData = !!(currentPlan || impressions || testResults)

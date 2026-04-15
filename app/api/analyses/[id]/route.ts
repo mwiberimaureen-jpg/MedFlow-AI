@@ -77,10 +77,7 @@ export async function GET(
   } catch (error: any) {
     console.error('Error fetching analysis:', error);
     return NextResponse.json(
-      {
-        error: 'Failed to fetch analysis',
-        message: error.message
-      },
+      { error: 'Failed to fetch analysis' },
       { status: 500 }
     );
   }
