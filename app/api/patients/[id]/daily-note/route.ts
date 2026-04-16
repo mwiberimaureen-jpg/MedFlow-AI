@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { analyzeDailyProgress } from '@/lib/openrouter/client'
 import { logAuditEvent } from '@/lib/audit/logger'
+import { decryptField } from '@/lib/crypto/field-encryption'
 
 export const dynamic = 'force-dynamic'
 
@@ -105,6 +106,10 @@ export async function POST(
             rotation: n.rotation,
         }))
 
+        // Decrypt PII for use in analysis
+        const patientName = decryptField(patient.patient_name)
+        const patientIdentifier = patient.patient_identifier ? decryptField(patient.patient_identifier) : null
+
         // Call OpenRouter AI for daily progress analysis
         // Patient identifiers are de-identified before transmission to the AI API
         const analysisResponse = await analyzeDailyProgress(
@@ -114,7 +119,7 @@ export async function POST(
             day_number,
             undefined,
             personalNotes,
-            { patientName: patient.patient_name, patientIdentifier: patient.patient_identifier }
+            { patientName, patientIdentifier }
         )
 
         const processingTime = Date.now() - startTime

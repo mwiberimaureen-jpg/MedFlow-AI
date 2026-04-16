@@ -10,6 +10,7 @@ import { getTriageFromRiskLevel, getTriageBadgeVariant, getTriageLabel } from '@
 import { AnalysisPoller } from '@/components/patients/AnalysisPoller'
 import Link from 'next/link'
 import { DeletePatientButton } from '@/components/patients/DeletePatientButton'
+import { decryptField } from '@/lib/crypto/field-encryption'
 
 export default async function PatientDetailPage({
   params,
@@ -37,6 +38,10 @@ export default async function PatientDetailPage({
   if (error || !patient) {
     notFound()
   }
+
+  // Decrypt PII fields
+  patient.patient_name = decryptField(patient.patient_name)
+  if (patient.patient_identifier) patient.patient_identifier = decryptField(patient.patient_identifier)
 
   // Sort analyses chronologically by created_at
   const sortedAnalyses = (patient.analyses || []).sort(

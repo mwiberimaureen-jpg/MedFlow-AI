@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { PatientRoundCard } from '@/components/rounds/PatientRoundCard'
 import { PrintButton } from '@/components/rounds/PrintButton'
+import { decryptField } from '@/lib/crypto/field-encryption'
 
 export default async function RoundsPage() {
   const supabase = await createClient()
@@ -28,10 +29,10 @@ export default async function RoundsPage() {
     return {
       patient: {
         id: patient.id,
-        patient_name: patient.patient_name,
+        patient_name: decryptField(patient.patient_name),
         patient_age: patient.patient_age,
         patient_gender: patient.patient_gender,
-        patient_identifier: patient.patient_identifier,
+        patient_identifier: patient.patient_identifier ? decryptField(patient.patient_identifier) : undefined,
         history_text: patient.history_text,
         created_at: patient.created_at,
       },

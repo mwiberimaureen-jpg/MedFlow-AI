@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { logAuditEvent } from '@/lib/audit/logger';
+import { decryptPatientPII } from '@/lib/crypto/field-encryption';
 
 export const dynamic = 'force-dynamic';
 
@@ -74,7 +75,7 @@ export async function GET(
       success: true,
       analysis,
       todoItems: todoItemsRes.data || [],
-      patientHistory: patientHistoryRes.data || null,
+      patientHistory: patientHistoryRes.data ? decryptPatientPII(patientHistoryRes.data) : null,
     });
 
   } catch (error: any) {

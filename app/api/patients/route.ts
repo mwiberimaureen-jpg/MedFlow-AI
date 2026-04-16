@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { CreatePatientRequest } from '@/lib/types/patient'
 import { logAuditEvent } from '@/lib/audit/logger'
+import { encryptField, decryptPatientList } from '@/lib/crypto/field-encryption'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    return NextResponse.json({ patients })
+    return NextResponse.json({ patients: decryptPatientList(patients || []) })
 
   } catch (error: any) {
     console.error('Error in GET /api/patients:', error)
@@ -112,15 +113,19 @@ export async function POST(request: NextRequest) {
       finalMetadata.consent_recorded_at = new Date().toISOString()
     }
 
+    // Encrypt PII fields before storage
+    const encryptedName = encryptField(patient_name.trim())
+    const encryptedIdentifier = patient_identifier ? encryptField(patient_identifier.trim()) : null
+
     // Create patient history record
     const { data: patient, error: createError } = await supabase
       .from('patient_histories')
       .insert({
         user_id: user.id,
-        patient_name: patient_name.trim(),
+        patient_name: encryptedName,
         patient_age: patient_age || null,
         patient_gender: patient_gender || null,
-        patient_identifier: patient_identifier || null,
+        patient_identifier: encryptedIdentifier,
         history_text: history_text.trim(),
         status: status || 'draft',
         metadata: finalMetadata
@@ -158,6 +163,10 @@ export async function POST(request: NextRequest) {
         request,
       })
     }
+
+    // Decrypt PII before returning to client
+    patient.patient_name = patient_name.trim()
+    patient.patient_identifier = patient_identifier || null
 
     return NextResponse.json(
       { success: true, patient },

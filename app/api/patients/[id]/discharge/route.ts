@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { generateDischargeSummary } from '@/lib/openrouter/client'
 import { logAuditEvent } from '@/lib/audit/logger'
+import { decryptField } from '@/lib/crypto/field-encryption'
 
 export const dynamic = 'force-dynamic'
 
@@ -85,6 +86,10 @@ export async function PATCH(
             rawText: a.raw_analysis_text
         }))
 
+        // Decrypt PII for use in discharge summary
+        const patientName = decryptField(patient.patient_name)
+        const patientIdentifier = patient.patient_identifier ? decryptField(patient.patient_identifier) : null
+
         // Generate AI discharge summary
         // Patient identifiers are de-identified before transmission to the AI API
         const startTime = Date.now()
@@ -92,7 +97,7 @@ export async function PATCH(
             patient.history_text,
             analysisSummaries,
             undefined,
-            { patientName: patient.patient_name, patientIdentifier: patient.patient_identifier }
+            { patientName, patientIdentifier }
         )
         const processingTime = Date.now() - startTime
 

@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/Badge'
 import { getTriageFromRiskLevel, getTriageBadgeVariant, getTriageLabel } from '@/lib/utils/triage'
 import Link from 'next/link'
 import { TrashSection } from '@/components/patients/TrashSection'
+import { decryptField } from '@/lib/crypto/field-encryption'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -139,7 +140,7 @@ export default async function DashboardPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium text-gray-900 dark:text-white">{patient.patient_name}</p>
+                        <p className="font-medium text-gray-900 dark:text-white">{decryptField(patient.patient_name)}</p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
                           {new Date(patient.created_at).toLocaleDateString()}
                         </p>
