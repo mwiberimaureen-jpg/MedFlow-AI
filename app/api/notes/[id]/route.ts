@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { logAuditEvent } from '@/lib/audit/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,6 +40,8 @@ export async function PATCH(
       return NextResponse.json({ error: 'Failed to update note' }, { status: 500 })
     }
 
+    logAuditEvent({ userId: user.id, action: 'note.update', resourceType: 'note', resourceId: id, request })
+
     return NextResponse.json({ note })
   } catch (error: any) {
     console.error('Notes PATCH error:', error)
@@ -69,6 +72,8 @@ export async function DELETE(
       console.error('Error deleting note:', error)
       return NextResponse.json({ error: 'Failed to delete note' }, { status: 500 })
     }
+
+    logAuditEvent({ userId: user.id, action: 'note.delete', resourceType: 'note', resourceId: id, request })
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

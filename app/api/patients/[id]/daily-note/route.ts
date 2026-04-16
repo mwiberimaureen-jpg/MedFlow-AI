@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { analyzeDailyProgress } from '@/lib/openrouter/client'
+import { logAuditEvent } from '@/lib/audit/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -242,6 +243,15 @@ export async function POST(
                 console.error('Error creating todo items:', todoError)
             }
         }
+
+        logAuditEvent({
+            userId: user.id,
+            action: 'daily_note.create',
+            resourceType: 'analysis',
+            resourceId: analysis.id,
+            metadata: { patient_id: id, version: versionKey, day_number },
+            request,
+        })
 
         return NextResponse.json({
             success: true,

@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { generateDischargeSummary } from '@/lib/openrouter/client'
+import { logAuditEvent } from '@/lib/audit/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -116,6 +117,15 @@ export async function PATCH(
             console.error('Error saving discharge summary:', analysisError)
             // Don't fail the discharge — it's already done, summary is a bonus
         }
+
+        logAuditEvent({
+            userId: user.id,
+            action: 'discharge.create',
+            resourceType: 'patient',
+            resourceId: id,
+            metadata: { discharge_date: dischargeDate },
+            request,
+        })
 
         return NextResponse.json({
             success: true,

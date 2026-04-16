@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getIntasendClient } from '@/lib/intasend/client';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
+import { logAuditEvent } from '@/lib/audit/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -102,6 +103,8 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    logAuditEvent({ userId, action: 'payment.checkout', resourceType: 'subscription', resourceId: subscription.id, request });
 
     // Return checkout URL to client
     return NextResponse.json({

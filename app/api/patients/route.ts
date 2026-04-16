@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { CreatePatientRequest } from '@/lib/types/patient'
+import { logAuditEvent } from '@/lib/audit/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -133,6 +134,29 @@ export async function POST(request: NextRequest) {
         { error: 'Failed to create patient history' },
         { status: 500 }
       )
+    }
+
+    logAuditEvent({
+      userId: user.id,
+      action: 'patient.create',
+      resourceType: 'patient',
+      resourceId: patient.id,
+      metadata: {
+        status: status || 'draft',
+        consent_granted: !!(finalMetadata?.ai_consent && finalMetadata?.third_party_consent),
+      },
+      request,
+    })
+
+    if (finalMetadata?.ai_consent && finalMetadata?.third_party_consent) {
+      logAuditEvent({
+        userId: user.id,
+        action: 'consent.granted',
+        resourceType: 'patient',
+        resourceId: patient.id,
+        metadata: { consent_recorded_at: finalMetadata.consent_recorded_at },
+        request,
+      })
     }
 
     return NextResponse.json(

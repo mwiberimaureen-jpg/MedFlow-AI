@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { analyzePatientHistoryFanOut, analyzeDailyProgress } from '@/lib/openrouter/client'
+import { logAuditEvent } from '@/lib/audit/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -245,6 +246,15 @@ export async function POST(
                 console.error('Error creating todo items:', todoError)
             }
         }
+
+        logAuditEvent({
+            userId: user.id,
+            action: 'analysis.regenerate',
+            resourceType: 'analysis',
+            resourceId: analysisId,
+            metadata: { patient_id: existingAnalysis.patient_history_id, version: existingAnalysis.analysis_version },
+            request,
+        })
 
         return NextResponse.json({
             success: true,

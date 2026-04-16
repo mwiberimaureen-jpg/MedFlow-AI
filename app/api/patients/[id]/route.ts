@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { logAuditEvent } from '@/lib/audit/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,6 +50,8 @@ export async function GET(
         { status: 404 }
       )
     }
+
+    logAuditEvent({ userId: user.id, action: 'patient.view', resourceType: 'patient', resourceId: id, request })
 
     return NextResponse.json({ patient })
 
@@ -113,6 +116,8 @@ export async function DELETE(
         return NextResponse.json({ error: 'Failed to permanently delete patient' }, { status: 500 })
       }
 
+      logAuditEvent({ userId: user.id, action: 'patient.permanent_delete', resourceType: 'patient', resourceId: id, request })
+
       return NextResponse.json({ message: 'Patient permanently deleted' })
     } else {
       // Soft delete — move to trash
@@ -126,6 +131,8 @@ export async function DELETE(
       if (updateError) {
         return NextResponse.json({ error: 'Failed to delete patient' }, { status: 500 })
       }
+
+      logAuditEvent({ userId: user.id, action: 'patient.delete', resourceType: 'patient', resourceId: id, request })
 
       return NextResponse.json({ message: 'Patient moved to trash' })
     }
@@ -162,6 +169,8 @@ export async function PATCH(
         return NextResponse.json({ error: 'Failed to restore patient' }, { status: 500 })
       }
 
+      logAuditEvent({ userId: user.id, action: 'patient.restore', resourceType: 'patient', resourceId: id, request })
+
       return NextResponse.json({ message: 'Patient restored' })
     }
 
@@ -193,6 +202,8 @@ export async function PATCH(
       if (updateError) {
         return NextResponse.json({ error: 'Failed to update rotation' }, { status: 500 })
       }
+
+      logAuditEvent({ userId: user.id, action: 'patient.update', resourceType: 'patient', resourceId: id, metadata: { rotation: body.rotation }, request })
 
       return NextResponse.json({ patient: updated })
     }

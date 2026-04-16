@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { analyzePatientHistoryFanOut } from '@/lib/openrouter/client'
+import { logAuditEvent } from '@/lib/audit/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -231,6 +232,15 @@ export async function POST(
         .from('patient_histories')
         .update({ status: 'completed' })
         .eq('id', id)
+
+      logAuditEvent({
+        userId: user.id,
+        action: 'analysis.create',
+        resourceType: 'analysis',
+        resourceId: analysis.id,
+        metadata: { patient_id: id, version: 'admission', processing_time_ms: processingTime },
+        request,
+      })
 
       return NextResponse.json({
         success: true,

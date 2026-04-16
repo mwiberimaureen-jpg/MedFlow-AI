@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import type { ToggleTodoRequest, ToggleTodoResponse } from '@/lib/types/analysis';
+import { logAuditEvent } from '@/lib/audit/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -88,6 +89,8 @@ export async function PATCH(
         { status: 404 }
       );
     }
+
+    logAuditEvent({ userId: user.id, action: 'todo.update', resourceType: 'todo', resourceId: todo_item_id, metadata: { analysis_id: analysisId, is_checked }, request });
 
     return NextResponse.json({ success: true } as ToggleTodoResponse);
 

@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { logAuditEvent } from '@/lib/audit/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,6 +66,8 @@ export async function GET(
     if (patientHistoryRes.error) {
       console.error('Error fetching patient history:', patientHistoryRes.error);
     }
+
+    logAuditEvent({ userId: user.id, action: 'analysis.view', resourceType: 'analysis', resourceId: id, request });
 
     // Return combined data
     return NextResponse.json({

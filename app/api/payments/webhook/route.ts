@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getIntasendClient, WebhookPayload } from '@/lib/intasend/client';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
+import { logAuditEvent } from '@/lib/audit/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -203,6 +204,8 @@ export async function POST(request: NextRequest) {
 
       console.log(`Payment pending for subscription ${subscription.id}`);
     }
+
+    logAuditEvent({ userId: subscription?.user_id || 'system', action: 'payment.webhook', resourceType: 'payment', metadata: { state: payload.state, invoice_id: payload.invoice_id }, request });
 
     return NextResponse.json({
       success: true,
