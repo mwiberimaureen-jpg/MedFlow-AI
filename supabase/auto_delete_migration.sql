@@ -13,10 +13,19 @@
 ALTER TABLE public.users
   ADD COLUMN IF NOT EXISTS auto_delete_histories boolean NOT NULL DEFAULT true;
 
+-- 1b. Add per-history star flag: starred histories are never auto-deleted
+ALTER TABLE public.patient_histories
+  ADD COLUMN IF NOT EXISTS is_starred boolean NOT NULL DEFAULT false;
+
+CREATE INDEX IF NOT EXISTS idx_patient_histories_is_starred
+  ON public.patient_histories(is_starred)
+  WHERE is_starred = true;
+
 -- 2. Enable pg_cron extension (safe if already enabled)
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 
--- 3. Soft-delete function: marks histories >90 days old as deleted for opted-in users
+-- 3. Soft-delete function: marks histories >90 days old as deleted for opted-in users,
+--    skipping any history the user has starred to retain.
 CREATE OR REPLACE FUNCTION public.cleanup_old_patient_histories()
 RETURNS integer
 LANGUAGE plpgsql
@@ -32,6 +41,7 @@ BEGIN
   WHERE ph.user_id = u.id
     AND u.auto_delete_histories = true
     AND ph.deleted_at IS NULL
+    AND ph.is_starred = false
     AND ph.created_at < (now() - interval '90 days');
 
   GET DIAGNOSTICS rows_affected = ROW_COUNT;

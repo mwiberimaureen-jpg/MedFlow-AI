@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/Badge'
 import { getTriageFromRiskLevel, getTriageBadgeVariant, getTriageLabel } from '@/lib/utils/triage'
 import { DeletePatientButton } from './DeletePatientButton'
+import { StarPatientButton } from './StarPatientButton'
 
 interface PatientData {
   id: string
@@ -15,6 +16,7 @@ interface PatientData {
   status: string
   metadata?: Record<string, any> | null
   created_at: string
+  is_starred?: boolean | null
   analyses: Array<{ risk_level: string; analysis_version: string | null; created_at: string }> | null
 }
 
@@ -142,6 +144,7 @@ export function PatientsList({ patients: initialPatients }: PatientsListProps) {
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 ml-3">
                   {renderTriageBadge(patient)}
+                  <StarPatientButton patientId={patient.id} initialStarred={!!patient.is_starred} />
                   <DeletePatientButton patientId={patient.id} patientName={patient.patient_name} variant="icon" />
                   <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -205,6 +208,7 @@ export function PatientsList({ patients: initialPatients }: PatientsListProps) {
                         >
                           View Details
                         </Link>
+                        <StarPatientButton patientId={patient.id} initialStarred={!!patient.is_starred} />
                         <DeletePatientButton patientId={patient.id} patientName={patient.patient_name} variant="icon" />
                       </div>
                     </td>

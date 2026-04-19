@@ -10,6 +10,7 @@ import { getTriageFromRiskLevel, getTriageBadgeVariant, getTriageLabel } from '@
 import { AnalysisPoller } from '@/components/patients/AnalysisPoller'
 import Link from 'next/link'
 import { DeletePatientButton } from '@/components/patients/DeletePatientButton'
+import { StarPatientButton } from '@/components/patients/StarPatientButton'
 import { decryptField } from '@/lib/crypto/field-encryption'
 
 export default async function PatientDetailPage({
@@ -85,6 +86,7 @@ export default async function PatientDetailPage({
                 {patient.status}
               </Badge>
             ) : null}
+            <StarPatientButton patientId={id} initialStarred={!!patient.is_starred} size="md" />
             <DeletePatientButton patientId={id} patientName={patient.patient_name} variant="icon" />
           </div>
         </div>
