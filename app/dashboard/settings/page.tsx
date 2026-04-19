@@ -14,6 +14,7 @@ interface UserProfile {
   subscription_status: string
   subscription_expires_at?: string
   created_at?: string
+  auto_delete_histories?: boolean
 }
 
 interface Subscription {
@@ -40,6 +41,8 @@ export default function SettingsPage() {
   // Editable fields
   const [fullName, setFullName] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
+  const [autoDelete, setAutoDelete] = useState(true)
+  const [savingRetention, setSavingRetention] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -64,6 +67,7 @@ export default function SettingsPage() {
         setProfile(profileData)
         setFullName(profileData.full_name || '')
         setPhoneNumber(profileData.phone_number || '')
+        setAutoDelete(profileData.auto_delete_histories !== false)
       }
 
       // Fetch active subscription
@@ -106,6 +110,33 @@ export default function SettingsPage() {
       setProfile(prev => prev ? { ...prev, full_name: fullName.trim(), phone_number: phoneNumber.trim() } : null)
     }
     setSaving(false)
+  }
+
+  async function handleToggleAutoDelete(next: boolean) {
+    if (!profile) return
+    setSavingRetention(true)
+    setMessage(null)
+    const previous = autoDelete
+    setAutoDelete(next)
+
+    const { error } = await supabase
+      .from('users')
+      .update({ auto_delete_histories: next })
+      .eq('id', profile.id)
+
+    if (error) {
+      setAutoDelete(previous)
+      setMessage({ type: 'error', text: 'Failed to update retention preference. Please try again.' })
+    } else {
+      setProfile(prev => prev ? { ...prev, auto_delete_histories: next } : null)
+      setMessage({
+        type: 'success',
+        text: next
+          ? 'Auto-delete enabled. Histories older than 90 days will be cleaned up daily.'
+          : 'Auto-delete disabled. Your histories will be retained indefinitely.',
+      })
+    }
+    setSavingRetention(false)
   }
 
   async function handlePasswordReset() {
@@ -229,6 +260,43 @@ export default function SettingsPage() {
               Reset Password
             </button>
           </div>
+        </div>
+      </Card>
+
+      {/* Data Retention */}
+      <Card>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Data Retention</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+          Manage how long patient histories are kept in your account.
+        </p>
+
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <p className="text-sm font-medium text-gray-900 dark:text-white">
+              Auto-delete histories after 90 days
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              When enabled, patient histories older than 90 days are automatically removed to reduce clutter.
+              Turn off to retain all histories indefinitely.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={autoDelete}
+            aria-label="Toggle auto-delete"
+            onClick={() => handleToggleAutoDelete(!autoDelete)}
+            disabled={savingRetention}
+            className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 ${
+              autoDelete ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                autoDelete ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
         </div>
       </Card>
 
