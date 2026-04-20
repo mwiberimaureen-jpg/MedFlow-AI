@@ -31,6 +31,7 @@ export type AuditAction =
   | 'note.delete'
   | 'todo.update'
   | 'consent.granted'
+  | 'terms.accept'
   | 'payment.checkout'
   | 'payment.webhook'
 
