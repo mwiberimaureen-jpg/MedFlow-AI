@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/server'
 import { analyzePatientHistoryFanOut } from '@/lib/openrouter/client'
 import { logAuditEvent } from '@/lib/audit/logger'
 import { decryptField } from '@/lib/crypto/field-encryption'
+import { getTrialQuota } from '@/lib/billing/trial'
 
 export const dynamic = 'force-dynamic'
 
@@ -68,6 +69,20 @@ export async function POST(
       return NextResponse.json(
         { error: 'Admission analysis already exists for this patient' },
         { status: 400 }
+      )
+    }
+
+    // Trial quota gate: 5 free admission analyses per account
+    const quota = await getTrialQuota(supabase, user.id)
+    if (!quota.allowed) {
+      return NextResponse.json(
+        {
+          error: `You've used all ${quota.limit} free analyses. Subscribe to continue.`,
+          code: 'TRIAL_LIMIT_REACHED',
+          used: quota.used,
+          limit: quota.limit,
+        },
+        { status: 402 }
       )
     }
 

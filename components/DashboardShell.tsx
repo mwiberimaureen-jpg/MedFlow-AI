@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Sidebar from './Sidebar'
 import ThemeToggle from './ThemeToggle'
+import TrialBadge from './TrialBadge'
 
 interface DashboardShellProps {
   userEmail: string
@@ -42,7 +43,8 @@ export default function DashboardShell({ userEmail, children }: DashboardShellPr
             <p className="text-sm text-gray-600 dark:text-gray-400">Welcome back,</p>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">{userEmail}</h2>
           </div>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-3">
+            <TrialBadge />
             <ThemeToggle />
           </div>
         </div>
