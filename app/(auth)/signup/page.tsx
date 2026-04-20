@@ -1,7 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { getFirebaseAuth } from '@/lib/firebase/client'
+import {
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  ConfirmationResult,
+} from 'firebase/auth'
 import Link from 'next/link'
 
 type Step = 'details' | 'otp' | 'success'
@@ -19,6 +25,28 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
 
+  const recaptchaContainerRef = useRef<HTMLDivElement>(null)
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null)
+  const confirmationRef = useRef<ConfirmationResult | null>(null)
+
+  // Clean up any Firebase recaptcha widget on unmount
+  useEffect(() => {
+    return () => {
+      try {
+        recaptchaVerifierRef.current?.clear()
+      } catch {}
+    }
+  }, [])
+
+  const ensureRecaptcha = () => {
+    if (recaptchaVerifierRef.current) return recaptchaVerifierRef.current
+    const auth = getFirebaseAuth()
+    recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      size: 'invisible',
+    })
+    return recaptchaVerifierRef.current
+  }
+
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -31,26 +59,33 @@ export default function SignupPage() {
       setError('Password must be at least 6 characters')
       return
     }
-    if (!phone.trim()) {
-      setError('Phone number is required')
+
+    const normalized = phone.trim().replace(/\s|-/g, '')
+    if (!/^\+\d{10,15}$/.test(normalized) && !/^0[17]\d{8}$/.test(normalized)) {
+      setError('Enter a valid phone number in international format (e.g. +254712345678)')
       return
     }
+    const intlPhone = normalized.startsWith('0')
+      ? '+254' + normalized.slice(1)
+      : normalized
 
     setLoading(true)
     try {
-      const res = await fetch('/api/auth/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data?.error || 'Failed to send code')
-        return
-      }
+      const auth = getFirebaseAuth()
+      const verifier = ensureRecaptcha()
+      const confirmation = await signInWithPhoneNumber(auth, intlPhone, verifier)
+      confirmationRef.current = confirmation
       setStep('otp')
-    } catch {
-      setError('Network error. Please try again.')
+    } catch (err: any) {
+      console.error('[SIGNUP] signInWithPhoneNumber failed:', err)
+      // Reset reCAPTCHA so the next attempt starts fresh
+      try {
+        recaptchaVerifierRef.current?.clear()
+      } catch {}
+      recaptchaVerifierRef.current = null
+      setError(err?.code === 'auth/invalid-phone-number'
+        ? 'Invalid phone number format'
+        : err?.message || 'Failed to send code')
     } finally {
       setLoading(false)
     }
@@ -64,13 +99,21 @@ export default function SignupPage() {
       setError('Enter the 6-digit code')
       return
     }
+    if (!confirmationRef.current) {
+      setError('Please request a new code')
+      setStep('details')
+      return
+    }
 
     setLoading(true)
     try {
+      const credential = await confirmationRef.current.confirm(code)
+      const firebaseIdToken = await credential.user.getIdToken()
+
       const res = await fetch('/api/auth/signup-with-phone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, phone, code }),
+        body: JSON.stringify({ email, password, firebaseIdToken }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -78,26 +121,11 @@ export default function SignupPage() {
         return
       }
       setStep('success')
-    } catch {
-      setError('Network error. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleResendOtp = async () => {
-    setError(null)
-    setLoading(true)
-    try {
-      const res = await fetch('/api/auth/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone }),
-      })
-      const data = await res.json()
-      if (!res.ok) setError(data?.error || 'Failed to resend code')
-    } catch {
-      setError('Network error.')
+    } catch (err: any) {
+      console.error('[SIGNUP] verify failed:', err)
+      setError(err?.code === 'auth/invalid-verification-code'
+        ? 'Incorrect verification code'
+        : err?.message || 'Verification failed')
     } finally {
       setLoading(false)
     }
@@ -284,25 +312,20 @@ export default function SignupPage() {
             {loading ? 'Verifying...' : 'Verify & Create Account'}
           </button>
 
-          <div className="flex items-center justify-between text-sm">
+          <div className="text-center">
             <button
               type="button"
-              onClick={() => { setStep('details'); setCode(''); setError(null) }}
-              className="text-gray-600 hover:text-gray-800"
+              onClick={() => { setStep('details'); setCode(''); setError(null); confirmationRef.current = null }}
+              className="text-sm text-gray-600 hover:text-gray-800"
             >
               ← Edit details
-            </button>
-            <button
-              type="button"
-              onClick={handleResendOtp}
-              disabled={loading}
-              className="text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50"
-            >
-              Resend code
             </button>
           </div>
         </form>
       )}
+
+      {/* Invisible reCAPTCHA container — required by Firebase Phone Auth */}
+      <div id="recaptcha-container" ref={recaptchaContainerRef} />
 
       <p className="text-center mt-6 text-gray-600">
         Already have an account?{' '}
