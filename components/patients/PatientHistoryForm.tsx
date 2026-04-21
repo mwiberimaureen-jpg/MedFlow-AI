@@ -12,29 +12,48 @@ import { DEFAULT_ROTATIONS } from '@/lib/constants/rotations'
 const MAX_HISTORY_LENGTH = 10000
 const MIN_HISTORY_LENGTH = 50
 
-export function PatientHistoryForm() {
+interface InitialData {
+  patient_name?: string
+  patient_age?: string | number
+  patient_gender?: string
+  patient_identifier?: string
+  history_text?: string
+  rotation?: string
+  ai_consent?: boolean
+  third_party_consent?: boolean
+}
+
+interface PatientHistoryFormProps {
+  /** When provided the form PATCHes this patient instead of POSTing a new one */
+  patientId?: string
+  initialData?: InitialData
+}
+
+export function PatientHistoryForm({ patientId, initialData }: PatientHistoryFormProps = {}) {
   const router = useRouter()
+  const isEditing = !!patientId
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
 
   const [formData, setFormData] = useState({
-    patient_name: '',
-    patient_age: '',
-    patient_gender: '',
-    patient_identifier: '',
-    history_text: '',
-    rotation: ''
+    patient_name: initialData?.patient_name || '',
+    patient_age: initialData?.patient_age ? String(initialData.patient_age) : '',
+    patient_gender: initialData?.patient_gender || '',
+    patient_identifier: initialData?.patient_identifier || '',
+    history_text: initialData?.history_text || '',
+    rotation: initialData?.rotation || ''
   })
   const [consent, setConsent] = useState({
-    ai_consent: false,
-    third_party_consent: false
+    ai_consent: initialData?.ai_consent || false,
+    third_party_consent: initialData?.third_party_consent || false
   })
   const [customRotation, setCustomRotation] = useState('')
   const [showCustomRotation, setShowCustomRotation] = useState(false)
 
-  // Load draft on mount
+  // Load localStorage draft only for new (non-edit) forms
   useEffect(() => {
+    if (isEditing) return
     const draft = loadDraft()
     if (draft && draft.patient_name) {
       setFormData({
@@ -55,7 +74,7 @@ export function PatientHistoryForm() {
         setLastSaved(new Date(draft.savedAt))
       }
     }
-  }, [])
+  }, [isEditing])
 
   // Auto-save draft every 30 seconds
   useEffect(() => {
@@ -124,63 +143,70 @@ export function PatientHistoryForm() {
   const handleSubmit = async (status: 'draft' | 'submitted') => {
     setError(null)
 
-    // Only validate for submitted status, allow drafts with less validation
     if (status === 'submitted' && !validateForm()) {
       return
     }
 
     setLoading(true)
 
-    // Clear draft immediately when submitting (not drafting)
     if (status === 'submitted') {
       clearDraft()
     }
 
+    const rotation = (showCustomRotation ? customRotation.trim() : formData.rotation) || null
+    const isSaving = status === 'draft'
+    const targetStatus = status === 'submitted' ? 'analyzing' : 'draft'
+
+    const payload = {
+      patient_name: formData.patient_name.trim(),
+      patient_age: formData.patient_age ? parseInt(formData.patient_age) : undefined,
+      patient_gender: formData.patient_gender || undefined,
+      patient_identifier: formData.patient_identifier.trim() || undefined,
+      history_text: formData.history_text.trim(),
+      status: targetStatus,
+      metadata: {
+        rotation,
+        ...(status === 'submitted' ? {
+          ai_consent: consent.ai_consent,
+          third_party_consent: consent.third_party_consent,
+          consent_recorded_at: new Date().toISOString()
+        } : {})
+      }
+    }
+
     try {
-      // Step 1: Create the patient record with 'analyzing' status
-      const response = await fetch('/api/patients', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          patient_name: formData.patient_name.trim(),
-          patient_age: formData.patient_age ? parseInt(formData.patient_age) : undefined,
-          patient_gender: formData.patient_gender || undefined,
-          patient_identifier: formData.patient_identifier.trim() || undefined,
-          history_text: formData.history_text.trim(),
-          status: status === 'submitted' ? 'analyzing' : 'draft',
-          metadata: {
-            rotation: (showCustomRotation ? customRotation.trim() : formData.rotation) || null,
-            ...(status === 'submitted' ? {
-              ai_consent: consent.ai_consent,
-              third_party_consent: consent.third_party_consent,
-              consent_recorded_at: new Date().toISOString()
-            } : {})
-          }
-        }),
-      })
+      let patientIdToUse: string
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to save patient history')
-      }
-
-      // Clear draft on successful save
-      clearDraft()
-
-      // Step 2: If submitted, fire off analysis in background (don't await)
-      if (status === 'submitted') {
-        fetch(`/api/patients/${data.patient.id}/analyze`, {
-          method: 'POST',
-        }).catch(() => {
-          // Analysis errors are handled on the patient detail page
+      if (isEditing) {
+        // PATCH the existing draft
+        const response = await fetch(`/api/patients/${patientId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
         })
+        const data = await response.json()
+        if (!response.ok) throw new Error(data.error || 'Failed to update patient history')
+        patientIdToUse = patientId!
+        clearDraft()
+      } else {
+        // POST a new patient
+        const response = await fetch('/api/patients', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        const data = await response.json()
+        if (!response.ok) throw new Error(data.error || 'Failed to save patient history')
+        patientIdToUse = data.patient.id
+        clearDraft()
       }
 
-      // Step 3: Redirect immediately — patient page will poll for results
-      router.push(`/dashboard/patients/${data.patient.id}`)
+      // Fire analysis in background when submitting
+      if (status === 'submitted') {
+        fetch(`/api/patients/${patientIdToUse}/analyze`, { method: 'POST' }).catch(() => {})
+      }
+
+      router.push(`/dashboard/patients/${patientIdToUse}`)
 
     } catch (err: any) {
       setError(err.message || 'An error occurred while saving')
@@ -352,7 +378,7 @@ export function PatientHistoryForm() {
             loading={loading}
             disabled={loading}
           >
-            {loading ? 'Saving...' : 'Submit & Analyze'}
+            {loading ? 'Saving...' : isEditing ? 'Save & Analyze' : 'Submit & Analyze'}
           </Button>
         </div>
       </div>
