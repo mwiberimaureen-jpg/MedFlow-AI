@@ -1,7 +1,13 @@
 {
   "functions": {
     "app/api/patients/*/analyze/route.ts": {
-      "maxDuration": 60
+      "maxDuration": 300
+    },
+    "app/api/patients/*/daily-note/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/patients/*/discharge/route.ts": {
+      "maxDuration": 300
     }
   }
 }

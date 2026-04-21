@@ -15,13 +15,28 @@ interface OpenRouterConfig {
 /**
  * Fetch with automatic retry + exponential backoff for transient API errors (5xx).
  */
+const FETCH_TIMEOUT_MS = 55_000
+
 async function fetchWithRetry(
   url: string,
   options: RequestInit,
   retries = MAX_RETRIES,
   backoff = INITIAL_BACKOFF_MS
 ): Promise<Response> {
-  const response = await fetch(url, options)
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+
+  let response: Response
+  try {
+    response = await fetch(url, { ...options, signal: controller.signal })
+  } catch (err: any) {
+    clearTimeout(timer)
+    if (err?.name === 'AbortError') {
+      throw new Error(`OpenRouter request timed out after ${FETCH_TIMEOUT_MS / 1000}s`)
+    }
+    throw err
+  }
+  clearTimeout(timer)
 
   if (response.status >= 500 && retries > 0) {
     console.warn(
