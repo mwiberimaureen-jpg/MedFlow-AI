@@ -9,6 +9,7 @@ interface TrialQuota {
   limit: number
   remaining: number
   subscribed: boolean
+  exempt?: boolean
 }
 
 export default function TrialBadge() {
@@ -33,7 +34,7 @@ export default function TrialBadge() {
     }
   }, [])
 
-  if (!quota || quota.subscribed) return null
+  if (!quota || quota.subscribed || quota.exempt) return null
 
   const { used, limit, remaining } = quota
   const exhausted = remaining === 0
