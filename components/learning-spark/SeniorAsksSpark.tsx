@@ -1,18 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { StarButton } from './StarButton'
 import type { SeniorAsksContent } from '@/lib/types/learning-spark'
 
 interface SeniorAsksSparkProps {
   content: SeniorAsksContent
   onInteraction: () => void
-  onStar: () => void
-  isStarred: boolean
-  starSaving: boolean
 }
 
-export function SeniorAsksSpark({ content, onInteraction, onStar, isStarred, starSaving }: SeniorAsksSparkProps) {
+export function SeniorAsksSpark({ content, onInteraction }: SeniorAsksSparkProps) {
   const [revealed, setRevealed] = useState(false)
 
   const handleReveal = () => {
@@ -58,9 +54,6 @@ export function SeniorAsksSpark({ content, onInteraction, onStar, isStarred, sta
             <p className="text-sm text-gray-700 dark:text-gray-300 italic">{content.clinical_pearl}</p>
           </div>
 
-          <div className="flex justify-end">
-            <StarButton isStarred={isStarred} saving={starSaving} onClick={onStar} />
-          </div>
         </div>
       )}
     </div>

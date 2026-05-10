@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { SparkHeader } from './SparkHeader'
+import { StarButton } from './StarButton'
 import { SeniorAsksSpark } from './SeniorAsksSpark'
 import { QuickTeachSpark } from './QuickTeachSpark'
 import { KnowYourDrugsSpark } from './KnowYourDrugsSpark'
@@ -295,17 +296,22 @@ export function DailyLearningSpark() {
 
       <div className="mt-4">
         {spark.format_type === 'senior_asks' && (
-          <SeniorAsksSpark content={spark.content as SeniorAsksContent} onInteraction={handleInteraction} onStar={handleStarClick} isStarred={isStarred} starSaving={starSaving} />
+          <SeniorAsksSpark content={spark.content as SeniorAsksContent} onInteraction={handleInteraction} />
         )}
         {spark.format_type === 'quick_teach' && (
-          <QuickTeachSpark content={spark.content as QuickTeachContent} onInteraction={handleInteraction} onStar={handleStarClick} isStarred={isStarred} starSaving={starSaving} />
+          <QuickTeachSpark content={spark.content as QuickTeachContent} onInteraction={handleInteraction} />
         )}
         {spark.format_type === 'know_your_drugs' && (
-          <KnowYourDrugsSpark content={spark.content as KnowYourDrugsContent} onInteraction={handleInteraction} onStar={handleStarClick} isStarred={isStarred} starSaving={starSaving} />
+          <KnowYourDrugsSpark content={spark.content as KnowYourDrugsContent} onInteraction={handleInteraction} />
         )}
         {spark.format_type === 'clinical_twist' && (
-          <ClinicalTwistSpark content={spark.content as ClinicalTwistContent} onInteraction={handleInteraction} onStar={handleStarClick} isStarred={isStarred} starSaving={starSaving} />
+          <ClinicalTwistSpark content={spark.content as ClinicalTwistContent} onInteraction={handleInteraction} />
         )}
+      </div>
+
+      {/* Star button — always visible so users can save any spark */}
+      <div className="flex justify-end mt-3">
+        <StarButton isStarred={isStarred} saving={starSaving} onClick={handleStarClick} />
       </div>
 
       {/* Rotation picker modal */}

@@ -1,18 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { StarButton } from './StarButton'
 import type { ClinicalTwistContent } from '@/lib/types/learning-spark'
 
 interface ClinicalTwistSparkProps {
   content: ClinicalTwistContent
   onInteraction: () => void
-  onStar: () => void
-  isStarred: boolean
-  starSaving: boolean
 }
 
-export function ClinicalTwistSpark({ content, onInteraction, onStar, isStarred, starSaving }: ClinicalTwistSparkProps) {
+export function ClinicalTwistSpark({ content, onInteraction }: ClinicalTwistSparkProps) {
   const [stage, setStage] = useState<'scenario' | 'twist' | 'revealed'>('scenario')
 
   const handleShowTwist = () => {
@@ -79,9 +75,6 @@ export function ClinicalTwistSpark({ content, onInteraction, onStar, isStarred, 
             <p className="text-sm text-gray-700 dark:text-gray-300 italic">{content.clinical_pearl}</p>
           </div>
 
-          <div className="flex justify-end">
-            <StarButton isStarred={isStarred} saving={starSaving} onClick={onStar} />
-          </div>
         </div>
       )}
     </div>
