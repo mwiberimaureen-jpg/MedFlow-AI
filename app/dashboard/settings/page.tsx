@@ -375,6 +375,49 @@ export default function SettingsPage() {
           </div>
         </div>
       </Card>
+      {/* Support */}
+      <Card>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Contact Support</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+          Have a complaint, question, or need help? Reach us and we&apos;ll get back to you as soon as possible.
+        </p>
+
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">Email Support</p>
+              <a
+                href="mailto:medflowai.ke@gmail.com"
+                className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                medflowai.ke@gmail.com
+              </a>
+            </div>
+          </div>
+
+          <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
+            <p>When contacting support, please include:</p>
+            <ul className="list-disc pl-5 space-y-0.5">
+              <li>Your account email address</li>
+              <li>A description of the issue or complaint</li>
+              <li>Any relevant patient history IDs (do not include real patient names)</li>
+            </ul>
+          </div>
+
+          <a
+            href={`mailto:medflowai.ke@gmail.com?subject=MedFlow AI Support Request&body=Account email: ${profile?.email || ''}%0A%0ADescribe your issue:%0A`}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            Send Email
+          </a>
+        </div>
+      </Card>
     </div>
   )
 }
