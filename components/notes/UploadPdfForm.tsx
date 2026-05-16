@@ -12,12 +12,39 @@ interface UploadPdfFormProps {
 }
 
 const MAX_MB = 20
+const MAX_CONTENT_CHARS = 8000 // ~2 000 tokens — enough for the key protocol content
+
+async function extractPdfText(file: File): Promise<string> {
+  // Dynamic import keeps pdfjs out of the initial bundle
+  const pdfjsLib = await import('pdfjs-dist')
+
+  // Use the bundled worker via import.meta.url — no CDN dependency
+  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.mjs',
+    import.meta.url
+  ).href
+
+  const arrayBuffer = await file.arrayBuffer()
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+
+  const parts: string[] = []
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i)
+    const content = await page.getTextContent()
+    const pageText = content.items.map((item: any) => item.str).join(' ').trim()
+    if (pageText) parts.push(pageText)
+    if (parts.join('\n\n').length >= MAX_CONTENT_CHARS) break
+  }
+
+  return parts.join('\n\n').slice(0, MAX_CONTENT_CHARS)
+}
 
 export function UploadPdfForm({ onUploaded, onCancel, customRotations = [], defaultRotation }: UploadPdfFormProps) {
   const [file, setFile] = useState<File | null>(null)
   const [title, setTitle] = useState('')
   const [rotation, setRotation] = useState(defaultRotation || '')
   const [uploading, setUploading] = useState(false)
+  const [progress, setProgress] = useState<string>('Upload PDF')
   const [error, setError] = useState<string | null>(null)
 
   const allRotations = [...new Set([...DEFAULT_ROTATIONS, ...customRotations])].sort()
@@ -25,7 +52,7 @@ export function UploadPdfForm({ onUploaded, onCancel, customRotations = [], defa
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = e.target.files?.[0] || null
     if (selected && selected.size > MAX_MB * 1024 * 1024) {
-      setError(`File is too large. Maximum size is ${MAX_MB} MB.`)
+      setError(`File too large. Maximum is ${MAX_MB} MB.`)
       setFile(null)
       return
     }
@@ -43,28 +70,32 @@ export function UploadPdfForm({ onUploaded, onCancel, customRotations = [], defa
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      // Upload to Supabase Storage under the user's folder
+      // Step 1 — extract text so the PDF becomes AI context
+      setProgress('Reading PDF…')
+      const extractedText = await extractPdfText(file)
+
+      // Step 2 — upload file to Supabase Storage
+      setProgress('Uploading…')
       const storagePath = `${user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
       const { error: uploadError } = await supabase.storage
         .from('clinical-pdfs')
         .upload(storagePath, file, { contentType: 'application/pdf', upsert: false })
+      if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`)
 
-      if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`)
-
-      // Save note record pointing to the storage path
+      // Step 3 — save note with extracted text as content
+      setProgress('Saving…')
       const noteTitle = title.trim() || file.name.replace(/\.pdf$/i, '')
       const res = await fetch('/api/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: noteTitle,
-          content: '',
+          content: extractedText,
           source: 'pdf',
           pdf_url: storagePath,
           rotation: rotation || null,
         }),
       })
-
       if (!res.ok) {
         const data = await res.json()
         throw new Error(data.error || 'Failed to save note')
@@ -75,6 +106,7 @@ export function UploadPdfForm({ onUploaded, onCancel, customRotations = [], defa
       setError(err.message || 'Upload failed. Please try again.')
     } finally {
       setUploading(false)
+      setProgress('Upload PDF')
     }
   }
 
@@ -86,9 +118,11 @@ export function UploadPdfForm({ onUploaded, onCancel, customRotations = [], defa
         </svg>
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Upload PDF Protocol / Guideline</h3>
       </div>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+        Text is extracted and used as AI context during patient analysis — just like your manual notes.
+      </p>
 
       <div className="space-y-3">
-        {/* File input */}
         <div>
           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
             PDF File <span className="text-gray-400 font-normal">(max {MAX_MB} MB)</span>
@@ -110,10 +144,9 @@ export function UploadPdfForm({ onUploaded, onCancel, customRotations = [], defa
           )}
         </div>
 
-        {/* Title */}
         <div>
           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-            Title <span className="text-gray-400 font-normal">(optional — defaults to filename)</span>
+            Title <span className="text-gray-400 font-normal">(optional)</span>
           </label>
           <input
             type="text"
@@ -124,7 +157,6 @@ export function UploadPdfForm({ onUploaded, onCancel, customRotations = [], defa
           />
         </div>
 
-        {/* Rotation */}
         <div>
           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">Rotation</label>
           <select
@@ -137,25 +169,16 @@ export function UploadPdfForm({ onUploaded, onCancel, customRotations = [], defa
           </select>
         </div>
 
-        {error && (
-          <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
-        )}
+        {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
 
         <div className="flex gap-2 pt-1">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex-1 py-2 rounded-lg text-xs font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          >
+          <button type="button" onClick={onCancel} disabled={uploading}
+            className="flex-1 py-2 rounded-lg text-xs font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
             Cancel
           </button>
-          <button
-            type="button"
-            onClick={handleUpload}
-            disabled={uploading || !file}
-            className="flex-1 py-2 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {uploading ? 'Uploading…' : 'Upload PDF'}
+          <button type="button" onClick={handleUpload} disabled={uploading || !file}
+            className="flex-1 py-2 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors">
+            {uploading ? progress : 'Upload PDF'}
           </button>
         </div>
       </div>

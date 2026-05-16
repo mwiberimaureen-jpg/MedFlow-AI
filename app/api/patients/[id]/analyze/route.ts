@@ -106,16 +106,17 @@ export async function POST(
       .eq('id', id)
 
     try {
-      // Fetch user's clinical notes for AI context
+      // Fetch user's clinical notes for AI context (skip empty-content notes)
       const { data: clinicalNotes } = await supabase
         .from('clinical_notes')
-        .select('title, content, rotation')
+        .select('title, content, rotation, source')
         .eq('user_id', user.id)
+        .neq('content', '')
         .order('created_at', { ascending: false })
         .limit(30)
 
       const personalNotes = (clinicalNotes || []).map((n: any) => ({
-        title: n.title,
+        title: n.source === 'pdf' ? `[Protocol] ${n.title}` : n.title,
         content: n.content,
         rotation: n.rotation,
       }))
