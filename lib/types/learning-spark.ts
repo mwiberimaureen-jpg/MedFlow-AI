@@ -66,6 +66,7 @@ export interface LearningSparkState {
   lastInteractionDate: string // YYYY-MM-DD
   longestStreak: number
   seenSparks: string[] // spark IDs
+  starredSparks: string[] // spark IDs the user manually starred
 }
 
 export function getDefaultSparkState(): LearningSparkState {
@@ -74,5 +75,6 @@ export function getDefaultSparkState(): LearningSparkState {
     lastInteractionDate: '',
     longestStreak: 0,
     seenSparks: [],
+    starredSparks: [],
   }
 }

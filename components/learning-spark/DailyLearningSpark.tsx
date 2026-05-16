@@ -117,7 +117,6 @@ export function DailyLearningSpark() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [state, setState] = useState<LearningSparkState>(getDefaultSparkState)
-  const [isStarred, setIsStarred] = useState(false)
   const [starSaving, setStarSaving] = useState(false)
   const [showRotationPicker, setShowRotationPicker] = useState(false)
   const [selectedRotation, setSelectedRotation] = useState('')
@@ -176,25 +175,7 @@ export function DailyLearningSpark() {
     return () => { cancelled = true }
   }, [])
 
-  // Check if current spark is already starred
-  useEffect(() => {
-    if (!spark) return
-    let cancelled = false
-
-    async function checkStarred() {
-      try {
-        const res = await fetch('/api/notes')
-        const data = await res.json()
-        if (!cancelled && data.notes) {
-          const found = data.notes.some((n: any) => n.spark_id === spark!.id)
-          setIsStarred(found)
-        }
-      } catch { /* ignore */ }
-    }
-
-    checkStarred()
-    return () => { cancelled = true }
-  }, [spark])
+  const isStarred = !!(spark && state.starredSparks?.includes(spark.id))
 
   const handleInteraction = useCallback(() => {
     if (!spark) return
@@ -233,14 +214,20 @@ export function DailyLearningSpark() {
       })
 
       if (!res.ok) throw new Error('Failed to save')
-      setIsStarred(true)
+
+      const newState = {
+        ...state,
+        starredSparks: [...(state.starredSparks || []), spark.id],
+      }
+      setState(newState)
+      saveState(newState)
       if (selectedRotation) saveLastRotation(selectedRotation)
     } catch (err) {
       console.error('Failed to star spark:', err)
     } finally {
       setStarSaving(false)
     }
-  }, [spark, isStarred, starSaving, selectedRotation])
+  }, [spark, isStarred, starSaving, selectedRotation, state])
 
   if (loading) {
     return (
