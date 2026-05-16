@@ -19,7 +19,7 @@ export default async function DashboardLayout({
 
   const { data: userRow } = await supabase
     .from('users')
-    .select('terms_version')
+    .select('terms_version, full_name')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -28,7 +28,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <DashboardShell userEmail={user.email || ''}>
+    <DashboardShell userEmail={user.email || ''} displayName={userRow?.full_name || undefined}>
       {children}
     </DashboardShell>
   )

@@ -26,8 +26,16 @@ export async function GET(request: Request) {
       }
     )
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    const { data: sessionData, error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
+      const displayName = sessionData?.user?.user_metadata?.display_name
+      if (displayName) {
+        await supabase
+          .from('users')
+          .update({ full_name: displayName })
+          .eq('id', sessionData.user.id)
+          .is('full_name', null)
+      }
       return NextResponse.redirect(`${origin}${next}`)
     }
   }

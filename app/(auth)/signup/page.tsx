@@ -6,6 +6,7 @@ import Link from 'next/link'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -33,6 +34,7 @@ export default function SignupPage() {
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: displayName.trim() ? { display_name: displayName.trim() } : undefined,
         },
       })
       if (error) throw error
@@ -133,6 +135,22 @@ export default function SignupPage() {
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="doctor@example.com"
           />
+        </div>
+
+        <div>
+          <label htmlFor="display_name" className="block text-sm font-medium text-gray-700 mb-2">
+            Display Name <span className="font-normal text-gray-400">(optional)</span>
+          </label>
+          <input
+            id="display_name"
+            type="text"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            autoComplete="nickname"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Dr. Zee"
+          />
+          <p className="text-xs text-gray-500 mt-1">How the app greets you — e.g. &quot;Welcome back, Dr. Zee&quot;</p>
         </div>
 
         <div>

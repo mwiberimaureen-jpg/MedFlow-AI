@@ -217,17 +217,18 @@ export default function SettingsPage() {
             <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">Email cannot be changed</p>
           </div>
 
-          {/* Full Name */}
+          {/* Display Name */}
           <div>
-            <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+            <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Display Name</label>
             <input
               id="full_name"
               type="text"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              placeholder="Dr. Jane Doe"
+              placeholder="Dr. Zee"
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             />
+            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">This is how the app greets you — e.g. &quot;Welcome back, Dr. Zee&quot;</p>
           </div>
 
           {/* Phone Number */}
