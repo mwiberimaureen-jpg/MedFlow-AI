@@ -47,7 +47,7 @@ body::after {
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  opacity: 0.22;
+  opacity: 0.35;
   mix-blend-mode: darken;
   pointer-events: none;
   z-index: 9999;
