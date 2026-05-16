@@ -307,7 +307,7 @@ Return ONLY a valid JSON response with this structure:
       "prevention_plan": "Specific prevention steps"
     }
   ],
-  "summary": "A ward-round presentation summary in SOAP-compatible format. Follow this EXACT order: 1) '[Name], [age]-year-old [sex], [parity if OB/GYN], doing day [N] of admission.' 2) 'Came in experiencing [chief complaint with context].' 3) 'On examination: [key vitals and physical exam findings].' 4) 'Results: [test results and interpretation].' 5) 'Impression: [working diagnosis].' 6) 'Current plan: [specific drugs with dose/route/frequency, monitoring, pending tests].' LENGTH: Simple cases (<3 problems) = 1 concise paragraph. Complex cases = 2 paragraphs. ALWAYS name specific drugs with dose/route/frequency. NEVER use vague terms like 'antibiotics' or 'IV fluids'. The summary must be SELF-CONTAINED: a doctor reading ONLY this summary should know who the patient is, why they are admitted, and what is happening today.",
+  "summary": "SHORT FACTUAL HANDOVER — only what is documented in the history. DO NOT include impressions, differentials, or management recommendations (those are in their own fields above). Follow this EXACT order: 1) '[Name], [age]-year-old [sex], [parity if OB/GYN], doing day [N] of admission.' 2) Chief complaint and relevant background. 3) Key examination findings (general appearance, vitals, significant findings). 4) Investigations sent and any available results — state factually, do not interpret. 5) Treatments and procedures already given (name every drug with dose/route/frequency). 6) Any pending plans explicitly stated in the history (e.g. 'planning CT head', 'awaiting haematology review'). LENGTH: One concise paragraph for most cases. Two only if genuinely complex. NEVER add impressions, working diagnoses, differentials, or management recommendations to the summary.",
   "todo_items": [
     {
       "title": "Brief action item title",
@@ -582,12 +582,10 @@ export async function analyzeDailyProgress(
     `- impressions: ALWAYS provide current clinical impressions.\n` +
     `- differential_diagnoses: ALWAYS provide differentials.\n` +
     `- management_plan: Account for ALL medications and treatments mentioned in previous progress notes. If a drug was reported in a previous day (e.g. ceftriaxone), acknowledge it and build on it — do NOT say the antibiotic choice is unspecified.\n\n` +
-    `SUMMARY WRITING STYLE — MANDATORY:\n` +
-    `Describe SYMPTOMS first, then state what you are querying and what tests confirm/rule out.\n` +
-    `WRONG: "She has developed post-abortion sepsis"\n` +
-    `CORRECT: "Patient developed hotness of body and drenching sweats from day 3, with temperatures of 39.3°C — querying sepsis, plan: LFTs, UECs, serum lactate to rule in/out end-organ damage"\n` +
-    `WRONG: "requires escalation to broad-spectrum antibiotics"\n` +
-    `CORRECT: "Patient was on IV ceftriaxone 1g BD day 1-3, changed to IV ceftazidime 1g BD on day 4. Plan: change to IV meropenem 1g TDS"\n\n` +
+    `SUMMARY — SHORT FACTUAL HANDOVER (MANDATORY):\n` +
+    `The summary must contain ONLY what is documented in today's progress notes. Do NOT add impressions, differentials, or management recommendations — those belong in their own fields.\n` +
+    `Order: 1) Patient demographics + day N. 2) Today's symptoms and complaints. 3) Examination findings (vitals, general appearance, key exam). 4) Investigations sent today + results available. 5) Treatments and procedures given today (named drugs with dose/route/frequency). 6) Any pending plans explicitly stated in the notes.\n` +
+    `LENGTH: One concise paragraph. NEVER add impressions or management plans to the summary.\n\n` +
     `Apply ALL the same clinical rules from your system instructions (AMBOSS-only, no hallucination, no forbidden phrases, specific drug dosing, etc.)`
 
   // PHI de-identification: mask patient name/identifier before sending to AI
