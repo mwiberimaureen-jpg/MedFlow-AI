@@ -3,8 +3,9 @@ export interface ClinicalNote {
   user_id: string
   title: string
   content: string
-  source: 'manual' | 'senior_asks' | 'quick_teach' | 'know_your_drugs' | 'clinical_twist'
+  source: 'manual' | 'senior_asks' | 'quick_teach' | 'know_your_drugs' | 'clinical_twist' | 'pdf'
   spark_id: string | null
+  pdf_url: string | null
   rotation: string | null
   tags: string[] | null
   created_at: string

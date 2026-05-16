@@ -41,10 +41,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { title, content, source, spark_id, tags, rotation } = body
+    const { title, content, source, spark_id, tags, rotation, pdf_url } = body
 
-    if (!title || !content) {
-      return NextResponse.json({ error: 'Title and content are required' }, { status: 400 })
+    if (!title) {
+      return NextResponse.json({ error: 'Title is required' }, { status: 400 })
+    }
+    // PDF notes have no text content; all other sources require content
+    if (source !== 'pdf' && !content) {
+      return NextResponse.json({ error: 'Content is required' }, { status: 400 })
     }
 
     const { data: note, error } = await supabase
@@ -52,9 +56,10 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: user.id,
         title,
-        content,
+        content: content || '',
         source: source || 'manual',
         spark_id: spark_id || null,
+        pdf_url: pdf_url || null,
         rotation: rotation || null,
         tags: tags || null,
       })

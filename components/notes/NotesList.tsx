@@ -3,9 +3,10 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { NoteCard } from './NoteCard'
 import { CreateNoteForm } from './CreateNoteForm'
+import { UploadPdfForm } from './UploadPdfForm'
 import type { ClinicalNote } from '@/lib/types/clinical-note'
 
-type FilterType = 'all' | 'manual' | 'starred'
+type FilterType = 'all' | 'manual' | 'starred' | 'pdf'
 
 const STARRED_SOURCES = ['senior_asks', 'quick_teach', 'know_your_drugs', 'clinical_twist']
 
@@ -16,6 +17,7 @@ export function NotesList() {
   const [filter, setFilter] = useState<FilterType>('all')
   const [rotationFilter, setRotationFilter] = useState<string>('__all__')
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [showUploadPdf, setShowUploadPdf] = useState(false)
 
   const fetchNotes = useCallback(async () => {
     try {
@@ -98,6 +100,7 @@ export function NotesList() {
     // Source filter
     if (filter === 'manual') return note.source === 'manual'
     if (filter === 'starred') return STARRED_SOURCES.includes(note.source)
+    if (filter === 'pdf') return note.source === 'pdf'
     return true
   })
 
@@ -143,11 +146,12 @@ export function NotesList() {
           </select>
 
           {/* Source filter pills */}
-          <div className="flex gap-1">
+          <div className="flex gap-1 flex-wrap">
             {([
               ['all', 'All'],
               ['manual', 'Manual'],
               ['starred', 'Starred'],
+              ['pdf', '📄 PDFs'],
             ] as [FilterType, string][]).map(([key, label]) => (
               <button
                 key={key}
@@ -164,16 +168,27 @@ export function NotesList() {
           </div>
         </div>
 
-        {!showCreateForm && (
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            New Note
-          </button>
+        {!showCreateForm && !showUploadPdf && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowCreateForm(true)}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              New Note
+            </button>
+            <button
+              onClick={() => setShowUploadPdf(true)}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors border border-gray-300 dark:border-gray-600"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Upload PDF
+            </button>
+          </div>
         )}
       </div>
 
@@ -182,6 +197,16 @@ export function NotesList() {
         <CreateNoteForm
           onCreated={handleCreated}
           onCancel={() => setShowCreateForm(false)}
+          customRotations={customRotations}
+          defaultRotation={rotationFilter !== '__all__' && rotationFilter !== '__uncategorized__' ? rotationFilter : null}
+        />
+      )}
+
+      {/* PDF upload form */}
+      {showUploadPdf && (
+        <UploadPdfForm
+          onUploaded={() => { setShowUploadPdf(false); fetchNotes() }}
+          onCancel={() => setShowUploadPdf(false)}
           customRotations={customRotations}
           defaultRotation={rotationFilter !== '__all__' && rotationFilter !== '__uncategorized__' ? rotationFilter : null}
         />
