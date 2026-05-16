@@ -11,10 +11,17 @@ interface UserInfo {
   subscription_status?: string;
 }
 
+// Which renewal this is determines the review requirement:
+//   1 past completed sub → paying for month 2 → mandatory review
+//   2 past completed subs → paying for month 3 → optional review
+//   anything else → no review
+type ReviewMode = 'none' | 'mandatory' | 'optional'
+
 export default function PricingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [reviewMode, setReviewMode] = useState<ReviewMode>('none');
   const [showReviewModal, setShowReviewModal] = useState(false);
 
   useEffect(() => {
@@ -23,18 +30,21 @@ export default function PricingPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: profile } = await supabase
-        .from('users')
-        .select('id, email, full_name, subscription_status')
-        .eq('id', user.id)
-        .single();
+      const [profileRes, subCountRes] = await Promise.all([
+        supabase.from('users').select('id, email, full_name, subscription_status').eq('id', user.id).single(),
+        supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('user_id', user.id).neq('status', 'pending'),
+      ]);
 
-      if (profile) setUserInfo(profile);
+      if (profileRes.data) setUserInfo(profileRes.data);
+
+      const paidCount = subCountRes.count ?? 0;
+      if (paidCount === 1) setReviewMode('mandatory');     // paying for month 2
+      else if (paidCount === 2) setReviewMode('optional'); // paying for month 3
+      else setReviewMode('none');
     }
     loadUser();
   }, []);
 
-  // Renewing = already an active subscriber coming back to pay again
   const isRenewing = userInfo?.subscription_status === 'active';
 
   async function doCheckout() {
@@ -63,8 +73,7 @@ export default function PricingPage() {
   }
 
   function handleSubscribeClick() {
-    // Returning subscribers see a review prompt first
-    if (isRenewing) {
+    if (reviewMode !== 'none') {
       setShowReviewModal(true);
       return;
     }
@@ -72,13 +81,12 @@ export default function PricingPage() {
   }
 
   function handleReviewDone() {
-    // After submitting review, proceed to checkout
     setShowReviewModal(false);
     doCheckout();
   }
 
   function handleReviewSkip() {
-    // Clicked "Maybe Later" — still proceed to checkout
+    // Only reachable for optional (month 3) — proceed to checkout anyway
     setShowReviewModal(false);
     doCheckout();
   }
@@ -200,12 +208,12 @@ export default function PricingPage() {
         </div>
       </div>
 
-      {/* Review modal — shown to returning subscribers before checkout */}
+      {/* Review modal — mandatory for month 2, optional for month 3 */}
       {showReviewModal && userInfo && (
         <ReviewModal
           userEmail={userInfo.email}
           userName={userInfo.full_name}
-          context="paid"
+          context={reviewMode === 'mandatory' ? 'renewal' : 'paid'}
           onClose={handleReviewSkip}
           onSubmitted={handleReviewDone}
         />

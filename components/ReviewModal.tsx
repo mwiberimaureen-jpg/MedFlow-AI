@@ -5,12 +5,18 @@ import { useState } from 'react'
 interface ReviewModalProps {
   userEmail: string
   userName?: string
-  context: 'trial' | 'paid' | 'required'
+  // required  = trial gate (no skip)
+  // renewal   = mandatory before 2nd month payment (no skip)
+  // paid      = optional before 3rd month payment (skippable)
+  // trial     = voluntary (skippable)
+  context: 'trial' | 'paid' | 'required' | 'renewal'
   onClose: () => void
   onSubmitted: () => void
 }
 
 export function ReviewModal({ userEmail, userName, context, onClose, onSubmitted }: ReviewModalProps) {
+  const isSkippable = context === 'trial' || context === 'paid'
+
   const [rating, setRating] = useState(0)
   const [hovered, setHovered] = useState(0)
   const [feedback, setFeedback] = useState('')
@@ -46,10 +52,11 @@ export function ReviewModal({ userEmail, userName, context, onClose, onSubmitted
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={context !== 'required' ? onClose : undefined} />
+      {/* Only skippable contexts can close by clicking outside */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={isSkippable ? onClose : undefined} />
 
       <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
-        {context !== 'required' && (
+        {isSkippable && (
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
@@ -74,6 +81,8 @@ export function ReviewModal({ userEmail, userName, context, onClose, onSubmitted
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 {context === 'required'
                   ? 'One quick review to unlock your last 2 analyses'
+                  : context === 'renewal'
+                  ? 'Before you renew — share your experience'
                   : context === 'trial'
                   ? 'How are you finding MedFlow AI?'
                   : 'Enjoying MedFlow AI?'}
@@ -81,9 +90,11 @@ export function ReviewModal({ userEmail, userName, context, onClose, onSubmitted
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 {context === 'required'
                   ? 'Submit a review to access your remaining admission analyses. It takes 30 seconds.'
+                  : context === 'renewal'
+                  ? "A quick review is required to renew your subscription. It takes 30 seconds."
                   : context === 'trial'
                   ? "You're 3 analyses in — your early feedback shapes the product."
-                  : 'A quick review means a lot to our small team.'}
+                  : 'Leave a review before renewing — it means a lot to our small team.'}
               </p>
             </div>
 
@@ -116,20 +127,20 @@ export function ReviewModal({ userEmail, userName, context, onClose, onSubmitted
             {error && <p className="text-red-500 text-xs mt-2">{error}</p>}
 
             <div className="flex gap-2 mt-4">
-              {context !== 'required' && (
+              {isSkippable && (
                 <button
                   type="button"
                   onClick={onClose}
                   className="flex-1 py-2.5 rounded-lg text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 >
-                  Maybe Later
+                  {context === 'paid' ? 'Skip for now' : 'Maybe Later'}
                 </button>
               )}
               <button
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className={`py-2.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors ${context === 'required' ? 'w-full' : 'flex-1'}`}
+                className={`py-2.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors ${isSkippable ? 'flex-1' : 'w-full'}`}
               >
                 {submitting ? 'Sending…' : 'Submit Review'}
               </button>
