@@ -63,7 +63,7 @@ export default function SettingsPage() {
         .eq('id', user.id)
         .single()
 
-      if (profileError) console.error('Profile fetch error:', profileError)
+      if (profileError && profileError.code !== 'PGRST116') throw profileError
 
       if (profileData) {
         setProfile(profileData)
@@ -112,7 +112,6 @@ export default function SettingsPage() {
         .eq('id', user.id)
 
       if (error) {
-        console.error('Save profile error:', error)
         setMessage({ type: 'error', text: `Failed to update profile: ${error.message}` })
       } else {
         setMessage({ type: 'success', text: 'Profile updated successfully.' })
