@@ -146,9 +146,78 @@ function ClinicalTwistNoteView({ data }: { data: any }) {
   )
 }
 
-function SparkNoteContent({ content }: { content: string }) {
+function parseOldTextFormat(content: string, source: string): any | null {
+  const sections = content.split('\n\n')
+  const get = (prefix: string) => sections.find(s => s.startsWith(prefix))?.slice(prefix.length).trim()
+
+  if (source === 'senior_asks') {
+    const question = get('Q: ')
+    const answer = get('A: ')
+    if (!question || !answer) return null
+    return {
+      _sparkFormat: 'senior_asks',
+      question,
+      answer,
+      teaching_point: get('Teaching Point: ') || '',
+      clinical_pearl: get('Clinical Pearl: ') || '',
+    }
+  }
+
+  if (source === 'clinical_twist') {
+    const scenario = get('Scenario: ')
+    if (!scenario) return null
+    return {
+      _sparkFormat: 'clinical_twist',
+      scenario,
+      original_plan: get('Original Plan: ') || '',
+      twist: get('Twist: ') || '',
+      revised_plan: get('Revised Plan: ') || '',
+      reasoning: get('Reasoning: ') || '',
+      clinical_pearl: get('Clinical Pearl: ') || '',
+    }
+  }
+
+  if (source === 'know_your_drugs') {
+    const pearlSection = get('Clinical Pearl: ')
+    const contextEnd = content.indexOf('\n\n')
+    const context = contextEnd > -1 ? content.slice(0, contextEnd) : ''
+    const drugsRaw = content.slice(contextEnd + 2, pearlSection ? content.lastIndexOf('\n\nClinical Pearl: ') : undefined)
+    const drugBlocks = drugsRaw.split('\n\n').filter(Boolean)
+    const drugs = drugBlocks.map(block => {
+      const lines = block.split('\n')
+      const name = lines[0]?.trim()
+      const mech = lines.find(l => l.trim().startsWith('Mechanism: '))?.replace(/^\s*Mechanism: /, '') || ''
+      const when = lines.find(l => l.trim().startsWith('When to use: '))?.replace(/^\s*When to use: /, '') || ''
+      const key = lines.find(l => l.trim().startsWith('Key point: '))?.replace(/^\s*Key point: /, '') || ''
+      return { name, mechanism: mech, when_to_use: when, key_point: key }
+    }).filter(d => d.name)
+    if (!drugs.length) return null
+    return { _sparkFormat: 'know_your_drugs', context, drugs, clinical_pearl: pearlSection || '' }
+  }
+
+  if (source === 'quick_teach') {
+    const pearlSection = get('Key Takeaway: ')
+    const bodyEnd = pearlSection ? content.lastIndexOf('\n\nKey Takeaway: ') : content.length
+    const [intro, ...rest] = content.slice(0, bodyEnd).split('\n\n')
+    const cards = rest.map((block, i) => {
+      const colonIdx = block.indexOf(': ')
+      if (colonIdx === -1) return { id: String(i), title: block, content: '' }
+      return { id: String(i), title: block.slice(0, colonIdx), content: block.slice(colonIdx + 2) }
+    }).filter(c => c.title)
+    if (!cards.length) return null
+    return { _sparkFormat: 'quick_teach', intro, cards, summary_pearl: pearlSection || '' }
+  }
+
+  return null
+}
+
+function SparkNoteContent({ content, source }: { content: string; source: string }) {
   let parsed: any = null
   try { parsed = JSON.parse(content) } catch { /* plain text */ }
+
+  if (!parsed?._sparkFormat) {
+    parsed = parseOldTextFormat(content, source)
+  }
 
   if (!parsed?._sparkFormat) {
     return <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap mt-2">{content}</p>
@@ -318,7 +387,7 @@ export function NoteCard({ note, onDelete, onRotationChange, customRotations = [
       {note.source === 'pdf' ? (
         note.pdf_url ? <PdfNoteContent pdfUrl={note.pdf_url} /> : null
       ) : isSparkNote ? (
-        <SparkNoteContent content={note.content} />
+        <SparkNoteContent content={note.content} source={note.source} />
       ) : (
         <div className="mt-2">
           <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{displayContent}</p>
