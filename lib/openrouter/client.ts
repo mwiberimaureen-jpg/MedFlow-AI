@@ -843,19 +843,26 @@ Given:
 - Clinical assessment (impressions, differentials, test interpretation, complications)
 - Management plan (risk level, management plan, confirmatory tests, todo items)
 
-Write a ward-round presentation summary following this EXACT order:
+Write a SHORT, FACTUAL ward-round handover summary — ONLY what is documented in the patient history. Do NOT add impressions, differentials, or management recommendations; those appear in their own dedicated sections below the summary.
+
+Follow this EXACT order:
 1. "[Name], [age]-year-old [sex], [parity if OB/GYN], doing day [N] of admission."
-2. "Came in experiencing [chief complaint with brief context]."
-3. "On examination: [key findings from vitals and physical exam]."
-4. "Results: [test results and interpretation]."
-5. "Impression: [working diagnosis/differential]."
-6. "Current plan: [specific drugs with dose/route/frequency, monitoring, pending tests]."
+2. Chief complaint and relevant background (why admitted, relevant past history).
+3. Examination findings: general appearance, key vitals, significant exam findings.
+4. Investigations sent and results available (if any). Do NOT interpret — just state them.
+5. Treatments and procedures already given/in progress (named drugs with dose/route/frequency, procedures done).
+6. Any pending plans explicitly stated in the history (e.g. "planning CT head", "awaiting haematology review").
 
-LENGTH RULES:
-- Simple cases (<3 active problems): Keep to 1 concise paragraph covering all 6 points.
-- Complex cases (3+ active problems or significant changes): Use 2 paragraphs. Paragraph 1 = points 1-4. Paragraph 2 = points 5-6 with detailed reasoning.
+WHAT TO EXCLUDE FROM THE SUMMARY:
+- Do NOT add impressions or working diagnoses — those belong in the Impressions section.
+- Do NOT add differential diagnoses — those belong in the Differentials section.
+- Do NOT add management recommendations — those belong in the Management Plan section.
+- Do NOT interpret investigation results beyond what is stated in the history.
+- Do NOT add information not present in the history.
 
-DRUG SPECIFICITY: ALWAYS name every drug with dose/route/frequency. NEVER say "antibiotics", "escalation of care", or "IV fluids". Say "IV ceftriaxone 1g BD", "Normal saline 1L over 8 hours".
+LENGTH: One concise paragraph for most cases. Two paragraphs only if the history is genuinely complex with many active problems. Keep it tight — a colleague reading this in 30 seconds should know exactly who the patient is and what has happened so far.
+
+DRUG SPECIFICITY: Name every drug with dose/route/frequency. Never say "antibiotics" or "IV fluids" — say "IV ceftriaxone 1g BD" or "Normal saline 1L over 8 hours".
 
 Return ONLY valid JSON:
 {

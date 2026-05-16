@@ -14,10 +14,15 @@ Agentic workflows detail automation pipelines for lead scraping, proposal genera
   3. **Day Notes Summary** (collapsible) — editable textarea formatted as proper clinical documentation. HPI flows as narrative (no header), then each section has its own header on a new line: "Review of Systems:", "Vital Signs:", "Physical Examination:", "Investigations:", "PLAN:" (caps). Matches the format of a clinical history document. Final submit button lives here. Does NOT auto-submit — user reviews and edits before submitting.
 - **Always show clinical reasoning sections**: Impression, Test Interpretation, Differential Diagnoses, and Complications sections must always be visible (not conditional). Show fallback text if AI content is not available.
 - **Day number calculation**: Day 1 = admission day. Use `Math.floor(diffDays) + 1` from admission date.
-- **AI Clinical Summary format (ward-round presentation)**: The AI-generated summary MUST be a self-contained ward-round presentation. Mandatory structure:
-  - **Paragraph 1**: "This is [Name], a [age]-year-old [sex], [parity if OB/GYN], on day [N] of admission following [original admission diagnosis with brief context — e.g. incomplete abortion at 31 weeks gestation in a now para 3+1 woman who experienced fetal expulsion at home followed by manual removal of retained placenta on admission]. [Current status: chief complaints today, key vital signs, significant exam findings, relevant lab results — woven into flowing clinical prose, NOT a copy-paste of assessment inputs]."
-  - **Paragraph 2**: Clinical interpretation — what the findings mean, the working impression, and immediate management priorities.
-  - A doctor reading ONLY this summary should know: who the patient is, why they are admitted, what happened today, and what needs to happen next.
+- **AI Clinical Summary format — SHORT AND FACTUAL**: The summary is a concise handover, NOT a full clinical analysis. It must contain ONLY what is documented in the patient history. Impressions, differentials, and management plans belong in their own dedicated sections — never in the summary. Structure:
+  1. Name, age, sex, parity (if OB/GYN), day N of admission.
+  2. Chief complaint and relevant background.
+  3. Key examination findings (appearance, vitals, exam).
+  4. Investigations sent + any available results (state only, do not interpret).
+  5. Treatments/procedures already given (named drugs with dose/route/frequency).
+  6. Any pending plans explicitly stated in the history (e.g. "planning CT head").
+  - **One paragraph for most cases.** Two only if genuinely complex.
+  - **Never add** impressions, differentials, or management recommendations to the summary — they are already in the sections below.
 - **Clinical reasoning rules**:
   - **SIRS vs Sepsis**: Do NOT diagnose "sepsis" without documented end-organ damage (SOFA criteria). Use "SIRS secondary to [source]" if no organ damage. See prompt in `lib/openrouter/client.ts`.
   - **Anemia diagnosis (AMBOSS/WHO)**: Non-pregnant women: anemia = HB < 12.0 (HB ≥ 12 is NORMAL, not anemia). Men: HB < 13.0. Pregnant: HB < 11.0. Severity grading — Women: Mild 11-11.9, Moderate 8-10.9, Severe <8. Pregnant: Mild 10-10.9, Moderate 7-9.9, Severe <7. Men: Mild 11-12.9, Moderate 8-10.9, Severe <8. Never call HB ≥8 "severe anemia". Never call HB above the diagnostic threshold "anemia" at all.
