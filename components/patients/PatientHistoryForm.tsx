@@ -14,6 +14,14 @@ import { createClient } from '@/lib/supabase/client'
 const MAX_HISTORY_LENGTH = 10000
 const MIN_HISTORY_LENGTH = 50
 
+function generatePatientId(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  const suffix = Array.from({ length: 8 }, () =>
+    chars[Math.floor(Math.random() * chars.length)]
+  ).join('')
+  return `MF${suffix}`
+}
+
 interface InitialData {
   patient_name?: string
   patient_age?: string | number
@@ -46,7 +54,7 @@ export function PatientHistoryForm({ patientId, initialData }: PatientHistoryFor
     patient_name: initialData?.patient_name || '',
     patient_age: initialData?.patient_age ? String(initialData.patient_age) : '',
     patient_gender: initialData?.patient_gender || '',
-    patient_identifier: initialData?.patient_identifier || '',
+    patient_identifier: initialData?.patient_identifier || (!patientId ? generatePatientId() : ''),
     history_text: initialData?.history_text || '',
     rotation: initialData?.rotation || ''
   })
@@ -288,13 +296,13 @@ export function PatientHistoryForm({ patientId, initialData }: PatientHistoryFor
           />
 
           <Input
-            label="Patient Identifier (Optional)"
+            label="Patient ID"
             id="patient_identifier"
             name="patient_identifier"
             type="text"
             value={formData.patient_identifier}
             onChange={handleChange}
-            placeholder="e.g., Hospital Number, MRN"
+            placeholder="Auto-generated"
           />
 
           <Input
