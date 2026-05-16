@@ -110,9 +110,11 @@ export default function SettingsPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        setProfileMessage({ type: 'error', text: `Failed to save: ${data.error}` })
+        setProfileMessage({ type: 'error', text: data.error || 'Failed to save. Please try again.' })
+      } else if (data.warning) {
+        setProfileMessage({ type: 'error', text: data.warning })
       } else {
-        setProfileMessage({ type: 'success', text: 'Saved!' })
+        setProfileMessage({ type: 'success', text: 'Changes saved successfully!' })
         setProfile(prev => prev ? { ...prev, full_name: fullName.trim(), phone_number: phoneNumber.trim() } : null)
       }
     } catch {
@@ -273,9 +275,13 @@ export default function SettingsPage() {
               </button>
             </div>
             {profileMessage && (
-              <p className={`text-sm font-medium ${profileMessage.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                {profileMessage.type === 'success' ? '✓ ' : '✗ '}{profileMessage.text}
-              </p>
+              <div className={`px-4 py-3 rounded-lg text-sm font-medium ${
+                profileMessage.type === 'success'
+                  ? 'bg-green-50 border border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
+                  : 'bg-red-50 border border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
+              }`}>
+                {profileMessage.text}
+              </div>
             )}
           </div>
         </div>
