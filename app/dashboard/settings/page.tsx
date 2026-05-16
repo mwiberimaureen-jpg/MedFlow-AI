@@ -37,7 +37,6 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [profileMessage, setProfileMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   // Editable fields
   const [fullName, setFullName] = useState('')
@@ -95,12 +94,12 @@ export default function SettingsPage() {
 
   async function handleSaveProfile() {
     setSaving(true)
-    setProfileMessage(null)
+    setMessage(null)
 
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) {
-        setProfileMessage({ type: 'error', text: 'Not authenticated. Please log in again.' })
+        setMessage({ type: 'error', text: 'Not authenticated. Please log in again.' })
         return
       }
 
@@ -113,9 +112,9 @@ export default function SettingsPage() {
         .eq('id', user.id)
 
       if (error) {
-        setProfileMessage({ type: 'error', text: `Failed to save: ${error.message}` })
+        setMessage({ type: 'error', text: `Failed to update profile: ${error.message}` })
       } else {
-        setProfileMessage({ type: 'success', text: 'Saved!' })
+        setMessage({ type: 'success', text: 'Profile updated successfully.' })
         setProfile(prev => prev ? { ...prev, full_name: fullName.trim(), phone_number: phoneNumber.trim() } : null)
       }
     } finally {
@@ -261,23 +260,16 @@ export default function SettingsPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400">{formatDate(profile?.created_at)}</p>
           </div>
 
-          <div className="space-y-2 pt-2">
-            <div className="flex items-center gap-3">
-              <Button variant="primary" onClick={handleSaveProfile} loading={saving} disabled={saving}>
-                Save Changes
-              </Button>
-              <button
-                onClick={handlePasswordReset}
-                className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                Reset Password
-              </button>
-            </div>
-            {profileMessage && (
-              <p className={`text-sm font-medium ${profileMessage.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                {profileMessage.type === 'success' ? '✓ ' : '✗ '}{profileMessage.text}
-              </p>
-            )}
+          <div className="flex items-center gap-3 pt-2">
+            <Button variant="primary" onClick={handleSaveProfile} loading={saving} disabled={saving}>
+              Save Changes
+            </Button>
+            <button
+              onClick={handlePasswordReset}
+              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Reset Password
+            </button>
           </div>
         </div>
       </Card>
