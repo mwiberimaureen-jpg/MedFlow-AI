@@ -443,6 +443,7 @@ export default function SettingsPage() {
         </div>
       </Card>
 
+      {/* Reformat existing summaries to new short factual format */}
       <ReformatSummariesCard />
     </div>
   )
