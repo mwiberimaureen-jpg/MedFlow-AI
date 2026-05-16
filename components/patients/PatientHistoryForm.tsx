@@ -8,6 +8,8 @@ import { Card } from '@/components/ui/Card'
 import { CharacterCounter } from './CharacterCounter'
 import { saveDraft, loadDraft, clearDraft } from '@/lib/utils/draft'
 import { DEFAULT_ROTATIONS } from '@/lib/constants/rotations'
+import { ReviewModal } from '@/components/ReviewModal'
+import { createClient } from '@/lib/supabase/client'
 
 const MAX_HISTORY_LENGTH = 10000
 const MIN_HISTORY_LENGTH = 50
@@ -35,6 +37,10 @@ export function PatientHistoryForm({ patientId, initialData }: PatientHistoryFor
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const [showReview, setShowReview] = useState(false)
+  const [reviewUserEmail, setReviewUserEmail] = useState('')
+  const [reviewUserName, setReviewUserName] = useState<string | undefined>(undefined)
+  const [pendingPatientId, setPendingPatientId] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     patient_name: initialData?.patient_name || '',
@@ -201,8 +207,32 @@ export function PatientHistoryForm({ patientId, initialData }: PatientHistoryFor
         clearDraft()
       }
 
-      // Fire analysis in background when submitting
+      // Fire analysis when submitting
       if (status === 'submitted') {
+        // Check if a review is required before allowing analysis
+        const quotaRes = await fetch('/api/auth/trial-status')
+        const quota = quotaRes.ok ? await quotaRes.json() : {}
+
+        if (quota.reviewRequired) {
+          // Show the required review modal — don't navigate yet
+          const supabase = createClient()
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { data: profile } = await supabase
+              .from('users')
+              .select('email, full_name')
+              .eq('id', user.id)
+              .single()
+            setReviewUserEmail(profile?.email || user.email || '')
+            setReviewUserName(profile?.full_name || undefined)
+          }
+          setPendingPatientId(patientIdToUse)
+          setShowReview(true)
+          setLoading(false)
+          return // Navigation happens after review is submitted
+        }
+
+        // No review required — fire analysis in background as normal
         fetch(`/api/patients/${patientIdToUse}/analyze`, { method: 'POST' }).catch(() => {})
       }
 
@@ -218,7 +248,25 @@ export function PatientHistoryForm({ patientId, initialData }: PatientHistoryFor
   const handleSaveDraft = () => handleSubmit('draft')
   const handleSubmitForm = () => handleSubmit('submitted')
 
+  async function handleReviewSubmitted() {
+    setShowReview(false)
+    if (!pendingPatientId) return
+    // Fire analysis now that review is submitted, then navigate
+    fetch(`/api/patients/${pendingPatientId}/analyze`, { method: 'POST' }).catch(() => {})
+    router.push(`/dashboard/patients/${pendingPatientId}`)
+  }
+
   return (
+    <>
+    {showReview && (
+      <ReviewModal
+        userEmail={reviewUserEmail}
+        userName={reviewUserName}
+        context="required"
+        onClose={() => {}} // cannot close without submitting
+        onSubmitted={handleReviewSubmitted}
+      />
+    )}
     <Card>
       {error && (
         <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
@@ -383,5 +431,6 @@ export function PatientHistoryForm({ patientId, initialData }: PatientHistoryFor
         </div>
       </div>
     </Card>
+    </>
   )
 }

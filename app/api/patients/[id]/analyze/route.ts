@@ -74,6 +74,19 @@ export async function POST(
 
     // Trial quota gate: 5 free admission analyses per account
     const quota = await getTrialQuota(supabase, user.id)
+
+    // Review gate: must submit review before accessing analyses 4 and 5
+    if (quota.reviewRequired) {
+      return NextResponse.json(
+        {
+          error: 'Please submit a review to access your remaining admission analyses.',
+          code: 'REVIEW_REQUIRED',
+          remaining: quota.remaining,
+        },
+        { status: 402 }
+      )
+    }
+
     if (!quota.allowed) {
       return NextResponse.json(
         {

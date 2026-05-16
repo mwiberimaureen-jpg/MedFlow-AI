@@ -20,6 +20,7 @@ export interface TrialQuota {
   remaining: number
   subscribed: boolean
   exempt: boolean
+  reviewRequired: boolean
 }
 
 function getExemptEmails(): Set<string> {
@@ -42,13 +43,14 @@ export async function getTrialQuota(
 ): Promise<TrialQuota> {
   const { data: userRow } = await supabase
     .from('users')
-    .select('email, subscription_status')
+    .select('email, subscription_status, review_submitted')
     .eq('id', userId)
     .maybeSingle()
 
   const subscribed = userRow?.subscription_status === 'active'
   const email = (userRow?.email || '').toLowerCase()
   const exempt = email !== '' && getExemptEmails().has(email)
+  const reviewSubmitted = userRow?.review_submitted === true
 
   // Count admission analyses owned by this user (joined via patient_histories)
   const { count } = await supabase
@@ -60,6 +62,8 @@ export async function getTrialQuota(
   const used = count ?? 0
   const remaining = Math.max(0, TRIAL_ANALYSIS_LIMIT - used)
 
+  const reviewRequired = !subscribed && !exempt && used >= 3 && !reviewSubmitted
+
   return {
     allowed: subscribed || exempt || used < TRIAL_ANALYSIS_LIMIT,
     used,
@@ -67,5 +71,6 @@ export async function getTrialQuota(
     remaining,
     subscribed,
     exempt,
+    reviewRequired,
   }
 }

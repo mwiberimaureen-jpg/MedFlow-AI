@@ -5,7 +5,7 @@ import { useState } from 'react'
 interface ReviewModalProps {
   userEmail: string
   userName?: string
-  context: 'trial' | 'paid'
+  context: 'trial' | 'paid' | 'required'
   onClose: () => void
   onSubmitted: () => void
 }
@@ -46,18 +46,20 @@ export function ReviewModal({ userEmail, userName, context, onClose, onSubmitted
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={context !== 'required' ? onClose : undefined} />
 
       <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-          aria-label="Close"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        {context !== 'required' && (
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+            aria-label="Close"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
 
         {done ? (
           <div className="text-center py-6">
@@ -70,10 +72,16 @@ export function ReviewModal({ userEmail, userName, context, onClose, onSubmitted
             <div className="text-center mb-5">
               <div className="text-3xl mb-2">🩺</div>
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                {context === 'trial' ? 'How are you finding MedFlow AI?' : 'Enjoying MedFlow AI?'}
+                {context === 'required'
+                  ? 'One quick review to unlock your last 2 analyses'
+                  : context === 'trial'
+                  ? 'How are you finding MedFlow AI?'
+                  : 'Enjoying MedFlow AI?'}
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {context === 'trial'
+                {context === 'required'
+                  ? 'Submit a review to access your remaining admission analyses. It takes 30 seconds.'
+                  : context === 'trial'
                   ? "You're 3 analyses in — your early feedback shapes the product."
                   : 'A quick review means a lot to our small team.'}
               </p>
@@ -108,18 +116,20 @@ export function ReviewModal({ userEmail, userName, context, onClose, onSubmitted
             {error && <p className="text-red-500 text-xs mt-2">{error}</p>}
 
             <div className="flex gap-2 mt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 py-2.5 rounded-lg text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                Maybe Later
-              </button>
+              {context !== 'required' && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 py-2.5 rounded-lg text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Maybe Later
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="flex-1 py-2.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className={`py-2.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors ${context === 'required' ? 'w-full' : 'flex-1'}`}
               >
                 {submitting ? 'Sending…' : 'Submit Review'}
               </button>

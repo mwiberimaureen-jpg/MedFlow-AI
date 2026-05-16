@@ -15,8 +15,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid rating' }, { status: 400 })
     }
 
-    // Save review to database
     const admin = getSupabaseServerClient()
+
+    // Save review to database
     await admin.from('reviews').insert({
       user_id: user?.id ?? null,
       email: userEmail ?? null,
@@ -25,6 +26,14 @@ export async function POST(request: NextRequest) {
       feedback: feedback?.trim() || null,
       context: context ?? 'trial',
     })
+
+    // Mark review as submitted on the user record (unlocks analyses 4 & 5 for trial users)
+    if (user?.id) {
+      await admin
+        .from('users')
+        .update({ review_submitted: true })
+        .eq('id', user.id)
+    }
 
     // Send email notification via Resend (only if API key is configured)
     const resendKey = process.env.RESEND_API_KEY
