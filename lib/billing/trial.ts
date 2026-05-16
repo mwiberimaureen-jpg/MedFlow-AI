@@ -23,14 +23,12 @@ export interface TrialQuota {
   reviewRequired: boolean
 }
 
+const OWNER_EMAILS = new Set(['mwiberimaureen@gmail.com'])
+
 function getExemptEmails(): Set<string> {
   const raw = process.env.TRIAL_EXEMPT_EMAILS || ''
-  return new Set(
-    raw
-      .split(',')
-      .map((e) => e.trim().toLowerCase())
-      .filter(Boolean)
-  )
+  const envEmails = raw.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+  return new Set([...OWNER_EMAILS, ...envEmails])
 }
 
 /**
