@@ -98,26 +98,25 @@ export default function SettingsPage() {
     setProfileMessage(null)
 
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError || !user) {
-        setProfileMessage({ type: 'error', text: 'Not authenticated. Please log in again.' })
-        return
-      }
-
-      const { error } = await supabase
-        .from('users')
-        .update({
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           full_name: fullName.trim() || null,
           phone_number: phoneNumber.trim() || null,
-        })
-        .eq('id', user.id)
+        }),
+      })
 
-      if (error) {
-        setProfileMessage({ type: 'error', text: `Failed to save: ${error.message}` })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setProfileMessage({ type: 'error', text: `Failed to save: ${data.error}` })
       } else {
         setProfileMessage({ type: 'success', text: 'Saved!' })
         setProfile(prev => prev ? { ...prev, full_name: fullName.trim(), phone_number: phoneNumber.trim() } : null)
       }
+    } catch {
+      setProfileMessage({ type: 'error', text: 'Network error. Please try again.' })
     } finally {
       setSaving(false)
     }
