@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Sidebar from './Sidebar'
 import ThemeToggle from './ThemeToggle'
 import TrialBadge from './TrialBadge'
+import { ReviewTrigger } from './ReviewTrigger'
 
 interface DashboardShellProps {
   userEmail: string
@@ -55,6 +56,8 @@ export default function DashboardShell({ userEmail, displayName, children }: Das
           {children}
         </div>
       </main>
+
+      <ReviewTrigger userEmail={userEmail} userName={displayName} />
     </div>
   )
 }
