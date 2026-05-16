@@ -104,18 +104,42 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Welcome card */}
-      <div className="bg-gradient-to-r from-blue-500 to-green-500 rounded-lg shadow-lg p-8 text-white">
-        <h3 className="text-2xl font-bold mb-2">Welcome to MedFlow AI</h3>
-        <p className="text-blue-50 mb-4">
-          Your subscription-based medical patient history analysis platform.
-        </p>
-        <Link href="/dashboard/patients/new">
-          <button className="bg-white text-blue-600 px-6 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors">
-            Add New Patient
-          </button>
-        </Link>
-      </div>
+      {/* Welcome card — shows demo CTA for new users, standard card for existing users */}
+      {totalPatients === 0 ? (
+        <div className="bg-gradient-to-r from-blue-600 to-teal-500 rounded-lg shadow-lg p-8 text-white">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-3xl">⚡</span>
+            <h3 className="text-2xl font-bold">See MedFlow AI in action — in 60 seconds</h3>
+          </div>
+          <p className="text-blue-50 mb-6 text-lg">
+            A real clinical case is ready for you. Hit analyze and watch MedFlow generate an impression, differentials, management plan, and complications — instantly.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/dashboard/patients/new?demo=true">
+              <button className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors text-base">
+                ⚡ Try a Demo Case
+              </button>
+            </Link>
+            <Link href="/dashboard/patients/new">
+              <button className="bg-blue-700 bg-opacity-50 text-white px-6 py-3 rounded-lg font-medium hover:bg-opacity-70 transition-colors text-base border border-white border-opacity-30">
+                Add My Own Patient
+              </button>
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-gradient-to-r from-blue-500 to-green-500 rounded-lg shadow-lg p-8 text-white">
+          <h3 className="text-2xl font-bold mb-2">Welcome to MedFlow AI</h3>
+          <p className="text-blue-50 mb-4">
+            Your AI-powered clinical reasoning platform.
+          </p>
+          <Link href="/dashboard/patients/new">
+            <button className="bg-white text-blue-600 px-6 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors">
+              Add New Patient
+            </button>
+          </Link>
+        </div>
+      )}
 
       {/* Recent activity */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
@@ -124,7 +148,14 @@ export default async function DashboardPage() {
         </div>
         <div className="p-6">
           {!recentPatients || recentPatients.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-8">No patients yet. Add your first patient to get started!</p>
+            <div className="text-center py-8">
+              <p className="text-gray-500 dark:text-gray-400 mb-4">No patients yet.</p>
+              <Link href="/dashboard/patients/new?demo=true">
+                <button className="bg-blue-600 text-white px-5 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm">
+                  ⚡ Try a Demo Case First
+                </button>
+              </Link>
+            </div>
           ) : (
             <div className="space-y-3">
               {recentPatients.map((patient) => {
