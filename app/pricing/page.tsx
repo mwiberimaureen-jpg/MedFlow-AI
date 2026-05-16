@@ -38,8 +38,8 @@ export default function PricingPage() {
       if (profileRes.data) setUserInfo(profileRes.data);
 
       const paidCount = subCountRes.count ?? 0;
-      if (paidCount === 1) setReviewMode('mandatory');     // paying for month 2
-      else if (paidCount === 2) setReviewMode('optional'); // paying for month 3
+      if (paidCount === 1) setReviewMode('optional');      // paying for month 2
+      else if (paidCount === 2) setReviewMode('mandatory'); // paying for month 3
       else setReviewMode('none');
     }
     loadUser();
