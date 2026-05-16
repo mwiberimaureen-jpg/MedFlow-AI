@@ -85,30 +85,9 @@ function calculateStreak(state: LearningSparkState, todayISO: string, sparkId: s
 function formatSparkAsNote(spark: SparkType): { title: string; content: string } {
   const c = spark.content as any
   const topic = c.topic || 'Clinical Note'
-
-  switch (spark.format_type) {
-    case 'senior_asks':
-      return {
-        title: topic,
-        content: `Q: ${c.question}\n\nA: ${c.answer}\n\nTeaching Point: ${c.teaching_point}\n\nClinical Pearl: ${c.clinical_pearl}`,
-      }
-    case 'quick_teach':
-      return {
-        title: topic,
-        content: `${c.intro}\n\n${c.cards.map((card: any) => `${card.title}: ${card.content}`).join('\n\n')}\n\nKey Takeaway: ${c.summary_pearl}`,
-      }
-    case 'know_your_drugs':
-      return {
-        title: topic,
-        content: `${c.context}\n\n${c.drugs.map((d: any) => `${d.name}\n  Mechanism: ${d.mechanism}\n  When to use: ${d.when_to_use}\n  Key point: ${d.key_point}`).join('\n\n')}\n\nClinical Pearl: ${c.clinical_pearl}`,
-      }
-    case 'clinical_twist':
-      return {
-        title: topic,
-        content: `Scenario: ${c.scenario}\n\nOriginal Plan: ${c.original_plan}\n\nTwist: ${c.twist}\n\nRevised Plan: ${c.revised_plan}\n\nReasoning: ${c.reasoning}\n\nClinical Pearl: ${c.clinical_pearl}`,
-      }
-    default:
-      return { title: topic, content: JSON.stringify(c, null, 2) }
+  return {
+    title: topic,
+    content: JSON.stringify({ _sparkFormat: spark.format_type, ...c }),
   }
 }
 
