@@ -57,11 +57,13 @@ export default function SettingsPage() {
       }
 
       // Fetch profile
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('users')
         .select('*')
         .eq('id', user.id)
         .single()
+
+      if (profileError) console.error('Profile fetch error:', profileError)
 
       if (profileData) {
         setProfile(profileData)
@@ -91,25 +93,34 @@ export default function SettingsPage() {
   }
 
   async function handleSaveProfile() {
-    if (!profile) return
     setSaving(true)
     setMessage(null)
 
-    const { error } = await supabase
-      .from('users')
-      .update({
-        full_name: fullName.trim() || null,
-        phone_number: phoneNumber.trim() || null,
-      })
-      .eq('id', profile.id)
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        setMessage({ type: 'error', text: 'Not authenticated. Please log in again.' })
+        return
+      }
 
-    if (error) {
-      setMessage({ type: 'error', text: 'Failed to update profile. Please try again.' })
-    } else {
-      setMessage({ type: 'success', text: 'Profile updated successfully.' })
-      setProfile(prev => prev ? { ...prev, full_name: fullName.trim(), phone_number: phoneNumber.trim() } : null)
+      const { error } = await supabase
+        .from('users')
+        .update({
+          full_name: fullName.trim() || null,
+          phone_number: phoneNumber.trim() || null,
+        })
+        .eq('id', user.id)
+
+      if (error) {
+        console.error('Save profile error:', error)
+        setMessage({ type: 'error', text: `Failed to update profile: ${error.message}` })
+      } else {
+        setMessage({ type: 'success', text: 'Profile updated successfully.' })
+        setProfile(prev => prev ? { ...prev, full_name: fullName.trim(), phone_number: phoneNumber.trim() } : null)
+      }
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
   }
 
   async function handleToggleAutoDelete(next: boolean) {
