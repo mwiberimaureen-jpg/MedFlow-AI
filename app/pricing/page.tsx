@@ -1,51 +1,87 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { ReviewModal } from '@/components/ReviewModal';
+
+interface UserInfo {
+  id: string;
+  email: string;
+  full_name?: string;
+  subscription_status?: string;
+}
 
 export default function PricingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
 
-  // TODO: Get user info from Supabase Auth context
-  // For now, using placeholder
-  const userId = 'user-id-placeholder';
-  const userEmail = 'user@example.com';
-  const userName = 'John Doe';
+  useEffect(() => {
+    async function loadUser() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-  const handleSubscribe = async () => {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('id, email, full_name, subscription_status')
+        .eq('id', user.id)
+        .single();
+
+      if (profile) setUserInfo(profile);
+    }
+    loadUser();
+  }, []);
+
+  // Renewing = already an active subscriber coming back to pay again
+  const isRenewing = userInfo?.subscription_status === 'active';
+
+  async function doCheckout() {
+    if (!userInfo) return;
     setIsLoading(true);
     setError(null);
 
     try {
       const response = await fetch('/api/payments/create-checkout', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId,
-          email: userEmail,
-          fullName: userName,
+          userId: userInfo.id,
+          email: userInfo.email,
+          fullName: userInfo.full_name || '',
         }),
       });
 
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create checkout session');
-      }
-
-      // Redirect to Intasend checkout page
+      if (!response.ok) throw new Error(data.error || 'Failed to create checkout session');
       window.location.href = data.checkoutUrl;
-
     } catch (err: any) {
-      console.error('Error creating checkout:', err);
       setError(err.message || 'Something went wrong. Please try again.');
       setIsLoading(false);
     }
-  };
+  }
+
+  function handleSubscribeClick() {
+    // Returning subscribers see a review prompt first
+    if (isRenewing) {
+      setShowReviewModal(true);
+      return;
+    }
+    doCheckout();
+  }
+
+  function handleReviewDone() {
+    // After submitting review, proceed to checkout
+    setShowReviewModal(false);
+    doCheckout();
+  }
+
+  function handleReviewSkip() {
+    // Clicked "Maybe Later" — still proceed to checkout
+    setShowReviewModal(false);
+    doCheckout();
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 py-12 px-4 sm:px-6 lg:px-8">
@@ -53,49 +89,39 @@ export default function PricingPage() {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            Choose Your Plan
+            {isRenewing ? 'Renew Your Subscription' : 'Choose Your Plan'}
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300">
-            Start analyzing patient histories with AI-powered insights
+            {isRenewing
+              ? 'Continue your access to AI-powered clinical tools'
+              : 'Start analyzing patient histories with AI-powered insights'}
           </p>
         </div>
 
         {/* Pricing Card */}
         <div className="max-w-lg mx-auto">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border-2 border-indigo-500">
-            {/* Popular Badge */}
             <div className="bg-indigo-500 text-white text-center py-2 px-4 text-sm font-semibold">
               MOST POPULAR
             </div>
 
             <div className="p-8">
-              {/* Plan Name */}
               <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                   Monthly Subscription
                 </h2>
-                <p className="text-gray-600 dark:text-gray-300">
-                  For medical professionals
-                </p>
+                <p className="text-gray-600 dark:text-gray-300">For medical professionals</p>
               </div>
 
-              {/* Price */}
               <div className="text-center mb-8">
                 <div className="flex items-baseline justify-center">
-                  <span className="text-5xl font-extrabold text-gray-900 dark:text-white">
-                    KES 2,000
-                  </span>
-                  <span className="text-xl text-gray-600 dark:text-gray-400 ml-2">
-                    /month
-                  </span>
+                  <span className="text-5xl font-extrabold text-gray-900 dark:text-white">KES 2,000</span>
+                  <span className="text-xl text-gray-600 dark:text-gray-400 ml-2">/month</span>
                 </div>
               </div>
 
-              {/* Features */}
               <div className="mb-8 space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  What's included:
-                </h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">What&apos;s included:</h3>
                 <Feature text="100 patient history analyses per month" />
                 <Feature text="AI-powered diagnostic suggestions" />
                 <Feature text="Structured to-do lists for patient care" />
@@ -105,47 +131,29 @@ export default function PricingPage() {
                 <Feature text="Regular feature updates" />
               </div>
 
-              {/* CTA Button */}
               <button
-                onClick={handleSubscribe}
+                type="button"
+                onClick={handleSubscribeClick}
                 disabled={isLoading}
                 className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold py-4 px-6 rounded-lg transition-colors duration-200 text-lg shadow-lg"
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center">
                     <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                        fill="none"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
                     Processing...
                   </span>
-                ) : (
-                  'Subscribe Now'
-                )}
+                ) : isRenewing ? 'Renew Subscription' : 'Subscribe Now'}
               </button>
 
-              {/* Error Message */}
               {error && (
                 <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                  <p className="text-sm text-red-600 dark:text-red-400 text-center">
-                    {error}
-                  </p>
+                  <p className="text-sm text-red-600 dark:text-red-400 text-center">{error}</p>
                 </div>
               )}
 
-              {/* Payment Methods */}
               <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                 <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-3">
                   Secure payment via Intasend
@@ -159,15 +167,14 @@ export default function PricingPage() {
             </div>
           </div>
 
-          {/* Trial Info */}
           <div className="mt-8 text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              New users get a 7-day free trial. Cancel anytime.
+              New users get 5 free analyses to get started. Cancel anytime.
             </p>
           </div>
         </div>
 
-        {/* FAQ Section */}
+        {/* FAQ */}
         <div className="mt-16 max-w-3xl mx-auto">
           <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-8">
             Frequently Asked Questions
@@ -175,7 +182,7 @@ export default function PricingPage() {
           <div className="space-y-6">
             <FAQ
               question="How does the free trial work?"
-              answer="New users automatically get a 7-day free trial. You can explore all features without any payment. If you don't subscribe after the trial, your account will be downgraded to free tier."
+              answer="New users get 5 free admission analyses. You can explore all features without any payment. Subscribe to continue after your free analyses are used."
             />
             <FAQ
               question="Can I cancel anytime?"
@@ -192,6 +199,17 @@ export default function PricingPage() {
           </div>
         </div>
       </div>
+
+      {/* Review modal — shown to returning subscribers before checkout */}
+      {showReviewModal && userInfo && (
+        <ReviewModal
+          userEmail={userInfo.email}
+          userName={userInfo.full_name}
+          context="paid"
+          onClose={handleReviewSkip}
+          onSubmitted={handleReviewDone}
+        />
+      )}
     </div>
   );
 }
@@ -199,18 +217,8 @@ export default function PricingPage() {
 function Feature({ text }: { text: string }) {
   return (
     <div className="flex items-start">
-      <svg
-        className="w-6 h-6 text-green-500 mr-3 flex-shrink-0 mt-0.5"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M5 13l4 4L19 7"
-        />
+      <svg className="w-6 h-6 text-green-500 mr-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
       </svg>
       <span className="text-gray-700 dark:text-gray-300">{text}</span>
     </div>
@@ -228,9 +236,7 @@ function PaymentBadge({ text }: { text: string }) {
 function FAQ({ question, answer }: { question: string; answer: string }) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-        {question}
-      </h3>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{question}</h3>
       <p className="text-gray-600 dark:text-gray-300">{answer}</p>
     </div>
   );
