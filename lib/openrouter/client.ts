@@ -307,7 +307,7 @@ Return ONLY a valid JSON response with this structure:
       "prevention_plan": "Specific prevention steps"
     }
   ],
-  "summary": "SHORT FACTUAL HANDOVER — only what is documented in the history. DO NOT include impressions, differentials, or management recommendations (those are in their own fields above). Follow this EXACT order: 1) '[Name], [age]-year-old [sex], [parity if OB/GYN], doing day [N] of admission.' 2) Chief complaint and relevant background. 3) Key examination findings (general appearance, vitals, significant findings). 4) Investigations sent and any available results — state factually, do not interpret. 5) Treatments and procedures already given (name every drug with dose/route/frequency). 6) Any pending plans explicitly stated in the history (e.g. 'planning CT head', 'awaiting haematology review'). LENGTH: One concise paragraph for most cases. Two only if genuinely complex. NEVER add impressions, working diagnoses, differentials, or management recommendations to the summary.",
+  "summary": "TRANSCRIPT of the history — report what is documented, never interpret. Order: 1) '[Name], [age]-year-old [sex], [parity if OB/GYN], doing day [N] of admission.' 2) Presenting complaints and background exactly as documented. 3) Examination findings as documented. 4) Investigations SENT only — do NOT include result values or interpret them (results go in test_interpretation). 5) Treatments given — every drug with dose/route/frequency, every procedure. 6) Pending plans explicitly stated in the history. ABSOLUTE RULES: No impressions, no diagnoses, no differentials, no result values, no interpretation, no information not in the history. One paragraph for most cases.",
   "todo_items": [
     {
       "title": "Brief action item title",
@@ -583,8 +583,9 @@ export async function analyzeDailyProgress(
     `- differential_diagnoses: ALWAYS provide differentials.\n` +
     `- management_plan: Account for ALL medications and treatments mentioned in previous progress notes. If a drug was reported in a previous day (e.g. ceftriaxone), acknowledge it and build on it — do NOT say the antibiotic choice is unspecified.\n\n` +
     `SUMMARY — SHORT FACTUAL HANDOVER (MANDATORY):\n` +
-    `The summary must contain ONLY what is documented in today's progress notes. Do NOT add impressions, differentials, or management recommendations — those belong in their own fields.\n` +
-    `Order: 1) Patient demographics + day N. 2) Today's symptoms and complaints. 3) Examination findings (vitals, general appearance, key exam). 4) Investigations sent today + results available. 5) Treatments and procedures given today (named drugs with dose/route/frequency). 6) Any pending plans explicitly stated in the notes.\n` +
+    `The summary is a TRANSCRIPT of the progress notes — REPORT what is documented, never INTERPRET it.\n` +
+    `Order: 1) Patient demographics + day N. 2) Today's symptoms and complaints as documented. 3) Examination findings as documented (vitals, general appearance, key exam). 4) Investigations SENT today ONLY — do NOT include result values or interpret them (results go in test_interpretation). 5) Treatments and procedures given today — every drug with dose/route/frequency, every procedure. 6) Any pending plans explicitly stated in the notes.\n` +
+    `ABSOLUTE RULES: Do NOT state investigation result values in the summary. Do NOT add impressions, diagnoses, or interpretations. Do NOT add any information not explicitly documented. Say what was sent, not what it showed.\n` +
     `LENGTH: One concise paragraph. NEVER add impressions or management plans to the summary.\n\n` +
     `Apply ALL the same clinical rules from your system instructions (AMBOSS-only, no hallucination, no forbidden phrases, specific drug dosing, etc.)`
 
@@ -841,26 +842,25 @@ Given:
 - Clinical assessment (impressions, differentials, test interpretation, complications)
 - Management plan (risk level, management plan, confirmatory tests, todo items)
 
-Write a SHORT, FACTUAL ward-round handover summary — ONLY what is documented in the patient history. Do NOT add impressions, differentials, or management recommendations; those appear in their own dedicated sections below the summary.
+Write a SHORT, FACTUAL ward-round handover — a TRANSCRIPT of what is in the history, not an interpretation of it. Report symptoms as the history states them. Do NOT diagnose, interpret, or add clinical reasoning.
 
 Follow this EXACT order:
 1. "[Name], [age]-year-old [sex], [parity if OB/GYN], doing day [N] of admission."
-2. Chief complaint and relevant background (why admitted, relevant past history).
-3. Examination findings: general appearance, key vitals, significant exam findings.
-4. Investigations sent and results available (if any). Do NOT interpret — just state them.
-5. Treatments and procedures already given/in progress (named drugs with dose/route/frequency, procedures done).
-6. Any pending plans explicitly stated in the history (e.g. "planning CT head", "awaiting haematology review").
+2. Presenting complaints and relevant background — exactly as documented.
+3. Examination findings: general appearance, vitals, significant exam findings — as documented.
+4. Investigations sent — list only what was ordered. Do NOT include results or values; those go in Test Interpretation.
+5. Treatments and procedures already given — every drug with dose/route/frequency, every procedure done.
+6. Pending plans explicitly stated in the history only (e.g. "planning CT head").
 
-WHAT TO EXCLUDE FROM THE SUMMARY:
-- Do NOT add impressions or working diagnoses — those belong in the Impressions section.
-- Do NOT add differential diagnoses — those belong in the Differentials section.
-- Do NOT add management recommendations — those belong in the Management Plan section.
-- Do NOT interpret investigation results beyond what is stated in the history.
-- Do NOT add information not present in the history.
+ABSOLUTE RULES:
+- REPORT, do not INTERPRET. Say "patient developed hotness of body" not "patient has fever." Say "investigations sent" not "results show severe anemia."
+- Do NOT state investigation results or values in the summary — they belong in Test Interpretation.
+- Do NOT add impressions, diagnoses, or differential diagnoses.
+- Do NOT add management recommendations not already documented.
+- Do NOT add ANY information not explicitly in the history.
+- Every drug must be named with dose/route/frequency.
 
-LENGTH: One concise paragraph for most cases. Two paragraphs only if the history is genuinely complex with many active problems. Keep it tight — a colleague reading this in 30 seconds should know exactly who the patient is and what has happened so far.
-
-DRUG SPECIFICITY: Name every drug with dose/route/frequency. Never say "antibiotics" or "IV fluids" — say "IV ceftriaxone 1g BD" or "Normal saline 1L over 8 hours".
+LENGTH: One concise paragraph for most cases. Two only if genuinely complex.
 
 Return ONLY valid JSON:
 {

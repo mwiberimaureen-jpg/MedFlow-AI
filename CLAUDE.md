@@ -14,15 +14,15 @@ Agentic workflows detail automation pipelines for lead scraping, proposal genera
   3. **Day Notes Summary** (collapsible) — editable textarea formatted as proper clinical documentation. HPI flows as narrative (no header), then each section has its own header on a new line: "Review of Systems:", "Vital Signs:", "Physical Examination:", "Investigations:", "PLAN:" (caps). Matches the format of a clinical history document. Final submit button lives here. Does NOT auto-submit — user reviews and edits before submitting.
 - **Always show clinical reasoning sections**: Impression, Test Interpretation, Differential Diagnoses, and Complications sections must always be visible (not conditional). Show fallback text if AI content is not available.
 - **Day number calculation**: Day 1 = admission day. Use `Math.floor(diffDays) + 1` from admission date.
-- **AI Clinical Summary format — SHORT AND FACTUAL**: The summary is a concise handover, NOT a full clinical analysis. It must contain ONLY what is documented in the patient history. Impressions, differentials, and management plans belong in their own dedicated sections — never in the summary. Structure:
+- **AI Clinical Summary format — TRANSCRIPT, NOT INTERPRETATION**: The summary is a factual transcript of what is documented in the history. REPORT, do not INTERPRET. Structure:
   1. Name, age, sex, parity (if OB/GYN), day N of admission.
-  2. Chief complaint and relevant background.
-  3. Key examination findings (appearance, vitals, exam).
-  4. Investigations sent + any available results (state only, do not interpret).
-  5. Treatments/procedures already given (named drugs with dose/route/frequency).
+  2. Chief complaint and relevant background — exactly as documented.
+  3. Examination findings as documented (appearance, vitals, key exam findings).
+  4. Investigations SENT only — do NOT include result values or interpret them (results belong in Test Interpretation section, not the summary).
+  5. Treatments/procedures already given — every drug with dose/route/frequency, every procedure.
   6. Any pending plans explicitly stated in the history (e.g. "planning CT head").
   - **One paragraph for most cases.** Two only if genuinely complex.
-  - **Never add** impressions, differentials, or management recommendations to the summary — they are already in the sections below.
+  - **ABSOLUTE RULES**: Never add impressions, diagnoses, differentials, or management recommendations. Never include test result values. Never interpret findings. Only report what is explicitly in the history.
 - **Clinical reasoning rules**:
   - **SIRS vs Sepsis**: Do NOT diagnose "sepsis" without documented end-organ damage (SOFA criteria). Use "SIRS secondary to [source]" if no organ damage. See prompt in `lib/openrouter/client.ts`.
   - **Anemia diagnosis (AMBOSS/WHO)**: Non-pregnant women: anemia = HB < 12.0 (HB ≥ 12 is NORMAL, not anemia). Men: HB < 13.0. Pregnant: HB < 11.0. Severity grading — Women: Mild 11-11.9, Moderate 8-10.9, Severe <8. Pregnant: Mild 10-10.9, Moderate 7-9.9, Severe <7. Men: Mild 11-12.9, Moderate 8-10.9, Severe <8. Never call HB ≥8 "severe anemia". Never call HB above the diagnostic threshold "anemia" at all.
@@ -31,7 +31,7 @@ Agentic workflows detail automation pipelines for lead scraping, proposal genera
   - Describe **symptoms** first, not diagnostic labels. Say "patient developed hotness of body and drenching sweats from day 3, with temperatures of 39.3°C" NOT "she has developed post-abortion sepsis."
   - Always name **specific drugs** with dose/route/frequency. Say "patient was on IV ceftriaxone 1g BD from day 1-3, changed to IV ceftazidime 1g BD on day 4" NOT "despite 4 days of antibiotic therapy."
   - When recommending drug changes, be specific: "Plan: change from IV ceftazidime 1g BD to IV meropenem 1g TDS" NOT "requires escalation to broad-spectrum antibiotics."
-  - Report investigation results factually: "normal chest X-ray" NOT "chest X-ray remains normal despite respiratory symptoms."
+  - Do NOT include test result values or interpretations in the summary. Say "investigations sent: FBC, LFTs, blood cultures" NOT "HB 4.0 consistent with severe anemia." Results belong in Test Interpretation only.
   - Do NOT assume diagnoses without evidence. Normal WBC + normal CXR rules out hospital-acquired pneumonia.
   - When querying a diagnosis, say "querying sepsis — plan: LFTs, UECs, serum lactate to rule in/out end-organ damage."
 
