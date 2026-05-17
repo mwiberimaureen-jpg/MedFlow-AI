@@ -47,7 +47,7 @@ async function reformatSummary(
       'X-Title': 'MedFlow AI',
     },
     body: JSON.stringify({
-      model: 'anthropic/claude-haiku-4-5-20251001',
+      model: 'anthropic/claude-3.5-haiku',
       messages: [
         { role: 'system', content: REFORMAT_PROMPT },
         { role: 'user', content: userContent },
