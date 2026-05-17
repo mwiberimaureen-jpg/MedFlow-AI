@@ -458,12 +458,12 @@ export function DayAdmissionCard({
                 .map(l => l.replace(/^\d+\.\s*/, '').replace(/\*\*(.*?)\*\*/g, '$1').trim())
                 .filter(Boolean)
                 .map((l, i) => `${i + 1}. ${l}`)
-            if (steps.length) parts.push(steps.join('\n'))
+            if (steps.length) parts.push(`Recommended Plan:\n${steps.join('\n')}`)
         }
 
         if (adjMatch?.[1]?.trim()) {
             const adj = adjMatch[1].trim().replace(/\*\*(.*?)\*\*/g, '$1')
-            if (adj) parts.push(`Adjustments: ${adj}`)
+            if (adj && adj.toLowerCase() !== 'n/a') parts.push(`Adjustments Based on Patient Status: ${adj}`)
         }
 
         return parts.length ? parts.join('\n\n') : undefined

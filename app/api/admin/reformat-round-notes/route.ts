@@ -32,14 +32,14 @@ function extractManagementPlan(rawText: string): string {
       .map(l => l.trim())
       .filter(Boolean)
       .map((l, i) => `${i + 1}. ${l.replace(/^\d+\.\s*/, '').replace(/\*\*(.*?)\*\*/g, '$1').trim()}`)
-    if (steps.length) parts.push(steps.join('\n'))
+    if (steps.length) parts.push(`Recommended Plan:\n${steps.join('\n')}`)
   }
 
   // Extract adjustments
   const adjMatch = mgmtContent.match(/\*\*Adjustments Based on Patient Status:\*\*\s*([\s\S]*?)$/i)
   if (adjMatch?.[1]?.trim()) {
     const adj = adjMatch[1].trim().replace(/\*\*(.*?)\*\*/g, '$1')
-    if (adj && adj !== 'N/A' && adj.length > 5) parts.push(`Adjustments: ${adj}`)
+    if (adj && adj.toLowerCase() !== 'n/a' && adj.length > 5) parts.push(`Adjustments Based on Patient Status: ${adj}`)
   }
 
   return parts.join('\n\n')
