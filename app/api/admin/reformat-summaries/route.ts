@@ -75,22 +75,29 @@ async function reformatSummary(
   oldSummary: string,
   apiKey: string
 ): Promise<string> {
+  // Truncate to avoid token limits — Haiku handles up to ~200k but keep prompt lean
+  const truncatedHistory = historyText.slice(0, 6000)
+  const truncatedSummary = oldSummary.slice(0, 2000)
+
   const userContent =
-    `PATIENT HISTORY:\n${historyText}\n\n` +
-    `OLD SUMMARY:\n${oldSummary}\n\n` +
+    `PATIENT HISTORY:\n${truncatedHistory}\n\n` +
+    `OLD SUMMARY:\n${truncatedSummary}\n\n` +
     `Rewrite the summary following the new format rules.`
 
-  // Try twice — handles transient rate limits or malformed responses
-  try {
-    return await callOpenRouter(userContent, apiKey)
-  } catch (firstErr: any) {
-    if (firstErr.message.includes('429') || firstErr.message.includes('rate')) {
-      await sleep(3000)
-    } else {
-      await sleep(500)
+  // Up to 3 attempts with increasing back-off
+  const delays = [0, 1000, 3000]
+  let lastError: Error = new Error('Unknown error')
+
+  for (const delay of delays) {
+    if (delay > 0) await sleep(delay)
+    try {
+      return await callOpenRouter(userContent, apiKey)
+    } catch (err: any) {
+      lastError = err
     }
-    return await callOpenRouter(userContent, apiKey)
   }
+
+  throw lastError
 }
 
 export async function POST(request: NextRequest) {
