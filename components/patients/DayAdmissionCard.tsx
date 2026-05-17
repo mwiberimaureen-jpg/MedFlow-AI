@@ -223,7 +223,13 @@ const SUMMARY_SECTIONS: Array<{ key: string; label: string }> = [
  *   - Each subsequent section has its own header on a separate line
  *   - PLAN: in caps with content below
  */
-function buildClinicalNotes(sectionAnswers: Record<string, string>, dayLabel: string, submittedSections: Set<string>, clinicalSummary?: string): string {
+function buildClinicalNotes(
+    sectionAnswers: Record<string, string>,
+    dayLabel: string,
+    submittedSections: Set<string>,
+    clinicalSummary?: string,
+    aiPlan?: string
+): string {
     const get = (key: string) => submittedSections.has(key) ? sectionAnswers[key]?.trim() || '' : ''
 
     const hpi = get('follow_up_questions')
@@ -231,51 +237,44 @@ function buildClinicalNotes(sectionAnswers: Record<string, string>, dayLabel: st
     const vitals = get('vitals')
     const exam = get('physical_exam')
     const investigations = get('confirmatory_tests')
-    const plan = get('management_plan')
+    const userPlan = get('management_plan')
 
-    const hasContent = [hpi, ros, vitals, exam, investigations, plan].some(v => v)
+    const hasContent = [hpi, ros, vitals, exam, investigations, userPlan, clinicalSummary, aiPlan].some(v => v)
     if (!hasContent) return ''
 
     const blocks: string[] = []
 
-    // HPI — Use AI clinical summary as the ward-round narrative if available,
-    // otherwise fall back to the user's raw follow-up questions input
+    // HPI — AI clinical summary (factual handover) takes priority over raw user input
     if (clinicalSummary) {
         blocks.push(clinicalSummary)
     } else if (hpi) {
         blocks.push(hpi)
     }
 
-    // ROS — brief system-by-system
-    if (ros) {
-        blocks.push(`Review of Systems:\n${ros}`)
-    }
+    if (ros) blocks.push(`Review of Systems:\n${ros}`)
+    if (vitals) blocks.push(`Vital Signs:\n${vitals}`)
+    if (exam) blocks.push(`Physical Examination:\n${exam}`)
+    if (investigations) blocks.push(`Investigations:\n${investigations}`)
 
-    // Vitals — listed directly, no prefix
-    if (vitals) {
-        blocks.push(`Vital Signs:\n${vitals}`)
-    }
+    // PLAN — AI recommended plan first, then any user additions
+    if (aiPlan || userPlan) {
+        const planParts: string[] = []
 
-    // Physical Examination — findings directly
-    if (exam) {
-        blocks.push(`Physical Examination:\n${exam}`)
-    }
+        if (aiPlan) {
+            planParts.push(aiPlan)
+        }
 
-    // Investigations — test results
-    if (investigations) {
-        blocks.push(`Investigations:\n${investigations}`)
-    }
+        if (userPlan) {
+            const userLines = userPlan.split('\n').map(line => {
+                const trimmed = line.trim()
+                if (!trimmed) return ''
+                if (trimmed.startsWith('-') || trimmed.startsWith('•') || /^\d+\./.test(trimmed)) return trimmed
+                return `- ${trimmed}`
+            }).filter(Boolean).join('\n')
+            if (userLines) planParts.push(userLines)
+        }
 
-    // PLAN — management steps
-    if (plan) {
-        // Ensure plan items start with dashes if they don't already
-        const planLines = plan.split('\n').map(line => {
-            const trimmed = line.trim()
-            if (!trimmed) return ''
-            if (trimmed.startsWith('-') || trimmed.startsWith('•')) return trimmed
-            return `- ${trimmed}`
-        }).filter(Boolean).join('\n')
-        blocks.push(`PLAN: \n${planLines}`)
+        blocks.push(`PLAN:\n${planParts.join('\n\n')}`)
     }
 
     return blocks.join('\n\n').trim()
@@ -436,8 +435,42 @@ export function DayAdmissionCard({
     // Filled sections for the summary area
     const filledSections = SUMMARY_SECTIONS.filter(({ key }) => sectionAnswers[key]?.trim())
 
-    // Auto-generated clinical notes from assessment inputs
-    const autoNotes = useMemo(() => buildClinicalNotes(sectionAnswers, dayLabel, submittedSections, clinicalSummary), [sectionAnswers, dayLabel, submittedSections, clinicalSummary])
+    // Extract AI recommended plan + adjustments from raw_analysis_text
+    const aiPlan = useMemo(() => {
+        if (!analysis.raw_analysis_text) return undefined
+        const sections = parseAnalysisText(analysis.raw_analysis_text)
+        const mgmt = sections.find(s => s.title.toLowerCase().includes('management plan'))
+        if (!mgmt?.content) return undefined
+
+        const text = mgmt.content.trim()
+
+        // Pull out Recommended Plan numbered items
+        const recMatch = text.match(/\*\*Recommended Plan:\*\*\s*([\s\S]*?)(?:\*\*Adjustments|$)/i)
+        const adjMatch = text.match(/\*\*Adjustments Based on Patient Status:\*\*\s*([\s\S]*?)$/i)
+
+        const parts: string[] = []
+
+        if (recMatch?.[1]?.trim()) {
+            const steps = recMatch[1].trim()
+                .split('\n')
+                .map(l => l.trim())
+                .filter(Boolean)
+                .map(l => l.replace(/^\d+\.\s*/, '').replace(/\*\*(.*?)\*\*/g, '$1').trim())
+                .filter(Boolean)
+                .map((l, i) => `${i + 1}. ${l}`)
+            if (steps.length) parts.push(steps.join('\n'))
+        }
+
+        if (adjMatch?.[1]?.trim()) {
+            const adj = adjMatch[1].trim().replace(/\*\*(.*?)\*\*/g, '$1')
+            if (adj) parts.push(`Adjustments: ${adj}`)
+        }
+
+        return parts.length ? parts.join('\n\n') : undefined
+    }, [analysis.raw_analysis_text])
+
+    // Auto-generated clinical notes from assessment inputs + AI summary + AI plan
+    const autoNotes = useMemo(() => buildClinicalNotes(sectionAnswers, dayLabel, submittedSections, clinicalSummary, aiPlan), [sectionAnswers, dayLabel, submittedSections, clinicalSummary, aiPlan])
 
     // The displayed notes: user-edited version takes priority, otherwise auto-generated
     const displayNotes = editedNotes !== null ? editedNotes : autoNotes
