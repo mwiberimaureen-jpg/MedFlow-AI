@@ -2,15 +2,12 @@
  * POST /api/admin/reformat-summaries
  * Rewrites the `summary` field on every analysis the user owns,
  * using the new short-factual format (no impressions or management plans).
- * Processes up to `limit` analyses per call (default 50).
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, getSupabaseServerClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
-// Allow up to 5 minutes for large accounts
-export const maxDuration = 300
 
 const REFORMAT_PROMPT = `You are reformatting an existing clinical summary into a shorter, factual handover format.
 
@@ -60,12 +57,16 @@ async function reformatSummary(
     }),
   })
 
-  if (!response.ok) throw new Error(`OpenRouter error: ${response.status}`)
+  if (!response.ok) {
+    const errText = await response.text()
+    throw new Error(`OpenRouter ${response.status}: ${errText.slice(0, 200)}`)
+  }
 
   const data = await response.json()
   const content = data.choices?.[0]?.message?.content?.replace(/```json\n?|\n?```/g, '').trim()
+  if (!content) throw new Error('Empty response from AI')
   const parsed = JSON.parse(content)
-  if (!parsed.summary) throw new Error('No summary in response')
+  if (!parsed.summary) throw new Error('No summary field in AI response')
   return parsed.summary
 }
 
@@ -85,22 +86,19 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}))
     const limit = Math.min(body.limit ?? 50, 100)
 
-    // Fetch all analyses for this user via the service role (bypasses RLS for the join)
     const admin = getSupabaseServerClient()
+
+    // Filter directly on analyses.user_id — no join needed for auth
     const { data: analyses, error: fetchError } = await admin
       .from('analyses')
-      .select(`
-        id,
-        summary,
-        patient_histories!inner ( history_text, user_id )
-      `)
-      .eq('patient_histories.user_id', user.id)
+      .select('id, summary, patient_history_id')
+      .eq('user_id', user.id)
       .not('summary', 'is', null)
       .neq('summary', '')
       .limit(limit)
 
     if (fetchError) {
-      return NextResponse.json({ error: fetchError.message }, { status: 500 })
+      return NextResponse.json({ error: `Fetch error: ${fetchError.message}` }, { status: 500 })
     }
 
     if (!analyses || analyses.length === 0) {
@@ -108,31 +106,48 @@ export async function POST(request: NextRequest) {
     }
 
     let updated = 0
-    let failed = 0
+    const errors: string[] = []
 
     for (const analysis of analyses) {
-      const historyText = (analysis.patient_histories as any)?.history_text
-      if (!historyText || !analysis.summary) { failed++; continue }
+      if (!analysis.summary || !analysis.patient_history_id) {
+        errors.push(`${analysis.id}: missing summary or patient_history_id`)
+        continue
+      }
+
+      // Fetch history text for this analysis
+      const { data: patient, error: patientError } = await admin
+        .from('patient_histories')
+        .select('history_text')
+        .eq('id', analysis.patient_history_id)
+        .single()
+
+      if (patientError || !patient?.history_text) {
+        errors.push(`${analysis.id}: could not fetch history — ${patientError?.message || 'no history_text'}`)
+        continue
+      }
 
       try {
-        const newSummary = await reformatSummary(historyText, analysis.summary, apiKey)
+        const newSummary = await reformatSummary(patient.history_text, analysis.summary, apiKey)
 
-        await admin
+        const { error: updateError } = await admin
           .from('analyses')
           .update({ summary: newSummary })
           .eq('id', analysis.id)
 
+        if (updateError) throw new Error(updateError.message)
         updated++
-      } catch {
-        failed++
+      } catch (err: any) {
+        errors.push(`${analysis.id}: ${err.message}`)
       }
     }
 
+    const failed = analyses.length - updated
     return NextResponse.json({
       updated,
       failed,
       total: analyses.length,
       message: `Reformatted ${updated} of ${analyses.length} summaries.${failed > 0 ? ` ${failed} failed.` : ''}`,
+      ...(errors.length > 0 && { errors: errors.slice(0, 5) }),
     })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
