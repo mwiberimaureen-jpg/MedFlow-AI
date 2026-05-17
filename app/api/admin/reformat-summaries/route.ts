@@ -139,25 +139,22 @@ export async function POST(request: NextRequest) {
     const errors: string[] = []
 
     for (const analysis of analyses) {
-      if (!analysis.summary || !analysis.patient_history_id) {
-        errors.push(`${analysis.id}: missing summary or patient_history_id`)
+      if (!analysis.summary) {
+        errors.push(`${analysis.id}: no summary to reformat`)
         continue
       }
 
-      // Fetch history text for this analysis
-      const { data: patient, error: patientError } = await admin
+      // Fetch history text — fall back to empty string so we can still reformat from the old summary
+      const { data: patient } = await admin
         .from('patient_histories')
         .select('history_text')
         .eq('id', analysis.patient_history_id)
         .single()
 
-      if (patientError || !patient?.history_text) {
-        errors.push(`${analysis.id}: could not fetch history — ${patientError?.message || 'no history_text'}`)
-        continue
-      }
+      const historyText = patient?.history_text || ''
 
       try {
-        const newSummary = await reformatSummary(patient.history_text, analysis.summary, apiKey)
+        const newSummary = await reformatSummary(historyText, analysis.summary, apiKey)
 
         const { error: updateError } = await admin
           .from('analyses')
