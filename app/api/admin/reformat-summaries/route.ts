@@ -28,16 +28,11 @@ STRICT RULES:
 Return ONLY valid JSON with no markdown fences:
 {"summary": "the reformatted summary"}`
 
-async function reformatSummary(
-  historyText: string,
-  oldSummary: string,
-  apiKey: string
-): Promise<string> {
-  const userContent =
-    `PATIENT HISTORY:\n${historyText}\n\n` +
-    `OLD SUMMARY:\n${oldSummary}\n\n` +
-    `Rewrite the summary following the new format rules.`
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
 
+async function callOpenRouter(userContent: string, apiKey: string): Promise<string> {
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -63,11 +58,39 @@ async function reformatSummary(
   }
 
   const data = await response.json()
-  const content = data.choices?.[0]?.message?.content?.replace(/```json\n?|\n?```/g, '').trim()
-  if (!content) throw new Error('Empty response from AI')
-  const parsed = JSON.parse(content)
+  const raw = data.choices?.[0]?.message?.content
+  if (!raw) throw new Error('Empty response from AI')
+
+  // Strip markdown fences and extract JSON robustly
+  const cleaned = raw.replace(/```json\n?|\n?```/g, '').trim()
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) throw new Error('No JSON object found in response')
+  const parsed = JSON.parse(jsonMatch[0])
   if (!parsed.summary) throw new Error('No summary field in AI response')
   return parsed.summary
+}
+
+async function reformatSummary(
+  historyText: string,
+  oldSummary: string,
+  apiKey: string
+): Promise<string> {
+  const userContent =
+    `PATIENT HISTORY:\n${historyText}\n\n` +
+    `OLD SUMMARY:\n${oldSummary}\n\n` +
+    `Rewrite the summary following the new format rules.`
+
+  // Try twice — handles transient rate limits or malformed responses
+  try {
+    return await callOpenRouter(userContent, apiKey)
+  } catch (firstErr: any) {
+    if (firstErr.message.includes('429') || firstErr.message.includes('rate')) {
+      await sleep(3000)
+    } else {
+      await sleep(500)
+    }
+    return await callOpenRouter(userContent, apiKey)
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -139,6 +162,9 @@ export async function POST(request: NextRequest) {
       } catch (err: any) {
         errors.push(`${analysis.id}: ${err.message}`)
       }
+
+      // Small pause between calls to avoid rate limiting
+      await sleep(200)
     }
 
     const failed = analyses.length - updated
