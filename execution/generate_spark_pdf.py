@@ -5,6 +5,7 @@ Usage:  python execution/generate_spark_pdf.py
 Output: .tmp/nbu_14day_sparks.html  — open in Chrome, Ctrl+P → Save as PDF
 """
 
+import base64
 import json
 import os
 import time
@@ -296,7 +297,7 @@ RENDERERS = {
 
 # ── HTML wrapper ──────────────────────────────────────────────────────────────
 
-def build_html(days: list) -> str:
+def build_html(days: list, logo_b64: str = "") -> str:
     day_cards = ""
     for day_num, topic, fmt, content in days:
         color  = FORMAT_COLORS[fmt]
@@ -372,6 +373,28 @@ def build_html(days: list) -> str:
     border-radius: 50%;
   }}
 
+  /* ── Watermark — appears on every page ── */
+  .day-card::before, .cover::before {{
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 420px;
+    height: 420px;
+    background-image: url('{logo_b64}');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 0.09;
+    mix-blend-mode: screen;
+    filter: invert(1) brightness(1.6);
+    pointer-events: none;
+    z-index: 0;
+  }}
+  .cover::before {{ opacity: 0.18; }}
+  .day-card > *, .cover > * {{ position: relative; z-index: 1; }}
+
   /* ── Day card ── */
   .day-card {{
     min-height: 100vh;
@@ -379,6 +402,8 @@ def build_html(days: list) -> str:
     display: flex;
     flex-direction: column;
     gap: 0;
+    position: relative;
+    overflow: hidden;
   }}
   .day-header {{
     margin-bottom: 20px;
@@ -486,7 +511,7 @@ def build_html(days: list) -> str:
 
 <div class="cover">
   <div style="font-size:13px;color:#3b82f6;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:20px">MedFlow AI · Senior Peer Review</div>
-  <div class="cover-title">14-Day NBU Clinical Teaching</div>
+  <div class="cover-title">NBU Clinical Teaching</div>
   <div class="cover-subtitle">Neonatal &amp; Paediatric Rotation</div>
   <div class="cover-rotation">Daily learning sparks — clinical reasoning, decision logic, drug selection</div>
   <div class="cover-dots">
@@ -536,8 +561,16 @@ def main():
         if i < len(TOPICS) - 1:
             time.sleep(1.5)  # avoid rate-limiting
 
+    logo_path = Path("medical-workflow-app/public/logo-watermark.jpg")
+    logo_b64 = ""
+    if logo_path.exists():
+        raw = logo_path.read_bytes()
+        logo_b64 = "data:image/jpeg;base64," + base64.b64encode(raw).decode()
+    else:
+        print("WARNING: logo-watermark.jpg not found — watermark skipped")
+
     out = Path(".tmp/nbu_14day_sparks.html")
-    out.write_text(build_html(days), encoding="utf-8")
+    out.write_text(build_html(days, logo_b64), encoding="utf-8")
     print(f"\nSaved -> {out.resolve()}")
     print("   Open in Chrome  ->  Ctrl+P  ->  Destination: Save as PDF")
     print("   Recommended: Paper A4, Margins: Minimum, Background graphics: ON")
