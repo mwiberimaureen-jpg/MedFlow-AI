@@ -19,7 +19,8 @@ API_KEY = os.getenv("OPENROUTER_API_KEY")
 MODEL = "anthropic/claude-sonnet-4"
 URL = "https://openrouter.ai/api/v1/chat/completions"
 
-# 19 NBU topics — format cycles: clinical_twist, quick_teach, senior_asks, know_your_drugs
+# Each entry: (topic, format) or (topic, format, hint)
+# hint = optional extra instruction appended to the AI user message
 TOPICS = [
     ("Neonatal Sepsis",                  "clinical_twist"),
     ("Neonatal Jaundice",                "quick_teach"),
@@ -28,8 +29,21 @@ TOPICS = [
     ("Preterm and Low Birth Weight",     "clinical_twist"),
     ("Bacterial Meningitis in Children", "quick_teach"),
     ("Convulsions in Children",          "senior_asks"),
+    ("Convulsions — Causes by Category", "quick_teach",
+        "Classify causes of convulsions in children into metabolic (hypoglycaemia, "
+        "hyponatraemia, hypocalcaemia, hypomagnesaemia — include diagnostic thresholds), "
+        "infectious (febrile seizures vs meningitis/encephalitis — key distinguishing features), "
+        "structural (HIE, cortical dysplasia), and epileptic/idiopathic. "
+        "For each category include the first-line investigation and immediate management step."),
     ("Childhood Pneumonia",              "know_your_drugs"),
     ("Dehydration and Shock",            "clinical_twist"),
+    ("Dehydration in Children — WHO Fluid Plans", "quick_teach",
+        "Cover WHO Dehydration Plans A, B, and C as separate cards. "
+        "Plan A: no/mild dehydration — home ORS, how much per stool/vomit. "
+        "Plan B: moderate dehydration — supervised ORS 75 mL/kg over 4 hours, reassessment. "
+        "Plan C: severe dehydration — IV Ringer's lactate (Hartmann's): 30 mL/kg in 30 min "
+        "(infants) or 1 h (children), then 70 mL/kg in 2.5 h (infants) or 3 h (children). "
+        "Include the clinical signs used to classify each plan and when to reassess."),
     ("Childhood Malaria",                "quick_teach"),
     ("Diabetic Ketoacidosis",            "senior_asks"),
     ("Acute Kidney Injury in Children",  "know_your_drugs"),
@@ -37,9 +51,27 @@ TOPICS = [
     ("Rheumatic Heart Disease",          "senior_asks"),
     ("Tuberculosis in Children",         "quick_teach"),
     ("HIV-Exposed Infant",               "know_your_drugs"),
+    ("HIV in Pregnancy — PMTCT Screening Timeline", "quick_teach",
+        "Cover the complete PMTCT screening timeline as sequential cards: "
+        "(1) First antenatal contact — HIV test regardless of previous negative; "
+        "(2) Repeat test at 28 weeks if initially negative; "
+        "(3) 36 weeks / third trimester — repeat again; "
+        "(4) Labour — rapid HIV test for any woman with unknown or untested status; "
+        "(5) Postpartum — test if missed antenatally. "
+        "Also include: start ART immediately regardless of CD4 (Option B+), "
+        "preferred regimen (TDF/3TC/DTG or country equivalent), "
+        "and infant prophylaxis (NVP for 6 weeks low-risk; NVP + AZT for high-risk infants)."),
     ("Chronic Kidney Disease in Children","clinical_twist"),
     ("Childhood Asthma",                 "senior_asks"),
     ("Rickets",                          "quick_teach"),
+    ("CPAP in Neonatal Resuscitation",   "senior_asks",
+        "Focus on the role of CPAP in neonates with birth asphyxia or respiratory distress. "
+        "When is CPAP the right choice vs bag-mask PPV? "
+        "Physiological rationale: FRC establishment, surfactant conservation, atelectasis prevention. "
+        "Starting PEEP (5 cmH2O) and FiO2 (0.21 for term, 0.30 for preterm). "
+        "When does CPAP fail and intubation is required? "
+        "The key mistake: using CPAP when PPV is actually indicated (apnea, HR < 100). "
+        "Make the question confront this specific confusion."),
 ]
 
 PROMPTS = {
@@ -168,13 +200,14 @@ FORMAT_COLORS = {
 
 # ── API call ──────────────────────────────────────────────────────────────────
 
-def call_api(topic: str, fmt: str) -> dict:
+def call_api(topic: str, fmt: str, hint: str = "") -> dict:
     user_msg = (
-        f"Medical conditions from the intern's patients: {topic}\n\n"
-        "Pick the most clinically interesting aspect of this condition and "
-        "generate a focused teaching moment. Push into gray areas, "
+        f"Topic: {topic}\n\n"
+        "Generate a focused teaching moment. Push into gray areas, "
         "contraindication traps, or decision logic — not basic recall."
     )
+    if hint:
+        user_msg += f"\n\nSpecific focus for this post:\n{hint}"
     resp = requests.post(
         URL,
         headers={
@@ -311,7 +344,7 @@ def build_html(days: list, logo_b64: str = "") -> str:
   <div class="day-card" {'style="page-break-before:always"' if day_num > 1 else ''}>
     <div class="day-header">
       <div class="day-meta">
-        <span class="day-num">Day {day_num}</span>
+        <span class="day-num">Post {day_num}</span>
         <span class="format-badge" style="background:rgba({_hex_to_rgb(color)},0.15);color:{color}">{label}</span>
       </div>
       <span class="topic-name">{esc(topic)}</span>
@@ -323,7 +356,7 @@ def build_html(days: list, logo_b64: str = "") -> str:
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>MedFlow AI — 14-Day NBU Clinical Teaching</title>
+<title>MedFlow AI — NBU Clinical Teaching Posts</title>
 <style>
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
   body {{
@@ -547,17 +580,19 @@ def main():
     os.makedirs(".tmp", exist_ok=True)
     days = []
 
-    for i, (topic, fmt) in enumerate(TOPICS):
-        day_num = i + 1
-        total = len(TOPICS)
-        print(f"[{day_num:2d}/{total}] {topic} ({FORMAT_LABELS[fmt]}) ...", end=" ", flush=True)
+    total = len(TOPICS)
+    for i, entry in enumerate(TOPICS):
+        topic, fmt = entry[0], entry[1]
+        hint = entry[2] if len(entry) > 2 else ""
+        post_num = i + 1
+        print(f"[{post_num:2d}/{total}] {topic} ({FORMAT_LABELS[fmt]}) ...", end=" ", flush=True)
         try:
-            content = call_api(topic, fmt)
-            days.append((day_num, topic, fmt, content))
+            content = call_api(topic, fmt, hint)
+            days.append((post_num, topic, fmt, content))
             print("OK")
         except Exception as e:
             print(f"FAIL  {e}")
-            days.append((day_num, topic, fmt, None))
+            days.append((post_num, topic, fmt, None))
         if i < len(TOPICS) - 1:
             time.sleep(1.5)  # avoid rate-limiting
 
