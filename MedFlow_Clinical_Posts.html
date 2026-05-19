@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MedFlow AI — Clinical Reasoning Posts</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f4f6f9;
+      color: #1a1a2e;
+      font-size: 13.5px;
+      line-height: 1.7;
+    }
+
+    /* Edit banner */
+    .edit-banner {
+      background: #1b5e20;
+      color: #fff;
+      text-align: center;
+      padding: 10px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .edit-banner span { opacity: 0.7; font-weight: 400; margin-left: 8px; }
+
+    /* Cover */
+    .cover {
+      background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #00695c 100%);
+      color: white;
+      padding: 70px 60px;
+      min-height: 220px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .cover h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px; }
+    .cover h2 { font-size: 17px; font-weight: 400; opacity: 0.8; margin-bottom: 16px; }
+    .cover .meta { font-size: 12px; opacity: 0.6; }
+
+    /* Format guide */
+    .format-guide {
+      background: #fff;
+      border-left: 5px solid #283593;
+      margin: 30px 40px;
+      padding: 22px 28px;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .format-guide h2 { font-size: 15px; color: #283593; font-weight: 700; margin-bottom: 12px; }
+    .format-guide p { font-size: 13px; color: #333; margin-bottom: 6px; }
+    .format-guide ul { padding-left: 18px; margin-top: 6px; }
+    .format-guide li { font-size: 13px; color: #333; margin-bottom: 4px; }
+
+    /* Week header */
+    .week-header {
+      background: linear-gradient(135deg, #1a237e, #283593);
+      color: white;
+      margin: 30px 40px 0;
+      padding: 16px 28px;
+      border-radius: 8px 8px 0 0;
+    }
+    .week-header h2 { font-size: 18px; font-weight: 800; }
+    .week-header p { font-size: 12px; opacity: 0.75; margin-top: 3px; }
+
+    /* Week body */
+    .week-body {
+      background: #fff;
+      margin: 0 40px 36px;
+      border-radius: 0 0 8px 8px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      overflow: hidden;
+    }
+
+    /* Post card */
+    .post-card {
+      border-bottom: 1px solid #e8edf5;
+      padding: 0;
+    }
+    .post-card:last-child { border-bottom: none; }
+
+    .post-day {
+      background: #f0f4ff;
+      padding: 9px 24px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: #283593;
+      border-bottom: 1px solid #e0e7ff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .day-num {
+      background: #283593;
+      color: white;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+    .specialty-tag {
+      margin-left: auto;
+      background: #e8f0fe;
+      color: #1a237e;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .post-inner { padding: 20px 28px; }
+
+    /* Hook section */
+    .hook-block {
+      background: #f8f9fe;
+      border-left: 4px solid #283593;
+      border-radius: 0 6px 6px 0;
+      padding: 14px 18px;
+      margin-bottom: 18px;
+    }
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      margin-bottom: 8px;
+    }
+    .hook-label { color: #283593; }
+    .medflow-label { color: #00695c; }
+    .impression-label { color: #b71c1c; }
+
+    .hook-text {
+      font-size: 13.5px;
+      line-height: 1.75;
+      color: #1a1a2e;
+      white-space: pre-wrap;
+    }
+    .hook-line { display: block; margin-bottom: 2px; }
+    .hook-clue {
+      display: block;
+      margin-top: 8px;
+      font-weight: 700;
+      color: #283593;
+      font-style: italic;
+    }
+
+    /* MedFlow output section */
+    .medflow-block {
+      background: #f0faf9;
+      border: 1px solid #b2dfdb;
+      border-radius: 6px;
+      padding: 16px 18px;
+      margin-bottom: 14px;
+    }
+    .medflow-block .medflow-label { color: #00695c; margin-bottom: 10px; }
+
+    .differential {
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px dashed #b2dfdb;
+    }
+    .differential:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+    .diff-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #00695c;
+      margin-bottom: 4px;
+    }
+    .diff-tests {
+      font-size: 12.5px;
+      color: #333;
+      line-height: 1.6;
+    }
+    .diff-rule {
+      font-size: 12px;
+      color: #555;
+      font-style: italic;
+      margin-top: 2px;
+    }
+
+    /* Impression */
+    .impression-block {
+      background: #ffebee;
+      border: 1px solid #ffcdd2;
+      border-radius: 6px;
+      padding: 14px 18px;
+    }
+    .impression-block .impression-label { margin-bottom: 6px; }
+    .impression-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #b71c1c;
+      margin-bottom: 6px;
+    }
+    .impression-reasoning {
+      font-size: 13px;
+      color: #3e2723;
+      line-height: 1.65;
+    }
+
+    /* Editable styles */
+    [contenteditable="true"] {
+      cursor: text;
+      border-radius: 4px;
+      transition: outline 0.15s, background 0.15s;
+      outline: 2px dashed transparent;
+    }
+    [contenteditable="true"]:hover {
+      outline: 2px dashed #283593;
+      background: #f0f7ff !important;
+    }
+    [contenteditable="true"]:focus {
+      outline: 2px solid #283593;
+      background: #e8f0fe !important;
+      box-shadow: 0 0 0 3px rgba(40,53,147,0.12);
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 28px;
+      font-size: 11px;
+      color: #999;
+    }
+
+    /* Print */
+    @media print {
+      body { background: white; }
+      .edit-banner { display: none; }
+      .cover, .week-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .day-num, .specialty-tag { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .post-day { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .week-body { box-shadow: none; border: 1px solid #ddd; }
+      .post-card { page-break-inside: avoid; }
+      [contenteditable="true"] { outline: none !important; background: inherit !important; box-shadow: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- EDIT BANNER -->
+<div class="edit-banner">
+  Click any text to edit directly in the browser
+  <span>— Ctrl+P → Save as PDF when ready</span>
+</div>
+
+<!-- COVER -->
+<div class="cover">
+  <h1>MedFlow AI</h1>
+  <h2>Clinical Reasoning Posts — 2-Week Series</h2>
+  <div class="meta">Format: Clinical clue → MedFlow differentials + tests → Impression &nbsp;|&nbsp; X &amp; TikTok</div>
+</div>
+
+<!-- FORMAT GUIDE -->
+<div class="format-guide">
+  <h2>How to Use These Posts</h2>
+  <p><strong>On X:</strong> Post the hook block as the opening tweet. Post the MedFlow output + impression as the first reply (thread). This keeps the hook clean and the clinical detail accessible for those who want it.</p>
+  <p><strong>On TikTok:</strong> Read the hook aloud (0–15s). Pause after the clue line. Then: "Here's what MedFlow gave for this case" — screen-record the MedFlow output being generated (15–55s). Close with the impression (55–60s).</p>
+  <ul>
+    <li>Never read the differentials robotically — say "MedFlow flagged three things" and walk through them conversationally.</li>
+    <li>Pause after the clue line every time. That pause is where the viewer stops scrolling.</li>
+    <li>The impression line is the payoff. Deliver it slowly and with confidence.</li>
+  </ul>
+</div>
+
+
+<!-- ==================== WEEK 1 ==================== -->
+<div class="week-header">
+  <h2>Week 1</h2>
+  <p>Internal medicine, respiratory, cardiology, endocrinology, neurology</p>
+</div>
+<div class="week-body">
+
+  <!-- POST 1 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">1</div>
+      Monday
+      <span class="specialty-tag">Respiratory / Infectious</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">You treated "community-acquired pneumonia" with amoxicillin for 5 days.</span><span class="hook-line">No improvement. Temperature still 38.9. Night sweats started.</span><span class="hook-clue">It was never pneumonia. The chest X-ray just looked that way.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Pulmonary Tuberculosis</div>
+          <div class="diff-tests" contenteditable="true">Sputum AFB x3, GeneXpert MTB/RIF, Mantoux/IGRA, CXR (upper lobe pattern, cavitation).</div>
+          <div class="diff-rule" contenteditable="true">Rules in: positive AFB smear or GeneXpert. Rules out: negative GeneXpert + negative culture at 6 weeks (with low pre-test probability).</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — Pulmonary Lymphoma</div>
+          <div class="diff-tests" contenteditable="true">CT chest (hilar/mediastinal adenopathy), LDH, serum protein electrophoresis, bronchoscopy with BAL and biopsy.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: hilar adenopathy + histological confirmation on biopsy. Rules out: normal CT and LDH with alternative diagnosis confirmed.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Pulmonary Vasculitis (GPA)</div>
+          <div class="diff-tests" contenteditable="true">ANCA (PR3/MPO), urine dipstick for haematuria, CT chest (cavitating nodules), renal function.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: positive PR3-ANCA + cavitating lesions + renal involvement + biopsy. Rules out: negative ANCA with alternative diagnosis confirmed.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Pulmonary Tuberculosis</div>
+        <div class="impression-reasoning" contenteditable="true">Antibiotic failure at 5 days + night sweats + upper lobe pattern = TB until proven otherwise. Isolate the patient. Initiate sputum collection. Refer to infectious disease before changing antibiotics empirically.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 2 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">2</div>
+      Tuesday
+      <span class="specialty-tag">Haematology / Gastroenterology</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Young woman. Iron deficiency anaemia confirmed. Started on oral iron.</span><span class="hook-line">Three months later — haemoglobin unchanged.</span><span class="hook-clue">The iron is not the problem. Something is stopping it from being absorbed.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Coeliac Disease</div>
+          <div class="diff-tests" contenteditable="true">Anti-tTG IgA + total IgA (to exclude IgA deficiency), upper GI endoscopy with duodenal biopsies (Marsh classification).</div>
+          <div class="diff-rule" contenteditable="true">Rules in: positive anti-tTG + villous atrophy on biopsy. Rules out: negative serology + normal duodenal histology.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — H. pylori Gastritis</div>
+          <div class="diff-tests" contenteditable="true">Urea breath test or stool antigen (off PPI x2 weeks before testing), upper GI endoscopy.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: positive breath test or stool antigen + response to eradication therapy. Rules out: negative test on adequate washout.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Ongoing Occult GI Blood Loss</div>
+          <div class="diff-tests" contenteditable="true">Faecal occult blood, colonoscopy, capsule endoscopy if colonoscopy negative.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: active bleeding source identified on endoscopy. Rules out: normal complete GI evaluation.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Coeliac Disease</div>
+        <div class="impression-reasoning" contenteditable="true">Non-response to oral iron in a young woman is malabsorption until proven otherwise. Screen with anti-tTG IgA before scoping. Do not increase the iron dose — find why it is not working.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 3 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">3</div>
+      Wednesday
+      <span class="specialty-tag">Respiratory / ENT</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Patient admitted with a "flare of asthma." Salbutamol given. No relief.</span><span class="hook-line">You listen again. The wheeze is loudest over the trachea, not the lung bases.</span><span class="hook-clue">It was never asthma. The obstruction is above the carina.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Tracheal Stenosis</div>
+          <div class="diff-tests" contenteditable="true">CT neck and chest (axial cuts through trachea), flow-volume loop (inspiratory plateau pattern), direct laryngoscopy.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: fixed narrowing on CT + flat inspiratory loop. Rules out: normal CT tracheal diameter + normal flow-volume loop.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — Laryngeal or Tracheal Mass</div>
+          <div class="diff-tests" contenteditable="true">Nasolaryngoscopy, CT neck with contrast, biopsy of any identified lesion.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: mass lesion on scope with histological confirmation. Rules out: normal laryngoscopy and CT.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Vocal Cord Dysfunction</div>
+          <div class="diff-tests" contenteditable="true">Flow-volume loop (variable extrathoracic obstruction — flattened inspiratory limb), laryngoscopy during symptomatic episode.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: paradoxical vocal cord adduction on laryngoscopy during episode. Rules out: normal laryngoscopy during symptoms.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Upper Airway Obstruction</div>
+        <div class="impression-reasoning" contenteditable="true">Monophonic wheeze loudest over the trachea is a large airway sign, not a small airway sign. Salbutamol will not help. Stop it. Get ENT. The flow-volume loop is the next investigation — not another nebuliser.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 4 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">4</div>
+      Thursday
+      <span class="specialty-tag">Cardiology / Rheumatology</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">28-year-old. Hypertension found incidentally. Started on amlodipine.</span><span class="hook-line">You check BP in both arms. Right: 160/100. Left: 112/74.</span><span class="hook-clue">The asymmetry just told you this isn't essential hypertension.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Takayasu's Arteritis</div>
+          <div class="diff-tests" contenteditable="true">ESR, CRP, CT angiography of aorta and branches (vessel wall thickening, stenosis, aneurysm), PET-CT if CT equivocal.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: vessel wall inflammation/stenosis on CTA + elevated inflammatory markers in a young woman. Rules out: normal CTA with alternative vascular cause identified.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — Coarctation of the Aorta (proximal to left subclavian)</div>
+          <div class="diff-tests" contenteditable="true">4-limb BP measurement (arm > leg), ECG (LVH), CXR (rib notching, figure-of-3 sign), CT aortogram, echocardiogram.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: pressure gradient on imaging + arm-leg BP discrepancy. Rules out: normal CT aortogram.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Aortic Dissection (Stanford B, involving left subclavian)</div>
+          <div class="diff-tests" contenteditable="true">Urgent CT angiography chest/abdomen/pelvis.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: intimal flap on CTA. Rules out: no dissection on CTA.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Takayasu's Arteritis</div>
+        <div class="impression-reasoning" contenteditable="true">Young patient + inter-arm BP difference >10mmHg + hypertension = large vessel vasculitis until excluded. Do not simply titrate the antihypertensive. Get the CTA. Check ESR and CRP today.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 5 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">5</div>
+      Friday
+      <span class="specialty-tag">Neurology / Nephrology</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Patient came in confused. CT head normal. Lumbar puncture normal.</span><span class="hook-line">You review the drug chart. She's been on 80mg furosemide daily for two weeks.</span><span class="hook-clue">The brain is fine. Check the sodium.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Diuretic-Induced Hyponatraemia</div>
+          <div class="diff-tests" contenteditable="true">Serum Na, serum osmolality, urine Na, urine osmolality, serum K (co-depletion common).</div>
+          <div class="diff-rule" contenteditable="true">Rules in: serum Na &lt;130 + urine Na >20 on loop diuretic + resolution with electrolyte correction. Rules out: normal serum Na.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — Hypomagnesaemia</div>
+          <div class="diff-tests" contenteditable="true">Serum magnesium (often co-depleted with loop diuretics and frequently not checked).</div>
+          <div class="diff-rule" contenteditable="true">Rules in: Mg &lt;0.7mmol/L + symptom resolution on replacement. Rules out: normal serum magnesium.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Wernicke's Encephalopathy</div>
+          <div class="diff-tests" contenteditable="true">Thiamine level, MRI brain (mamillary body and periaqueductal signal change), empirical IV thiamine 500mg TDS x3 days if clinical suspicion high.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: clinical triad (confusion + ophthalmoplegia + ataxia) + MRI findings. Rules out: no nutritional risk factors + alternative diagnosis confirmed.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Diuretic-Induced Hyponatraemia</div>
+        <div class="impression-reasoning" contenteditable="true">Loop diuretic + confusion + normal structural imaging = electrolyte cause first. Draw UECs before ordering the next investigation. Hyponatraemia at this level is enough to explain a GCS of 14.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 6 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">6</div>
+      Saturday
+      <span class="specialty-tag">Cardiology / Nephrology</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">You gave 2 litres of IV saline to a patient in "dehydration."</span><span class="hook-line">An hour later she's more short of breath than when she arrived.</span><span class="hook-clue">You treated the wrong diagnosis. Now find the right one.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Acute Decompensated Heart Failure</div>
+          <div class="diff-tests" contenteditable="true">BNP or NT-proBNP, CXR (pulmonary oedema, cardiomegaly, Kerley B lines), ECG, echocardiogram.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: elevated BNP + pulmonary oedema on CXR + echo showing reduced EF or diastolic dysfunction. Rules out: normal BNP + normal CXR + normal echo.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — SIADH Worsened by Isotonic Saline</div>
+          <div class="diff-tests" contenteditable="true">Serum Na, serum osmolality, urine Na, urine osmolality (urine osmolality >100mOsm/kg in a hypotonic patient = SIADH).</div>
+          <div class="diff-rule" contenteditable="true">Rules in: euvolaemic hyponatraemia + urine Na >40 + urine osmolality > serum osmolality. Rules out: normal serum Na.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Nephrotic Syndrome</div>
+          <div class="diff-tests" contenteditable="true">Urine protein:creatinine ratio, serum albumin, lipid profile, renal USS, renal biopsy if indicated.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: proteinuria >3.5g/day + hypoalbuminaemia &lt;30 + oedema. Rules out: normal urine protein and albumin.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Acute Decompensated Cardiac Failure</div>
+        <div class="impression-reasoning" contenteditable="true">Fluid-responsive dehydration improves with fluid. If the patient deteriorates after 2L of saline, the diagnosis was wrong. Check the BNP. Get the CXR. The fluid may have just tipped her into pulmonary oedema.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 7 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">7</div>
+      Sunday
+      <span class="specialty-tag">Endocrinology</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">19-year-old male. Brought in by his mother. "He's been sad for months."</span><span class="hook-line">On examination: slow movements, dry skin, cold hands, constipation, bradycardia.</span><span class="hook-clue">This isn't depression. Check the TSH.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Primary Hypothyroidism</div>
+          <div class="diff-tests" contenteditable="true">TSH (sensitive first-line test), free T4. If TSH elevated, confirm with free T4 before treating.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: elevated TSH + low free T4. Rules out: normal TSH (primary hypothyroidism excluded; consider central if high suspicion).</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — Addison's Disease (Primary Adrenal Insufficiency)</div>
+          <div class="diff-tests" contenteditable="true">Morning cortisol (8am), ACTH stimulation test, serum electrolytes (hyponatraemia + hyperkalaemia), ACTH level.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: failure to mount cortisol response >550nmol/L on ACTH stimulation + electrolyte pattern. Rules out: normal cortisol response.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Young-Onset Parkinson's Disease</div>
+          <div class="diff-tests" contenteditable="true">Clinical assessment (resting tremor, cogwheel rigidity, postural instability), DAT-SPECT scan, neurology referral.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: asymmetric parkinsonism + dopamine transporter deficit on SPECT. Rules out: no extrapyramidal features + alternative diagnosis confirmed.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Primary Hypothyroidism</div>
+        <div class="impression-reasoning" contenteditable="true">Bradycardia + cold intolerance + constipation + psychomotor slowing in a 19-year-old is a metabolic diagnosis first. Check the TSH before starting an antidepressant. It costs almost nothing and takes 24 hours.</div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- end week 1 -->
+
+
+<!-- ==================== WEEK 2 ==================== -->
+<div class="week-header">
+  <h2>Week 2</h2>
+  <p>Gastroenterology, surgery, haematology, obstetrics, neurology, infectious disease</p>
+</div>
+<div class="week-body">
+
+  <!-- POST 8 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">8</div>
+      Monday
+      <span class="specialty-tag">Gastroenterology</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Epigastric pain. Worse at night. Relieved by eating. Treated as gastritis for 3 months.</span><span class="hook-line">You scope him. Ulcers in the stomach and the third part of the duodenum simultaneously.</span><span class="hook-clue">One ulcer is a problem. Multiple ulcers in unusual locations is a diagnosis.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Zollinger-Ellison Syndrome (Gastrinoma)</div>
+          <div class="diff-tests" contenteditable="true">Fasting serum gastrin (off PPI x2 weeks), secretin stimulation test (gold standard), CT/MRI pancreas and duodenum, somatostatin receptor scintigraphy (Octreoscan).</div>
+          <div class="diff-rule" contenteditable="true">Rules in: fasting gastrin >1000pg/mL + >200pg/mL rise after secretin + pancreatic/duodenal mass. Rules out: normal fasting gastrin on adequate PPI washout.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — H. pylori with Complicated Ulcer Disease</div>
+          <div class="diff-tests" contenteditable="true">Rapid urease test on biopsy (at endoscopy), urea breath test (off PPI x2 weeks), stool antigen.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: positive H. pylori + typical single/duodenal ulcer pattern + response to eradication. Rules out: negative testing on adequate washout.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Crohn's Disease (Gastroduodenal)</div>
+          <div class="diff-tests" contenteditable="true">CT enterography, ileocolonoscopy with biopsies, faecal calprotectin, CRP.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: transmural granulomatous inflammation on biopsy + skip lesions on CT. Rules out: normal ileocolonoscopy and CT enterography.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Zollinger-Ellison Syndrome</div>
+        <div class="impression-reasoning" contenteditable="true">Distal duodenal ulcer + multiple simultaneous ulcers + PPI failure = gastrinoma until excluded. Do not scope and discharge. Check the fasting gastrin. If elevated, the tumour needs to be found — it may be malignant.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 9 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">9</div>
+      Tuesday
+      <span class="specialty-tag">Surgery / Post-operative</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Post-op day 2. Patient spiked a fever of 38.4°C.</span><span class="hook-line">You start antibiotics.</span><span class="hook-clue">The fever on post-op day 2 is almost never infection. You just treated the wrong thing.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered — The 5 W's of Post-operative Fever</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Wind — Days 1–2 (Atelectasis)</div>
+          <div class="diff-tests" contenteditable="true">Clinical: decreased air entry, dullness at bases. CXR. Incentive spirometry, chest physiotherapy, early mobilisation.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: clinical + CXR findings. Treatment: physiotherapy, NOT antibiotics.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Water — Days 3–5 (UTI)</div>
+          <div class="diff-tests" contenteditable="true">Urine dipstick, urine MC&amp;S. Common if urinary catheter in situ.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: positive nitrites/leucocytes on dipstick + positive MC&amp;S. Treat per sensitivities.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Wound — Days 5–7 (Surgical Site Infection)</div>
+          <div class="diff-tests" contenteditable="true">Wound inspection (erythema, induration, discharge), wound swab MC&amp;S.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: clinical signs of wound infection + positive swab culture.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Walking — Days 5+ (DVT / PE)</div>
+          <div class="diff-tests" contenteditable="true">D-dimer, USS doppler lower limbs, CTPA if PE suspected. Wells score to guide investigation.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: positive CTPA or USS. Anticoagulate immediately if confirmed.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Wonder Drugs — Any Day (Drug Fever)</div>
+          <div class="diff-tests" contenteditable="true">Review drug chart. Withdrawal of offending agent. Diagnosis of exclusion.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: fever resolves within 72 hours of drug withdrawal. Rules out: fever persists after withdrawal.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Post-operative Atelectasis (Day 2)</div>
+        <div class="impression-reasoning" contenteditable="true">Day 2 post-op fever is atelectasis until proven otherwise. Encourage deep breathing and early ambulation. Hold antibiotics unless a specific infectious source is identified. Starting antibiotics reflexively on day 2 fever is one of the most common errors on surgical wards.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 10 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">10</div>
+      Wednesday
+      <span class="specialty-tag">Haematology / Rheumatology</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">32-year-old woman. Second unprovoked DVT in 18 months. No surgery, no long flights.</span><span class="hook-line">You ask about family history. Her mother had a stroke at 40.</span><span class="hook-clue">Unprovoked. Recurrent. Familial. The clot is a symptom, not the diagnosis.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Antiphospholipid Syndrome</div>
+          <div class="diff-tests" contenteditable="true">Lupus anticoagulant, anticardiolipin IgG/IgM, anti-β2-glycoprotein I IgG/IgM — must be positive on two occasions at least 12 weeks apart.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: positive on two separate occasions 12 weeks apart in a patient with thrombosis or obstetric morbidity. Rules out: consistently negative antibody panel.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — Inherited Thrombophilia</div>
+          <div class="diff-tests" contenteditable="true">Factor V Leiden (PCR), Prothrombin G20210A mutation (PCR), Protein C activity, Protein S antigen, Antithrombin III levels — test off anticoagulation.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: identified mutation or deficiency. Rules out: normal full thrombophilia screen off anticoagulation.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Occult Malignancy</div>
+          <div class="diff-tests" contenteditable="true">CT chest/abdomen/pelvis, FBC + blood film, LDH, tumour markers where clinically appropriate.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: mass lesion or haematological malignancy on investigation. Rules out: normal CT and blood film.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Antiphospholipid Syndrome</div>
+        <div class="impression-reasoning" contenteditable="true">Young woman + recurrent unprovoked venous thrombosis + family history of early arterial event = APS first. Test before labelling her a thrombophilia and committing to lifelong anticoagulation without a diagnosis. The antibody panel is the starting point.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 11 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">11</div>
+      Thursday
+      <span class="specialty-tag">Haematology</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Patient's urine turned dark brown after an acute illness.</span><span class="hook-line">LFTs: normal. Bilirubin: normal. Urobilinogen: elevated.</span><span class="hook-clue">The liver is not the problem. Something is happening upstream of it.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Haemolytic Anaemia</div>
+          <div class="diff-tests" contenteditable="true">FBC + blood film (spherocytes, schistocytes, polychromasia), reticulocyte count, LDH, haptoglobin (low in haemolysis), direct Coombs test (DAT), bilirubin fractions (unconjugated elevated).</div>
+          <div class="diff-rule" contenteditable="true">Rules in: raised LDH + low haptoglobin + raised unconjugated bilirubin + abnormal blood film. Rules out: normal haptoglobin + normal blood film.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — Rhabdomyolysis</div>
+          <div class="diff-tests" contenteditable="true">Serum CK (markedly elevated), urine myoglobin, UECs (acute kidney injury — the main complication), urine dipstick (blood positive, no RBCs on microscopy).</div>
+          <div class="diff-rule" contenteditable="true">Rules in: CK >1000 IU/L + myoglobinuria + urine blood positive without RBCs on microscopy. Rules out: normal CK.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — G6PD Deficiency (Oxidative Haemolysis)</div>
+          <div class="diff-tests" contenteditable="true">G6PD enzyme assay (test after acute episode resolves — reticulocytes can give falsely normal result acutely), blood film (bite cells, Heinz bodies on supravital stain).</div>
+          <div class="diff-rule" contenteditable="true">Rules in: enzyme deficiency on assay + bite cells on film + trigger identified (acute illness, drug, food). Rules out: normal enzyme level on repeat testing when stable.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Haemolytic Anaemia — Query G6PD Deficiency</div>
+        <div class="impression-reasoning" contenteditable="true">Dark urine after acute illness with normal LFTs = red cell destruction, not liver disease. Elevated urobilinogen confirms the bilirubin load is coming from haemolysis. Check the film. Check the enzyme — but wait until the acute episode settles for an accurate result.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 12 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">12</div>
+      Friday
+      <span class="specialty-tag">Obstetrics</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Pregnant woman at 32 weeks. BP 148/96. Mild headache.</span><span class="hook-line">Urine: 2+ protein. Platelets: 89. LFTs elevated.</span><span class="hook-clue">She doesn't have hypertension. She has a syndrome — and it's worsening.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — HELLP Syndrome</div>
+          <div class="diff-tests" contenteditable="true">FBC (thrombocytopaenia, anaemia), blood film (schistocytes — microangiopathic haemolytic anaemia), LDH (elevated), LFTs (AST/ALT elevated), uric acid, urine protein:creatinine ratio.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: Haemolysis (abnormal film + raised LDH) + Elevated Liver enzymes + Low Platelets &lt;100. Rules out: normal platelet count + normal LFTs + no haemolysis.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — Acute Fatty Liver of Pregnancy</div>
+          <div class="diff-tests" contenteditable="true">Blood glucose (hypoglycaemia), coagulation screen (prolonged PT/APTT), ammonia, LFTs, USS liver (echogenic liver), liver biopsy if diagnosis uncertain.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: hypoglycaemia + coagulopathy + hepatic dysfunction in third trimester + microvesicular steatosis on biopsy. Rules out: normal glucose + normal coagulation.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Thrombotic Thrombocytopenic Purpura (TTP)</div>
+          <div class="diff-tests" contenteditable="true">Blood film (schistocytes), ADAMTS13 activity level, LDH, renal function.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: ADAMTS13 activity &lt;10% + schistocytes + neurological involvement. Rules out: normal ADAMTS13 activity.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">HELLP Syndrome</div>
+        <div class="impression-reasoning" contenteditable="true">Thrombocytopaenia + elevated LFTs + proteinuric hypertension at 32 weeks = HELLP. This is not managed outpatient. Admit immediately. Obstetrics and haematology today. Delivery timing is a clinical decision — but the decision needs to happen now.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 13 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">13</div>
+      Saturday
+      <span class="specialty-tag">Neurology / Geriatrics</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Elderly man on warfarin. Collapsed at home. GCS 14 on arrival. CT head: normal.</span><span class="hook-line">The fall was 3 weeks ago.</span><span class="hook-clue">A normal CT today doesn't mean what you think it means.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Chronic Subdural Haematoma</div>
+          <div class="diff-tests" contenteditable="true">MRI brain (isodense haematoma invisible on standard CT at 3 weeks — MRI FLAIR/T1 identifies it), repeat CT at 4–6 weeks if MRI unavailable, neurosurgery review.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: crescent-shaped collection on MRI + head trauma history + anticoagulation. Rules out: completely normal MRI at appropriate time post-injury.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — Subacute Subdural Haematoma (Evolving)</div>
+          <div class="diff-tests" contenteditable="true">CT head with thin cuts and bone windows, MRI FLAIR sequence. The isodense phase (approximately days 7–21) is the most dangerous — it looks normal on standard CT windows.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: hypodense or isodense collection on MRI at appropriate timeline. Rules out: normal MRI.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Supratherapeutic Anticoagulation as Contributing Factor</div>
+          <div class="diff-tests" contenteditable="true">INR, PT, APTT. Does not change the need for imaging — but influences management if a bleed is found.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: INR >4 as a contributing factor. Do not withhold imaging because the INR is normal.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Chronic Subdural Haematoma</div>
+        <div class="impression-reasoning" contenteditable="true">Warfarin + head trauma 3 weeks ago + fluctuating GCS = isodense subdural on CT that looks completely normal. CT sensitivity at 3 weeks is approximately 70%. A normal CT is not a normal brain. Get the MRI. Reverse the anticoagulation while you wait for it.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 14 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">14</div>
+      Sunday
+      <span class="specialty-tag">Infectious Disease / Rheumatology</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">You started IV antibiotics for sepsis. 48 hours later the patient is worse.</span><span class="hook-line">Temperature up. WBC up. CRP up. Blood cultures: negative.</span><span class="hook-clue">Negative cultures on empirical antibiotics are not reassurance. They are a question.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Adult-Onset Still's Disease</div>
+          <div class="diff-tests" contenteditable="true">Serum ferritin (>10,000 in Still's — often in the tens of thousands), ANA, RF (both negative in Still's), CRP, LFTs, blood film.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: quotidian fever + evanescent salmon-coloured rash + arthralgia + extreme hyperferritinaemia + negative ANA/RF. Rules out: alternative infectious or malignant cause identified.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — Haematological Malignancy (Lymphoma)</div>
+          <div class="diff-tests" contenteditable="true">CT chest/abdomen/pelvis, FBC + blood film, LDH, uric acid, bone marrow biopsy if indicated.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: lymphadenopathy + constitutional symptoms + abnormal blood film + histological confirmation. Rules out: normal CT and bone marrow biopsy.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Culture-Negative Endocarditis</div>
+          <div class="diff-tests" contenteditable="true">Transoesophageal echocardiogram (TOE — more sensitive than TTE for vegetations), serology for HACEK organisms, Coxiella burnetii, Bartonella spp., Brucella spp.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: vegetation on TOE + epidemiological exposure + modified Duke criteria. Rules out: normal TOE + negative extended serology.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Non-Infectious Systemic Inflammatory Condition — Query Adult-Onset Still's Disease</div>
+        <div class="impression-reasoning" contenteditable="true">Antibiotic failure at 48 hours + negative cultures + rising inflammatory markers = stop assuming infection. The ferritin is the next investigation. If it is four or five digits, you have your answer. Check it before ordering another antibiotic.</div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- end week 2 -->
+
+
+<!-- ==================== WEEK 3 — PAEDIATRICS ==================== -->
+<div class="week-header">
+  <h2>Week 3 — Paediatrics</h2>
+  <p>Convulsions · Dehydration · HIV/PMTCT · Birth Asphyxia &amp; CPAP</p>
+</div>
+<div class="week-body">
+
+  <!-- POST 15: Convulsions — Classification of Causes -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">15</div>
+      Monday
+      <span class="specialty-tag">Paediatrics / Neurology</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">You gave the anticonvulsant. The seizure stopped.</span><span class="hook-line">You wrote "febrile convulsion" and planned discharge.</span><span class="hook-line">Her capillary blood glucose was 1.2 mmol/L. Nobody had checked.</span><span class="hook-clue">She was back 4 hours later — seizing again. The fever was never the cause.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Convulsions in Children — Classification of Causes</div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Metabolic Causes — Remember MATCH</div>
+          <div class="diff-tests" contenteditable="true">M — Magnesium low (hypomagnesaemia — neonates, malnutrition)
+A — Ammonia high (inborn errors of metabolism, urea cycle defects)
+T — Timber! Glucose low (hypoglycaemia — the most common missed metabolic cause; check BGL in every seizing child)
+C — Calcium low (hypocalcaemia — neonates, vitamin D deficiency, hypoparathyroidism)
+H — Hyponatraemia (Na &lt;125 mmol/L — dilutional, gastroenteritis with hypotonic fluids)
+
+First-line bedside tests: capillary blood glucose, Na, Ca, Mg.</div>
+          <div class="diff-rule" contenteditable="true">Rule: "Febrile convulsion" is a diagnosis of exclusion. Check the glucose before you use that label — every time, without exception.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Infectious Causes — Remember BEAM</div>
+          <div class="diff-tests" contenteditable="true">B — Bacterial meningitis (fever + seizure + neck stiffness or bulging fontanelle → LP after stabilisation; do NOT delay antibiotics for imaging in a sick child)
+E — Encephalitis (viral — HSV most important; altered consciousness + personality change + fever → aciclovir empirically while awaiting PCR)
+A — Abscess (cerebral — subacute onset, focal neurological signs, raised ICP → CT with contrast first)
+M — Malaria (cerebral malaria — P. falciparum; any febrile child with seizures in an endemic region → thick &amp; thin blood film immediately)
+
+Key investigations: LP (if safe), blood cultures, thick film, HSV PCR on CSF.</div>
+          <div class="diff-rule" contenteditable="true">Rule: In a child under 18 months, absence of neck stiffness does NOT exclude bacterial meningitis. LP is mandatory if no contraindications.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Structural / Epileptic Causes</div>
+          <div class="diff-tests" contenteditable="true">Epilepsy (first unprovoked afebrile seizure → EEG + MRI brain)
+Neurocysticercosis (ring-enhancing lesions on CT — endemic area, exposure to undercooked pork; serology + CT head)
+Space-occupying lesion / vascular malformation (focal onset, focal signs → urgent CT)
+Hypoxic-ischaemic injury (perinatal history — relevant in neonates)
+
+CT head indications: focal signs, prolonged seizure (&gt;30 min), first unprovoked seizure, no metabolic or infectious cause identified.</div>
+          <div class="diff-rule" contenteditable="true">Rule: A normal CT does not rule out epilepsy — EEG is the key investigation for epilepsy, not imaging.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Every Seizing Child Gets a BGL and Na — Before Any Other Label</div>
+        <div class="impression-reasoning" contenteditable="true">MATCH the metabolic causes. BEAM through the infectious ones. "Febrile convulsion" only applies to a child over 6 months with a simple, brief, generalised seizure who has no signs of CNS infection and a normal BGL and electrolytes. Before you write it — prove it. One missed glucose is one preventable readmission.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 16: Dehydration in Paediatrics — Management -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">16</div>
+      Tuesday
+      <span class="specialty-tag">Paediatrics / Emergency</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">18-month-old. 3 days of watery diarrhoea. Sunken eyes. Crying without tears.</span><span class="hook-line">Skin pinch stays up for 2 seconds. Pulse rapid and weak. Lethargic.</span><span class="hook-line">You know he needs fluids. But which plan — and at exactly what rate?</span><span class="hook-clue">Most trainees give the right fluid. They give it at the wrong speed.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Dehydration in Paediatrics — WHO/IMCI Plan A, B, C</div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Step 1 — Assess Severity: The ESS Signs (Eyes, Skin, State)</div>
+          <div class="diff-tests" contenteditable="true">No dehydration: Alert, normal eyes, normal skin turgor, drinks normally → Plan A
+Some dehydration (5–10%): Restless/irritable, sunken eyes, skin pinch returns slowly (1–2 sec), drinks eagerly → Plan B
+Severe dehydration (&gt;10%): Lethargic or unconscious, very sunken eyes, skin pinch stays up &gt;2 seconds, unable to drink, weak or absent pulse → Plan C
+
+One of these three signs = severe: skin stays up, lethargic, unable to drink.</div>
+          <div class="diff-rule" contenteditable="true">Mnemonic — ESS: Eyes · Skin · State. If one of the "severe" ESS signs is present, go straight to Plan C. Do not use the oral route in severe dehydration.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Plan A, B, C — The ORS Ladder</div>
+          <div class="diff-tests" contenteditable="true">Plan A (No dehydration — prevention at home):
+→ ORS 10 ml/kg after each loose stool. Continue breastfeeding and normal feeds. Zinc 20 mg/day for 10 days (&lt;6 months: 10 mg/day).
+
+Plan B (Some dehydration — ORS in facility):
+→ ORS 75 ml/kg over 4 hours, given in small sips. Reassess every 1–2 hours. Improving → continue. Worsening → escalate to Plan C.
+
+Plan C (Severe dehydration — IV fluids):
+→ IV Ringer's Lactate (preferred) or Normal Saline
+→ Age ≤12 months: 30 ml/kg over 1 hour, then 70 ml/kg over 5 hours
+→ Age &gt;12 months: 30 ml/kg over 30 minutes, then 70 ml/kg over 2.5 hours</div>
+          <div class="diff-rule" contenteditable="true">Mnemonic — The 30-70 Rule: 30 fast (bolus), then 70 slow (rehydration). The total is always 100 ml/kg — just split by severity of the initial phase.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">The 3 Traps That Get Trainees in Trouble</div>
+          <div class="diff-tests" contenteditable="true">Trap 1 — Wrong Plan B volume: ORS in Plan B is 75 ml/kg over 4 hours — not 50, not 100. Fix the number in your memory.
+Trap 2 — ORS via NGT in severe dehydration: If the child cannot drink → IV only. Nasogastric ORS is not equivalent to IV fluid in severe dehydration — do not use it as first step.
+Trap 3 — Cholera-like watery diarrhoea: A child may look "some dehydration" clinically but be losing fluid faster than you think. Reassess aggressively every 30–60 minutes in rice-water stool presentations.</div>
+          <div class="diff-rule" contenteditable="true">Rule: After Plan C bolus, reassess after each phase. If the child can now drink and is improving → switch to ORS. If not improving → repeat the 30 ml/kg phase and consider other causes.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">ESS → Plan. 30 Fast, Then 70 Slow.</div>
+        <div class="impression-reasoning" contenteditable="true">The three signs that push a child to Plan C are: skin pinch stays up, lethargic or unconscious, unable to drink. If any one is present — go straight to IV. The 30 ml/kg bolus is given fast for a reason. Don't negotiate the rate in a severely dehydrated child. And don't forget zinc — it reduces stool output and duration of illness in every child with diarrhoea regardless of plan.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 17: HIV in Pregnancy — PMTCT & Prenatal Screening -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">17</div>
+      Wednesday
+      <span class="specialty-tag">OB/GYN / Infectious Disease</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">HIV-positive woman. First antenatal visit at 10 weeks.</span><span class="hook-line">She asks one question: "Will my baby be born negative?"</span><span class="hook-line">The answer is yes — with a transmission risk under 2%.</span><span class="hook-clue">But only if you hit every checkpoint in the pathway. Miss one and the window closes.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">HIV in Pregnancy — Screening Timeline &amp; PMTCT (WHO 2021 / Option B+)</div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">When to Screen — The 4 Windows</div>
+          <div class="diff-tests" contenteditable="true">Window 1 — 1st ANC contact (any gestation): Test ALL women at first visit. This is not optional. Early diagnosis = longer time on ART before delivery = lower viral load at term.
+
+Window 2 — 28 weeks (2nd trimester retest): Retest all women who were negative at booking. Seroconversion can occur during pregnancy. In high-prevalence settings: retest at every trimester.
+
+Window 3 — 36 weeks (3rd trimester): Final retest. If positive or known positive: check viral load. VL &gt;1000 copies/mL at 34–36 weeks → consider elective Caesarean section to reduce intrapartum transmission.
+
+Window 4 — Labour: Test any woman of unknown HIV status presenting in labour. Use rapid HIV test. If positive → start ART immediately and give infant NVP within 6 hours of delivery.</div>
+          <div class="diff-rule" contenteditable="true">Rule: "No HIV status = test at every contact." No woman should deliver without a documented HIV result from that pregnancy.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">ARV Regimen — Option B+ (Lifelong ART for All)</div>
+          <div class="diff-tests" contenteditable="true">Start ART in ALL HIV-positive pregnant women regardless of CD4 count and gestational age. Do not wait.
+
+Preferred regimen (WHO 2021): TDF + 3TC + DTG (dolutegravir)
+→ DTG preferred from the 2nd trimester onward. In the 1st trimester: use EFV if DTG is unavailable or there is a neural tube defect concern.
+→ Continue lifelong after delivery — never stop (Option B+ principle).
+
+Viral load monitoring: at ART initiation, at 3 months, at 34–36 weeks, and 6 months postpartum.
+
+Mnemonic — TLD = Triple Lifelong Durability: TDF + 3TC + DTG. Three drugs. For life.</div>
+          <div class="diff-rule" contenteditable="true">Rule: A suppressed viral load at delivery is the single most powerful intervention to prevent mother-to-child transmission. ART adherence from the first trimester onward achieves this.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Infant Prophylaxis + Feeding + PCR Timeline</div>
+          <div class="diff-tests" contenteditable="true">Infant NVP (nevirapine): Start within 6 hours of birth (maximum 72 hours).
+→ If mother on ART and VL suppressed: NVP for 6 weeks
+→ If mother not on ART or VL not suppressed: NVP for 12 weeks (extended prophylaxis)
+
+Feeding: In resource-limited settings — exclusive breastfeeding + maternal ART throughout. Mixed feeding increases MTCT risk; avoid it.
+In well-resourced settings where safe alternatives are available: formula feeding.
+
+Infant PCR testing schedule: 6 weeks, 10 weeks, 6 months, 9 months, 18 months, and at cessation of breastfeeding.
+
+With optimal ART + NVP + correct feeding: MTCT risk &lt;1–2%.</div>
+          <div class="diff-rule" contenteditable="true">Rule: If a mother arrives in labour HIV-positive with no prior ART — start her ART immediately, give infant NVP for 12 weeks, and schedule infant PCR at 6 weeks. The clock starts at birth.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">PMTCT Failure Is Almost Always a Gap in the Pathway</div>
+        <div class="impression-reasoning" contenteditable="true">Late booking. Interrupted ART. Unknown status in labour. Missed infant prophylaxis. Each one of those is a preventable transmission. Screen at 4 windows. Start TLD early. Check the viral load at 34–36 weeks. Give the infant NVP within 6 hours. Follow up with PCR at 6 weeks. A baby born to an HIV-positive mother on suppressive ART has a 98–99% chance of being negative. The pathway is the treatment.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 18: Birth Asphyxia — Role of CPAP -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">18</div>
+      Thursday
+      <span class="specialty-tag">Neonatology / Paediatrics</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Apgar 2 at 1 minute. You resuscitate — dry, stimulate, position, PPV.</span><span class="hook-line">At 5 minutes Apgar is 6. He's breathing. You exhale.</span><span class="hook-line">Fifteen minutes later: grunting on every breath, subcostal recessions, SpO₂ 88% on free-flow oxygen.</span><span class="hook-clue">The question is not whether he needs respiratory support. It's what kind — and whether you know the step before the ventilator.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Birth Asphyxia — The Role of CPAP</div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">What CPAP Does — and Why It's the Right Step Here</div>
+          <div class="diff-tests" contenteditable="true">CPAP (Continuous Positive Airway Pressure) delivers constant pressure through both phases of the respiratory cycle — it does not breathe for the baby, but it holds the airways open.
+
+Mechanism: Prevents alveolar collapse at end-expiration → reduces atelectasis → improves V/Q matching → better oxygenation with less work of breathing.
+
+Appropriate for: spontaneously breathing infant with grunting, intercostal/subcostal recessions, SpO₂ &lt;90% on free-flow O₂, tachypnoea &gt;60, or post-resuscitation respiratory distress.
+
+NOT appropriate for: apnoea without respiratory drive (needs PPV/intubation), choanal atresia, tracheo-oesophageal fistula, untreated pneumothorax.
+
+Core rule: CPAP requires a breathing baby. If there is no respiratory drive — CPAP will not help. Move to PPV or intubation immediately.</div>
+          <div class="diff-rule" contenteditable="true">Rule: CPAP is the bridge between free-flow oxygen and mechanical ventilation. It is not a minor step — a baby on CPAP is a sick baby who requires continuous monitoring.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Settings — Start Simple, Titrate Carefully</div>
+          <div class="diff-tests" contenteditable="true">Starting pressure: 5 cmH₂O — do not start higher without a specific reason.
+Increase: by 1–2 cmH₂O increments if hypoxia persists.
+Maximum: typically 8 cmH₂O in neonates before considering escalation.
+
+FiO₂: Start at 0.3–0.4. Titrate to maintain SpO₂ 90–95%.
+→ Target is NOT 100%. Hyperoxia causes retinopathy of prematurity and oxygen toxicity in neonates. Upper limit is 95%.
+
+Flow rate: typically 5–8 L/min (device-dependent — bubble CPAP or ventilator-derived CPAP).
+Interface: binasal prongs preferred over mask (better seal, less dead space).</div>
+          <div class="diff-rule" contenteditable="true">Mnemonic — "CPAP at 5, SpO₂ at 95": Starting pressure is 5 cmH₂O. Target saturation ceiling is 95%. Two numbers. Locked in.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">CPAP Failure — When to Escalate (The AFAR Criteria)</div>
+          <div class="diff-tests" contenteditable="true">A — Apnoea on CPAP (repeated episodes despite correct settings → intubate)
+F — FiO₂ &gt;0.6 required to maintain SpO₂ ≥90% (oxygen requirement too high for CPAP alone)
+A — Acidosis (respiratory acidosis on ABG — rising CO₂, pH falling, hypercapnia despite CPAP)
+R — Recessions worsening (increasing work of breathing, clinical exhaustion signs — infant tiring)
+
+If ANY one of these is present → escalate to intubation and mechanical ventilation.
+Do not wait for all four. One criterion is enough.</div>
+          <div class="diff-rule" contenteditable="true">Mnemonic — AFAR: Apnoea · FiO₂ &gt;0.6 · Acidosis · Recessions worsening = CPAP failure. Escalate early — a tired neonate decompensates faster than you expect.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">CPAP at 5. SpO₂ at 95. AFAR = Escalate.</div>
+        <div class="impression-reasoning" contenteditable="true">After resuscitation for birth asphyxia, CPAP buys time and lung recruitment when the baby has a drive to breathe but the lungs are failing. Start at 5 cmH₂O. Target SpO₂ 90–95% — not higher. Reassess at 30 minutes. If AFAR criteria are met — escalate to intubation early, not as a last resort. Delayed intubation in a deteriorating neonate is the more dangerous choice. The ventilator is not a failure — it is the next rung on the ladder.</div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- end week 3 -->
+
+
+<div class="footer">
+  MedFlow AI — Clinical Reasoning Posts &nbsp;|&nbsp; 2026 &nbsp;|&nbsp; Click any text to edit &nbsp;|&nbsp; Ctrl+P to save as PDF
+</div>
+
+</body>
+</html>
