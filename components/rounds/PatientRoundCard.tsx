@@ -34,31 +34,51 @@ interface PatientRoundCardProps {
 function extractPlan(rawText: string): string {
   if (!rawText) return ''
 
-  const mgmtMatch = rawText.match(/## Management Plan\s*([\s\S]*?)(?=\n## |$)/i)
-  if (!mgmtMatch) return ''
+  // raw_analysis_text is stored as JSON
+  try {
+    const parsed = JSON.parse(rawText)
+    const plan = parsed?.management_plan
+    if (!plan) return ''
 
-  const content = mgmtMatch[1]
-  const parts: string[] = []
+    const parts: string[] = []
 
-  const recMatch = content.match(/\*\*Recommended Plan:\*\*\s*([\s\S]*?)(?:\*\*Adjustments|$)/i)
-  if (recMatch?.[1]?.trim()) {
-    const steps = recMatch[1].trim()
-      .split('\n')
-      .map(l => l.trim())
-      .filter(Boolean)
-      .map((l, i) => `${i + 1}. ${l.replace(/^\d+\.\s*/, '').replace(/\*\*(.*?)\*\*/g, '$1').trim()}`)
-    if (steps.length) parts.push(`Recommended Plan:\n${steps.join('\n')}`)
-  }
+    if (Array.isArray(plan.recommended_plan) && plan.recommended_plan.length > 0) {
+      const steps = plan.recommended_plan.map((s: any, i: number) => `${i + 1}. ${s.step || s}`)
+      parts.push(`Recommended Plan:\n${steps.join('\n')}`)
+    }
 
-  const adjMatch = content.match(/\*\*Adjustments Based on Patient Status:\*\*\s*([\s\S]*?)$/i)
-  if (adjMatch?.[1]?.trim()) {
-    const adj = adjMatch[1].trim().replace(/\*\*(.*?)\*\*/g, '$1')
+    const adj = plan.adjustments_based_on_status?.trim()
     if (adj && adj.toLowerCase() !== 'n/a' && adj.length > 5) {
       parts.push(`Adjustments Based on Patient Status: ${adj}`)
     }
-  }
 
-  return parts.join('\n\n')
+    return parts.join('\n\n')
+  } catch {
+    // Legacy markdown fallback
+    const mgmtMatch = rawText.match(/## Management Plan\s*([\s\S]*?)(?=\n## |$)/i)
+    if (!mgmtMatch) return ''
+
+    const content = mgmtMatch[1]
+    const parts: string[] = []
+
+    const recMatch = content.match(/\*\*Recommended Plan:\*\*\s*([\s\S]*?)(?:\*\*Adjustments|$)/i)
+    if (recMatch?.[1]?.trim()) {
+      const steps = recMatch[1].trim()
+        .split('\n').map(l => l.trim()).filter(Boolean)
+        .map((l, i) => `${i + 1}. ${l.replace(/^\d+\.\s*/, '').replace(/\*\*(.*?)\*\*/g, '$1').trim()}`)
+      if (steps.length) parts.push(`Recommended Plan:\n${steps.join('\n')}`)
+    }
+
+    const adjMatch = content.match(/\*\*Adjustments Based on Patient Status:\*\*\s*([\s\S]*?)$/i)
+    if (adjMatch?.[1]?.trim()) {
+      const adj = adjMatch[1].trim().replace(/\*\*(.*?)\*\*/g, '$1')
+      if (adj && adj.toLowerCase() !== 'n/a' && adj.length > 5) {
+        parts.push(`Adjustments Based on Patient Status: ${adj}`)
+      }
+    }
+
+    return parts.join('\n\n')
+  }
 }
 
 export function PatientRoundCard({ patient, latestAnalysis, allAnalyses, analysisCount }: PatientRoundCardProps) {
