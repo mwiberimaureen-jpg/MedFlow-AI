@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MedFlow AI — Learning Sparks</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f4f6f9;
+      color: #1a1a2e;
+      font-size: 13.5px;
+      line-height: 1.7;
+    }
+
+    /* Edit banner */
+    .edit-banner {
+      background: #1b5e20;
+      color: #fff;
+      text-align: center;
+      padding: 10px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .edit-banner span { opacity: 0.7; font-weight: 400; margin-left: 8px; }
+
+    /* Editable */
+    [contenteditable="true"] {
+      cursor: text;
+      border-radius: 4px;
+      outline: 2px dashed transparent;
+      transition: outline 0.15s, background 0.15s;
+    }
+    [contenteditable="true"]:hover { outline: 2px dashed #4527a0; background: #f3f0ff !important; }
+    [contenteditable="true"]:focus { outline: 2px solid #4527a0; background: #ede7f6 !important; box-shadow: 0 0 0 3px rgba(69,39,160,0.12); }
+
+    /* Cover */
+    .cover {
+      background: linear-gradient(135deg, #311b92 0%, #4527a0 50%, #00695c 100%);
+      color: white;
+      padding: 70px 60px;
+      min-height: 220px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .cover h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px; }
+    .cover h2 { font-size: 17px; font-weight: 400; opacity: 0.8; margin-bottom: 16px; }
+    .cover .meta { font-size: 12px; opacity: 0.6; }
+
+    /* Format guide */
+    .format-guide {
+      background: #fff;
+      border-left: 5px solid #4527a0;
+      margin: 30px 40px;
+      padding: 22px 28px;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .format-guide h2 { font-size: 15px; color: #4527a0; font-weight: 700; margin-bottom: 12px; }
+    .format-guide p, .format-guide li { font-size: 13px; color: #333; margin-bottom: 5px; }
+    .format-guide ul { padding-left: 18px; margin-top: 6px; }
+    .format-tag {
+      display: inline-block; font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1px;
+      padding: 3px 9px; border-radius: 10px; margin-right: 6px;
+    }
+    .tag-mnemonic { background: #ede7f6; color: #4527a0; }
+    .tag-scenario { background: #fff3e0; color: #e65100; }
+
+    /* Post card */
+    .post-card {
+      background: #fff;
+      margin: 0 40px 36px;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      overflow: hidden;
+    }
+
+    /* Post header */
+    .post-header {
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid #ede7f6;
+    }
+    .post-header.mnemonic { background: linear-gradient(135deg, #311b92, #4527a0); }
+    .post-header.scenario { background: linear-gradient(135deg, #bf360c, #e64a19); }
+
+    .post-num {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border-radius: 50%;
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 800; flex-shrink: 0;
+    }
+    .post-meta { flex: 1; }
+    .post-category { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: rgba(255,255,255,0.7); margin-bottom: 2px; }
+    .post-title { font-size: 15px; font-weight: 700; color: white; }
+    .post-type-tag {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; padding: 3px 9px; border-radius: 10px;
+      background: rgba(255,255,255,0.2); color: white; white-space: nowrap;
+    }
+
+    /* Slide */
+    .slide {
+      border-bottom: 1px solid #f0ebff;
+      padding: 0;
+    }
+    .slide:last-child { border-bottom: none; }
+
+    .slide-label {
+      padding: 8px 24px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .slide-num-badge {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 800; flex-shrink: 0;
+    }
+
+    /* Slide type colours */
+    .slide-scenario .slide-label { background: #f8f4ff; color: #4527a0; border-bottom: 1px solid #ede7f6; }
+    .slide-scenario .slide-num-badge { background: #4527a0; color: white; }
+
+    .slide-content .slide-label { background: #f0faf9; color: #00695c; border-bottom: 1px solid #b2dfdb; }
+    .slide-content .slide-num-badge { background: #00897b; color: white; }
+
+    .slide-pearl .slide-label { background: #fff8e1; color: #f57f17; border-bottom: 1px solid #ffe082; }
+    .slide-pearl .slide-num-badge { background: #f9a825; color: white; }
+
+    .slide-twist .slide-label { background: #fff3e0; color: #e65100; border-bottom: 1px solid #ffcc80; }
+    .slide-twist .slide-num-badge { background: #f4511e; color: white; }
+
+    .slide-revised .slide-label { background: #e8f5e9; color: #2e7d32; border-bottom: 1px solid #a5d6a7; }
+    .slide-revised .slide-num-badge { background: #388e3c; color: white; }
+
+    .slide-reasoning .slide-label { background: #fce4ec; color: #880e4f; border-bottom: 1px solid #f48fb1; }
+    .slide-reasoning .slide-num-badge { background: #c2185b; color: white; }
+
+    .slide-inner { padding: 16px 24px; }
+
+    /* Content blocks within slides */
+    .scenario-text {
+      font-size: 13.5px;
+      line-height: 1.75;
+      color: #1a1a2e;
+      font-style: italic;
+    }
+    .plan-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; color: #4527a0; margin: 10px 0 5px;
+    }
+    .plan-text {
+      font-size: 13px; line-height: 1.7; color: #333;
+    }
+
+    /* Drug/mnemonic item */
+    .drug-item {
+      margin-bottom: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px dashed #e0e0e0;
+    }
+    .drug-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+    .drug-title { font-size: 13.5px; font-weight: 700; color: #00695c; margin-bottom: 6px; }
+    .drug-detail { font-size: 12.5px; color: #333; line-height: 1.65; margin-bottom: 3px; }
+    .drug-key { font-size: 12px; color: #4527a0; font-style: italic; margin-top: 4px; }
+
+    /* Mnemonic letter breakdown */
+    .mnemonic-grid { display: flex; flex-direction: column; gap: 6px; }
+    .mnemonic-row { display: flex; gap: 10px; align-items: flex-start; }
+    .mnemonic-letter {
+      background: #4527a0; color: white;
+      width: 28px; height: 28px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 800; flex-shrink: 0;
+    }
+    .mnemonic-desc { font-size: 13px; color: #333; line-height: 1.6; padding-top: 4px; }
+
+    /* Pearl */
+    .pearl-text {
+      font-size: 13px; line-height: 1.75; color: #33200a;
+    }
+
+    /* Twist */
+    .twist-text { font-size: 13.5px; line-height: 1.75; color: #bf360c; font-weight: 500; }
+    .revised-text { font-size: 13px; line-height: 1.75; color: #1b5e20; }
+    .reasoning-text { font-size: 13px; line-height: 1.75; color: #4a0e2b; }
+
+    /* Key point box */
+    .key-point {
+      background: #f3f0ff; border-left: 3px solid #4527a0;
+      border-radius: 0 4px 4px 0;
+      padding: 8px 12px; margin-top: 10px;
+      font-size: 12.5px; color: #311b92; font-weight: 600;
+    }
+
+    /* Footer */
+    .footer { text-align: center; padding: 28px; font-size: 11px; color: #999; }
+
+    /* Print */
+    @media print {
+      body { background: white; }
+      .edit-banner { display: none; }
+      .cover, .post-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .slide-label, .mnemonic-letter, .post-num, .slide-num-badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .post-card { box-shadow: none; border: 1px solid #ddd; page-break-inside: avoid; }
+      .slide { page-break-inside: avoid; }
+      [contenteditable="true"] { outline: none !important; background: inherit !important; box-shadow: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="edit-banner">
+  Click any text to edit directly in the browser
+  <span>— Ctrl+P → Save as PDF when ready</span>
+</div>
+
+<div class="cover">
+  <h1>MedFlow AI</h1>
+  <h2>Daily Learning Sparks — 14-Post Series</h2>
+  <div class="meta">
+    <span class="format-tag tag-mnemonic" style="background:rgba(255,255,255,0.2);color:white;">Mnemonics</span>
+    <span class="format-tag tag-scenario" style="background:rgba(255,255,255,0.2);color:white;">Scenario / Twist</span>
+    &nbsp;Kenya-focused · East African clinical context · X &amp; TikTok Carousel
+  </div>
+</div>
+
+<div class="format-guide">
+  <h2>Two Formats in This Document</h2>
+  <p><span class="format-tag tag-mnemonic">Mnemonic</span> Slide 1 = clinical scenario. Slides 2–4 = mnemonic or drug breakdown (Mechanism · When to use · Key point). Slide 5 = Clinical Pearl.</p>
+  <p style="margin-top:8px;"><span class="format-tag tag-scenario">Scenario / Twist</span> Slide 1 = scenario + original plan. Slide 2 = twist. Slide 3 = revised plan. Slide 4 = reasoning. Slide 5 = Clinical Pearl.</p>
+  <ul style="margin-top:10px;">
+    <li>Each slide maps directly to one TikTok carousel card or one X thread reply.</li>
+    <li>Slide 5 (Clinical Pearl) always ends with a CTA — replace "(CTA)" with your chosen call to action before posting.</li>
+    <li>Click any text to edit before saving as PDF.</li>
+  </ul>
+</div>
+
+
+<!-- ========== POST 1 ========== -->
+<div class="post-card">
+  <div class="post-header mnemonic">
+    <div class="post-num">1</div>
+    <div class="post-meta">
+      <div class="post-category" contenteditable="true">Mnemonics · Obstetric Emergencies · 1 day</div>
+      <div class="post-title" contenteditable="true">PPH — The 4 T's and HAEMOSTASIS</div>
+    </div>
+    <div class="post-type-tag">Mnemonic</div>
+  </div>
+
+  <div class="slide slide-scenario">
+    <div class="slide-label"><div class="slide-num-badge">1</div> Slide 1 — Scenario</div>
+    <div class="slide-inner">
+      <div class="scenario-text" contenteditable="true">Your patient is a 28-year-old G3P2 who just delivered vaginally. Estimated blood loss is 650ml and rising. The uterus is boggy on palpation. She is tachycardic. You have 2 minutes to have a plan.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">2</div> Slide 2 — The 4 T's: Find the Cause First</div>
+    <div class="slide-inner">
+      <div class="mnemonic-grid">
+        <div class="mnemonic-row">
+          <div class="mnemonic-letter" contenteditable="true">T</div>
+          <div class="mnemonic-desc" contenteditable="true"><strong>Tone</strong> — Uterine atony. 70% of PPH cases. The uterus is not contracting.</div>
+        </div>
+        <div class="mnemonic-row">
+          <div class="mnemonic-letter" contenteditable="true">T</div>
+          <div class="mnemonic-desc" contenteditable="true"><strong>Trauma</strong> — Lacerations, uterine rupture, haematoma. Inspect the entire birth canal.</div>
+        </div>
+        <div class="mnemonic-row">
+          <div class="mnemonic-letter" contenteditable="true">T</div>
+          <div class="mnemonic-desc" contenteditable="true"><strong>Tissue</strong> — Retained placenta or products. Is the placenta complete?</div>
+        </div>
+        <div class="mnemonic-row">
+          <div class="mnemonic-letter" contenteditable="true">T</div>
+          <div class="mnemonic-desc" contenteditable="true"><strong>Thrombin</strong> — Coagulopathy. DIC, pre-existing bleeding disorder.</div>
+        </div>
+      </div>
+      <div class="key-point" contenteditable="true">Key point: Identify the T before you treat. The intervention depends entirely on the cause.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">3</div> Slide 3 — HAEMOSTASIS Steps 1–5</div>
+    <div class="slide-inner">
+      <div class="mnemonic-grid">
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">H</div><div class="mnemonic-desc" contenteditable="true"><strong>Help</strong> — Call your senior now. Not when she is in shock.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">A</div><div class="mnemonic-desc" contenteditable="true"><strong>Assess and resuscitate</strong> — IV access x2, FBC, coagulation, crossmatch, urinary catheter.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">E</div><div class="mnemonic-desc" contenteditable="true"><strong>Establish cause</strong> — Which T?</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">M</div><div class="mnemonic-desc" contenteditable="true"><strong>Massage</strong> — Bimanual uterine compression while preparing oxytocics.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">O</div><div class="mnemonic-desc" contenteditable="true"><strong>Oxytocin</strong> — 10 units IM/IV + Ergometrine 0.5mg IM (avoid if hypertensive). Tranexamic acid 1g IV within 3 hours.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">4</div> Slide 4 — HAEMOSTASIS Steps 6–9</div>
+    <div class="slide-inner">
+      <div class="mnemonic-grid">
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">S</div><div class="mnemonic-desc" contenteditable="true"><strong>Shift to theatre</strong> — If medical management fails.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">T</div><div class="mnemonic-desc" contenteditable="true"><strong>Tamponade</strong> — Bakri balloon or condom catheter with 300–500ml saline.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">A</div><div class="mnemonic-desc" contenteditable="true"><strong>Apply compression sutures</strong> — B-Lynch suture.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">S</div><div class="mnemonic-desc" contenteditable="true"><strong>Systematic devascularisation</strong> — Uterine artery ligation.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">I</div><div class="mnemonic-desc" contenteditable="true"><strong>Interventional radiology</strong> — Uterine artery embolization if available.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">S</div><div class="mnemonic-desc" contenteditable="true"><strong>Subtotal/total hysterectomy</strong> — Last resort. Life-saving.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide slide-pearl">
+    <div class="slide-label"><div class="slide-num-badge">5</div> Slide 5 — Clinical Pearl</div>
+    <div class="slide-inner">
+      <div class="pearl-text" contenteditable="true">Call for help at 500ml — not when she is in shock. Tranexamic acid reduces mortality when given within 3 hours of delivery. If the uterus remains boggy after massage and oxytocics, move to tamponade without delay. Every minute in a PPH is a minute closer to DIC. (CTA)</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ========== POST 2 ========== -->
+<div class="post-card">
+  <div class="post-header mnemonic">
+    <div class="post-num">2</div>
+    <div class="post-meta">
+      <div class="post-category" contenteditable="true">Mnemonics · Know Your Management · 1 day</div>
+      <div class="post-title" contenteditable="true">Heart Failure — LMNOP and ABCDD</div>
+    </div>
+    <div class="post-type-tag">Mnemonic</div>
+  </div>
+
+  <div class="slide slide-scenario">
+    <div class="slide-label"><div class="slide-num-badge">1</div> Slide 1 — Scenario</div>
+    <div class="slide-inner">
+      <div class="scenario-text" contenteditable="true">Your patient is a 65-year-old hypertensive man with acute dyspnoea, orthopnoea, bilateral leg oedema, and basal crackles. BP 180/110, SpO2 88% on room air. He is in acute decompensated heart failure. What is your immediate management?</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">2</div> Slide 2 — LMNOP: Acute Heart Failure</div>
+    <div class="slide-inner">
+      <div class="mnemonic-grid">
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">L</div><div class="mnemonic-desc" contenteditable="true"><strong>Lasix (Furosemide)</strong> — 40–80mg IV. Reduces preload and fluid overload.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">M</div><div class="mnemonic-desc" contenteditable="true"><strong>Morphine</strong> — 2–4mg IV (use cautiously — respiratory depression risk). Reduces anxiety and preload.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">N</div><div class="mnemonic-desc" contenteditable="true"><strong>Nitrates</strong> — GTN sublingual or IV infusion. Avoid if systolic BP &lt;90.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">O</div><div class="mnemonic-desc" contenteditable="true"><strong>Oxygen</strong> — Target SpO2 94–98%. Use CPAP/NIV if not improving on O2 alone.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">P</div><div class="mnemonic-desc" contenteditable="true"><strong>Position</strong> — Sit the patient upright immediately. Reduces venous return.</div></div>
+      </div>
+      <div class="key-point" contenteditable="true">Key point: Position and oxygen cost nothing and start in seconds.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">3</div> Slide 3 — ABCDD: Chronic Heart Failure (HFrEF)</div>
+    <div class="slide-inner">
+      <div class="mnemonic-grid">
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">A</div><div class="mnemonic-desc" contenteditable="true"><strong>ACE inhibitor</strong> (or ARB if intolerant) — Reduces mortality. Start low, titrate up.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">B</div><div class="mnemonic-desc" contenteditable="true"><strong>Beta-blocker</strong> (carvedilol, bisoprolol) — Start only when euvolaemic. Never in acute decompensation.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">C</div><div class="mnemonic-desc" contenteditable="true"><strong>CRT</strong> — Cardiac resynchronisation therapy if LBBB + EF &lt;35% + symptomatic on optimal therapy.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">D</div><div class="mnemonic-desc" contenteditable="true"><strong>Diuretic</strong> (furosemide) — Symptom control of fluid overload only.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">D</div><div class="mnemonic-desc" contenteditable="true"><strong>Device (ICD)</strong> — If EF &lt;35% + high SCD risk. Or Digoxin for rate control in AF with HF.</div></div>
+      </div>
+      <div class="key-point" contenteditable="true">Key point: ACE inhibitor and beta-blocker reduce mortality. Diuretics only reduce symptoms.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">4</div> Slide 4 — Admit vs Outpatient + Monitoring</div>
+    <div class="slide-inner">
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Admit if:</div>
+        <div class="drug-detail" contenteditable="true">SpO2 &lt;94%, new-onset HF, systolic BP &lt;90, AKI, refractory to oral diuretics, or arrhythmia.</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Monitor:</div>
+        <div class="drug-detail" contenteditable="true">Daily weights — >2kg gain in 2 days = early decompensation. UECs (diuretics + ACEi = watch renal function). BNP trend.</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Discharge red flag:</div>
+        <div class="drug-detail" contenteditable="true">BNP >400 on discharge predicts 30-day readmission. Ensure medications reconciled and follow-up booked.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide slide-pearl">
+    <div class="slide-label"><div class="slide-num-badge">5</div> Slide 5 — Clinical Pearl</div>
+    <div class="slide-inner">
+      <div class="pearl-text" contenteditable="true">Never start a beta-blocker in acute decompensated HF — wait until the patient is dry and stable. The commonest reason HF patients re-admit is stopping their medications. Check adherence before escalating therapy. (CTA)</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ========== POST 3 — SCENARIO/TWIST ========== -->
+<div class="post-card">
+  <div class="post-header scenario">
+    <div class="post-num">3</div>
+    <div class="post-meta">
+      <div class="post-category" contenteditable="true">Senior Peer Review · Know Your Management · 1 day</div>
+      <div class="post-title" contenteditable="true">Severe Malaria — When the Picture Changes</div>
+    </div>
+    <div class="post-type-tag">Scenario / Twist</div>
+  </div>
+
+  <div class="slide slide-scenario">
+    <div class="slide-label"><div class="slide-num-badge">1</div> Slide 1 — Scenario + Original Plan</div>
+    <div class="slide-inner">
+      <div class="plan-label">Scenario</div>
+      <div class="scenario-text" contenteditable="true">32-year-old man from Kisumu. 4-day history of fever, rigors, and vomiting. RDT positive for P. falciparum. GCS 15, able to take orals, parasite density &lt;2%.</div>
+      <div class="plan-label">Original Plan</div>
+      <div class="plan-text" contenteditable="true">Uncomplicated falciparum malaria. Artemether-lumefantrine (AL) — 4 tablets at 0, 8, 24, 36, 48, and 60 hours. Ensure food before each dose (fat improves absorption). Paracetamol for fever.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-twist">
+    <div class="slide-label"><div class="slide-num-badge">2</div> Slide 2 — Twist</div>
+    <div class="slide-inner">
+      <div class="twist-text" contenteditable="true">At 12 hours he deteriorates. GCS drops to 10. He vomits the AL dose. Repeat blood smear shows parasite density now 8%. Creatinine has risen to 320μmol/L.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-revised">
+    <div class="slide-label"><div class="slide-num-badge">3</div> Slide 3 — Revised Plan</div>
+    <div class="slide-inner">
+      <div class="revised-text" contenteditable="true">This is now SEVERE malaria. Switch to IV artesunate 2.4mg/kg at 0, 12, and 24 hours — then once daily.
+IV fluids cautiously — severe malaria carries risk of pulmonary oedema. Do not fluid overload.
+Monitor blood glucose every 4 hours — hypoglycaemia is common.
+Daily FBC — haemolytic anaemia can drop Hb precipitously.
+Daily UECs — AKI may require dialysis.
+Hourly GCS — if not improving at 24 hours, rule out bacterial co-infection with LP.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-reasoning">
+    <div class="slide-label"><div class="slide-num-badge">4</div> Slide 4 — Reasoning</div>
+    <div class="slide-inner">
+      <div class="reasoning-text" contenteditable="true">Severe malaria criteria — ANY ONE qualifies: GCS &lt;15, parasite density >5%, AKI, pulmonary oedema, severe anaemia (Hb &lt;7), hypoglycaemia, hyperparasitaemia >10%, acidosis, haemoglobinuria.
+IV artesunate reduces mortality by 35% compared to quinine in severe disease. Quinine is second-line only if artesunate is unavailable — it causes hypoglycaemia and is arrhythmogenic.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-pearl">
+    <div class="slide-label"><div class="slide-num-badge">5</div> Slide 5 — Clinical Pearl</div>
+    <div class="slide-inner">
+      <div class="pearl-text" contenteditable="true">In Kenya, check glucose at presentation AND every 4 hours in severe malaria — hypoglycaemia kills faster than the parasite. If IV artesunate is unavailable, give rectal artesunate as a bridge to transfer. Never give AL to a vomiting patient — it will not be absorbed. (CTA)</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ========== POST 4 ========== -->
+<div class="post-card">
+  <div class="post-header mnemonic">
+    <div class="post-num">4</div>
+    <div class="post-meta">
+      <div class="post-category" contenteditable="true">Mnemonics · Know Your Drugs · 1 day</div>
+      <div class="post-title" contenteditable="true">TB Treatment — The RIPE Mnemonic</div>
+    </div>
+    <div class="post-type-tag">Mnemonic</div>
+  </div>
+
+  <div class="slide slide-scenario">
+    <div class="slide-label"><div class="slide-num-badge">1</div> Slide 1 — Scenario</div>
+    <div class="slide-inner">
+      <div class="scenario-text" contenteditable="true">Your patient has confirmed pulmonary TB. GeneXpert positive, rifampicin sensitive, HIV negative. He asks: "How long will I take these drugs and what will happen to my body?" Can you answer him clearly?</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">2</div> Slide 2 — RIPE: The Four First-Line Drugs</div>
+    <div class="slide-inner">
+      <div class="mnemonic-grid">
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">R</div><div class="mnemonic-desc" contenteditable="true"><strong>Rifampicin</strong> — Bactericidal. Turns body fluids orange — warn the patient. Induces liver enzymes (reduces OCP, warfarin efficacy). 6 months total.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">I</div><div class="mnemonic-desc" contenteditable="true"><strong>Isoniazid</strong> — Bactericidal. Give with pyridoxine (Vit B6) to prevent peripheral neuropathy. Hepatotoxic — monitor LFTs. 6 months total.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">P</div><div class="mnemonic-desc" contenteditable="true"><strong>Pyrazinamide</strong> — Bactericidal inside macrophages (acidic environment). Causes hyperuricaemia. First 2 months only.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">E</div><div class="mnemonic-desc" contenteditable="true"><strong>Ethambutol</strong> — Bacteriostatic. Causes optic neuritis — check visual acuity at baseline. First 2 months only.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">3</div> Slide 3 — Treatment Phases</div>
+    <div class="slide-inner">
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Intensive phase — 2 months</div>
+        <div class="drug-detail" contenteditable="true">RIPE — all four drugs. Kills rapidly dividing bacilli.</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Continuation phase — 4 months</div>
+        <div class="drug-detail" contenteditable="true">RI only — rifampicin and isoniazid. Eliminates persistent bacilli.</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Extended to 9 months for:</div>
+        <div class="drug-detail" contenteditable="true">TB meningitis, TB pericarditis, disseminated TB, spinal TB (Pott's disease).</div>
+      </div>
+      <div class="key-point" contenteditable="true">Key point: Completion matters more than speed. Partial treatment = drug resistance.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">4</div> Slide 4 — Monitoring and Pitfalls</div>
+    <div class="slide-inner">
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Baseline and monitoring</div>
+        <div class="drug-detail" contenteditable="true">LFTs at baseline. Visual acuity before ethambutol. Recheck LFTs at 2 weeks if abnormal.</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Drug interactions</div>
+        <div class="drug-detail" contenteditable="true">Rifampicin reduces efficacy of OCP, warfarin, antiretrovirals, and fluconazole.</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">HIV co-infection</div>
+        <div class="drug-detail" contenteditable="true">Start ART 2–8 weeks after TB treatment initiation. Timing depends on CD4 count.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide slide-pearl">
+    <div class="slide-label"><div class="slide-num-badge">5</div> Slide 5 — Clinical Pearl</div>
+    <div class="slide-inner">
+      <div class="pearl-text" contenteditable="true">Always test for HIV at TB diagnosis in Kenya — co-infection rates are high and change management. Defaulting at month 2 is the most dangerous point — the intensive phase is done and only the resistant bacilli remain. Rifampicin turns urine, tears, and sweat orange — counsel the patient before they present in a panic. (CTA)</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ========== POST 5 ========== -->
+<div class="post-card">
+  <div class="post-header mnemonic">
+    <div class="post-num">5</div>
+    <div class="post-meta">
+      <div class="post-category" contenteditable="true">Mnemonics · Know Your Management · 1 day</div>
+      <div class="post-title" contenteditable="true">Sepsis 6 — The Bundle That Saves Lives</div>
+    </div>
+    <div class="post-type-tag">Mnemonic</div>
+  </div>
+
+  <div class="slide slide-scenario">
+    <div class="slide-label"><div class="slide-num-badge">1</div> Slide 1 — Scenario</div>
+    <div class="slide-inner">
+      <div class="scenario-text" contenteditable="true">45-year-old woman, suspected urinary source. HR 118, RR 22, Temp 38.9°C, BP 94/60, GCS 14. She meets SIRS criteria with signs of organ dysfunction. You have one hour. What do you do?</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">2</div> Slide 2 — GIVE 3 (First Hour)</div>
+    <div class="slide-inner">
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">1. Give oxygen</div>
+        <div class="drug-detail" contenteditable="true">Target SpO2 >94%. High-flow if needed.</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">2. Give IV fluids</div>
+        <div class="drug-detail" contenteditable="true">500ml crystalloid bolus over 15–30 minutes. Repeat up to 30ml/kg if hypotensive and not fluid overloaded.</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">3. Give IV antibiotics</div>
+        <div class="drug-detail" contenteditable="true">Broad-spectrum within 1 hour of recognition. Every hour of delay increases mortality by 7%. Do not wait for cultures.</div>
+      </div>
+      <div class="key-point" contenteditable="true">Key point: Antibiotics within 1 hour is the single highest-impact intervention in sepsis.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">3</div> Slide 3 — TAKE 3 (Simultaneously)</div>
+    <div class="slide-inner">
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">1. Take blood cultures</div>
+        <div class="drug-detail" contenteditable="true">x2 sets from different sites before antibiotics if possible. Do not delay antibiotics more than 45 minutes for cultures.</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">2. Take serum lactate</div>
+        <div class="drug-detail" contenteditable="true">Lactate >2mmol/L = tissue hypoperfusion. Lactate >4 = septic shock regardless of BP. Repeat at 2 hours.</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">3. Take urine output</div>
+        <div class="drug-detail" contenteditable="true">Catheterise and measure hourly. Target >0.5ml/kg/hour. Oliguria = organ dysfunction.</div>
+      </div>
+      <div class="key-point" contenteditable="true">Key point: Lactate is the most important single prognostic marker. Check it immediately.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">4</div> Slide 4 — SIRS vs Sepsis vs Septic Shock</div>
+    <div class="slide-inner">
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">SIRS</div>
+        <div class="drug-detail" contenteditable="true">2+ of: Temp >38 or &lt;36°C, HR >90, RR >20, WBC >12 or &lt;4.</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Sepsis</div>
+        <div class="drug-detail" contenteditable="true">SIRS + suspected infection + organ dysfunction (SOFA score ≥2).</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Septic Shock</div>
+        <div class="drug-detail" contenteditable="true">Sepsis + vasopressors needed to maintain MAP ≥65 despite adequate fluids + lactate >2.</div>
+      </div>
+      <div class="key-point" contenteditable="true">Key point: Do NOT say "sepsis" without organ dysfunction. Say SIRS secondary to [source].</div>
+    </div>
+  </div>
+
+  <div class="slide slide-pearl">
+    <div class="slide-label"><div class="slide-num-badge">5</div> Slide 5 — Clinical Pearl</div>
+    <div class="slide-inner">
+      <div class="pearl-text" contenteditable="true">Start the Sepsis 6 simultaneously, not sequentially. Noradrenaline is first-line vasopressor — start at 0.01–0.03 mcg/kg/min, titrate to MAP ≥65. Hydrocortisone 200mg/day only if vasopressors are not maintaining MAP despite adequate fluids. (CTA)</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ========== POST 6 — SCENARIO/TWIST ========== -->
+<div class="post-card">
+  <div class="post-header scenario">
+    <div class="post-num">6</div>
+    <div class="post-meta">
+      <div class="post-category" contenteditable="true">Senior Peer Review · Know Your Management · 1 day</div>
+      <div class="post-title" contenteditable="true">Bacterial Meningitis — When the Picture Changes</div>
+    </div>
+    <div class="post-type-tag">Scenario / Twist</div>
+  </div>
+
+  <div class="slide slide-scenario">
+    <div class="slide-label"><div class="slide-num-badge">1</div> Slide 1 — Scenario + Original Plan</div>
+    <div class="slide-inner">
+      <div class="plan-label">Scenario</div>
+      <div class="scenario-text" contenteditable="true">19-year-old university student. 2-day history of severe headache, photophobia, neck stiffness, fever 39.2°C. GCS 14. CT head normal. LP: cloudy CSF, WBC 1200 (neutrophilic), elevated protein, low glucose.</div>
+      <div class="plan-label">Original Plan</div>
+      <div class="plan-text" contenteditable="true">Bacterial meningitis. Ceftriaxone 2g IV 12-hourly + dexamethasone 0.15mg/kg IV 6-hourly for 4 days. Supportive care — analgesia, IV fluids, strict input/output monitoring.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-twist">
+    <div class="slide-label"><div class="slide-num-badge">2</div> Slide 2 — Twist</div>
+    <div class="slide-inner">
+      <div class="twist-text" contenteditable="true">LP also shows India ink positive. CD4 returns at 45 cells/μL. The patient mentions he tested HIV positive 6 months ago but never started ART.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-revised">
+    <div class="slide-label"><div class="slide-num-badge">3</div> Slide 3 — Revised Plan</div>
+    <div class="slide-inner">
+      <div class="revised-text" contenteditable="true">Revised diagnosis: Cryptococcal meningitis in HIV. Stop ceftriaxone.
+Induction (2 weeks): Amphotericin B 0.7–1mg/kg/day IV + Flucytosine 25mg/kg QID.
+Consolidation (8 weeks): Fluconazole 400mg/day orally.
+Maintenance: Fluconazole 200mg/day lifelong or until immune reconstitution.
+ICP management: Therapeutic LP daily if opening pressure >25cmH2O. Remove 20–30ml CSF. Do not give mannitol or acetazolamide.
+ART: Start 4–6 weeks after antifungal initiation — not immediately (risk of IRIS).</div>
+    </div>
+  </div>
+
+  <div class="slide slide-reasoning">
+    <div class="slide-label"><div class="slide-num-badge">4</div> Slide 4 — Reasoning</div>
+    <div class="slide-inner">
+      <div class="reasoning-text" contenteditable="true">Cryptococcal meningitis is the leading cause of adult meningitis in HIV-positive patients in sub-Saharan Africa. India ink confirms Cryptococcus neoformans. High ICP from fungal polysaccharide capsule is the main cause of mortality — therapeutic LP is the most important intervention. Starting ART too early causes Immune Reconstitution Inflammatory Syndrome (IRIS), which worsens meningitis.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-pearl">
+    <div class="slide-label"><div class="slide-num-badge">5</div> Slide 5 — Clinical Pearl</div>
+    <div class="slide-inner">
+      <div class="pearl-text" contenteditable="true">In Kenya, always check HIV status in any patient with meningitis. Subacute onset + HIV = Cryptococcus first. Fluconazole alone as induction is inferior — do not shortcut the amphotericin phase. Headache worsening on treatment means check the opening pressure, not the antifungal choice. (CTA)</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ========== POST 7 ========== -->
+<div class="post-card">
+  <div class="post-header mnemonic">
+    <div class="post-num">7</div>
+    <div class="post-meta">
+      <div class="post-category" contenteditable="true">Mnemonics · Obstetric Emergencies · 1 day</div>
+      <div class="post-title" contenteditable="true">Eclampsia — MgSO4 Protocol and CALL Monitoring</div>
+    </div>
+    <div class="post-type-tag">Mnemonic</div>
+  </div>
+
+  <div class="slide slide-scenario">
+    <div class="slide-label"><div class="slide-num-badge">1</div> Slide 1 — Scenario</div>
+    <div class="slide-inner">
+      <div class="scenario-text" contenteditable="true">22-year-old primigravida at 36 weeks. Actively seizing. Last recorded BP 170/115. Second seizure in 30 minutes. You are the only doctor available. What do you do in the next 5 minutes?</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">2</div> Slide 2 — MgSO4 Pritchard Protocol</div>
+    <div class="slide-inner">
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Loading dose</div>
+        <div class="drug-detail" contenteditable="true">MgSO4 4g IV over 15–20 minutes (dilute in 100ml Normal Saline). Do NOT give as a bolus.</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Maintenance</div>
+        <div class="drug-detail" contenteditable="true">MgSO4 1g/hour IV infusion for 24 hours after the last seizure.</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Recurrent seizure on MgSO4</div>
+        <div class="drug-detail" contenteditable="true">Additional 2g IV bolus over 5 minutes.</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">No IV access</div>
+        <div class="drug-detail" contenteditable="true">10g IM — 5g each buttock, deeply. Loading dose only.</div>
+      </div>
+      <div class="key-point" contenteditable="true">Key point: MgSO4 is not a sedative. It prevents eclamptic seizures via NMDA receptor blockade.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">3</div> Slide 3 — Monitor for Toxicity: CALL</div>
+    <div class="slide-inner">
+      <div class="mnemonic-grid">
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">C</div><div class="mnemonic-desc" contenteditable="true"><strong>Check patellar reflex</strong> — Loss = first sign of toxicity (~5mmol/L). Stop infusion immediately.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">A</div><div class="mnemonic-desc" contenteditable="true"><strong>Assess RR</strong> — &lt;12/min = stop infusion immediately.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">L</div><div class="mnemonic-desc" contenteditable="true"><strong>Level of consciousness</strong> — Confusion or drowsiness = toxicity.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">L</div><div class="mnemonic-desc" contenteditable="true"><strong>Low urine output</strong> — Mg is renally cleared. If UO &lt;25ml/hour, halve the infusion rate.</div></div>
+      </div>
+      <div class="key-point" contenteditable="true">Antidote: Calcium gluconate 1g IV over 10 minutes. Keep at the bedside at all times.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">4</div> Slide 4 — Control BP and Deliver</div>
+    <div class="slide-inner">
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Target BP</div>
+        <div class="drug-detail" contenteditable="true">Systolic 140–150, Diastolic 90–100. Do NOT drop BP too fast.</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">First-line acute</div>
+        <div class="drug-detail" contenteditable="true">Hydralazine 5mg IV bolus every 15–20 minutes (max 20mg). Or labetalol 20mg IV. Oral: nifedipine 10mg.</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Avoid</div>
+        <div class="drug-detail" contenteditable="true">ACE inhibitors (contraindicated in pregnancy). Nitroprusside (fetal cyanide toxicity).</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Definitive treatment</div>
+        <div class="drug-detail" contenteditable="true">Delivery. Eclampsia is only cured by delivery.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide slide-pearl">
+    <div class="slide-label"><div class="slide-num-badge">5</div> Slide 5 — Clinical Pearl</div>
+    <div class="slide-inner">
+      <div class="pearl-text" contenteditable="true">MgSO4 reduces eclampsia recurrence by 52%. Never give diazepam as first-line — it sedates but does not prevent recurrence. Deliver within 12 hours of stabilisation regardless of gestational age. Postpartum eclampsia can occur up to 6 weeks after delivery — always check BP at postnatal visits. (CTA)</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ========== POST 8 ========== -->
+<div class="post-card">
+  <div class="post-header mnemonic">
+    <div class="post-num">8</div>
+    <div class="post-meta">
+      <div class="post-category" contenteditable="true">Mnemonics · Know Your Management · 1 day</div>
+      <div class="post-title" contenteditable="true">DKA — A Systematic Approach</div>
+    </div>
+    <div class="post-type-tag">Mnemonic</div>
+  </div>
+
+  <div class="slide slide-scenario">
+    <div class="slide-label"><div class="slide-num-badge">1</div> Slide 1 — Scenario</div>
+    <div class="slide-inner">
+      <div class="scenario-text" contenteditable="true">20-year-old type 1 diabetic. Drowsy (GCS 12). Deep rapid breathing (Kussmaul respiration). Fruity breath. Blood glucose 28mmol/L. Bicarbonate 8mmol/L. pH 7.12. She is in severe DKA. You have the first hour to get it right.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">2</div> Slide 2 — DKA Criteria and Severity</div>
+    <div class="slide-inner">
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">All three must be present</div>
+        <div class="drug-detail" contenteditable="true">Hyperglycaemia: BG >11mmol/L. Acidosis: pH &lt;7.3 OR bicarb &lt;15mmol/L. Ketonaemia: blood ketones >3mmol/L OR urine ketones 2+.</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Severity grading</div>
+        <div class="drug-detail" contenteditable="true">Mild: pH 7.25–7.30 · Moderate: pH 7.00–7.24 · Severe: pH &lt;7.00.</div>
+      </div>
+      <div class="key-point" contenteditable="true">Key point: Euglycaemic DKA exists — especially on SGLT2 inhibitors. Check ketones regardless of glucose level.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">3</div> Slide 3 — Fluids First</div>
+    <div class="slide-inner">
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">0.9% Normal Saline</div>
+        <div class="drug-detail" contenteditable="true">1L over 1 hour → 1L over 2 hours → 1L over 2 hours → 1L over 4 hours. Adjust based on clinical state and urine output.</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Switch when glucose &lt;14mmol/L</div>
+        <div class="drug-detail" contenteditable="true">0.45% NaCl with 5% dextrose — allows continued insulin infusion without causing hypoglycaemia.</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Potassium</div>
+        <div class="drug-detail" contenteditable="true">Add KCl to fluids once K &lt;5.5mmol/L and urine output confirmed. DKA causes total body K depletion even if serum K appears normal initially.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">4</div> Slide 4 — Insulin and Resolution</div>
+    <div class="slide-inner">
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Fixed rate IV insulin</div>
+        <div class="drug-detail" contenteditable="true">0.1 units/kg/hour. Do NOT give a bolus. Do NOT stop insulin until ketones cleared — even if glucose is normal, switch fluid to dextrose/saline instead.</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Monitor</div>
+        <div class="drug-detail" contenteditable="true">Hourly glucose and ketones. 2-hourly UECs and VBG. Strict fluid balance.</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Resolution criteria</div>
+        <div class="drug-detail" contenteditable="true">pH >7.3, bicarb >18, ketones &lt;0.6, tolerating orals. Give long-acting insulin SC, then stop infusion 1 hour later.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide slide-pearl">
+    <div class="slide-label"><div class="slide-num-badge">5</div> Slide 5 — Clinical Pearl</div>
+    <div class="slide-inner">
+      <div class="pearl-text" contenteditable="true">The commonest DKA death in young patients is cerebral oedema from over-rapid fluid correction. Do not give hypotonic fluids. The second commonest is hypokalaemia — insulin drives K intracellularly. Check K every 2 hours and replace aggressively. Bicarbonate is not routinely given — only consider if pH &lt;6.9. (CTA)</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ========== POST 9 — SCENARIO/TWIST ========== -->
+<div class="post-card">
+  <div class="post-header scenario">
+    <div class="post-num">9</div>
+    <div class="post-meta">
+      <div class="post-category" contenteditable="true">Senior Peer Review · Know Your Management · 1 day</div>
+      <div class="post-title" contenteditable="true">Sickle Cell Crisis — When Pain Progresses to Something Worse</div>
+    </div>
+    <div class="post-type-tag">Scenario / Twist</div>
+  </div>
+
+  <div class="slide slide-scenario">
+    <div class="slide-label"><div class="slide-num-badge">1</div> Slide 1 — Scenario + Original Plan</div>
+    <div class="slide-inner">
+      <div class="plan-label">Scenario</div>
+      <div class="scenario-text" contenteditable="true">16-year-old with known HbSS. Severe bilateral leg and back pain 9/10. Temp 37.4°C, SpO2 97%, HR 108. Fourth admission this year. No fever, normal CXR, normal urine.</div>
+      <div class="plan-label">Original Plan</div>
+      <div class="plan-text" contenteditable="true">Vaso-occlusive pain crisis. Ibuprofen 400mg TDS + morphine 0.1mg/kg IV PRN 2–4 hourly. IV fluids 1.5x maintenance. Oxygen only if SpO2 &lt;95%. Incentive spirometry. Monitor for acute chest syndrome.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-twist">
+    <div class="slide-label"><div class="slide-num-badge">2</div> Slide 2 — Twist</div>
+    <div class="slide-inner">
+      <div class="twist-text" contenteditable="true">At 18 hours, despite adequate morphine: fever 38.8°C, new bilateral infiltrates on CXR, SpO2 drops to 90% on 4L O2, and Hb drops from 7.2 to 5.8g/dL.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-revised">
+    <div class="slide-label"><div class="slide-num-badge">3</div> Slide 3 — Revised Plan</div>
+    <div class="slide-inner">
+      <div class="revised-text" contenteditable="true">New diagnosis: Acute Chest Syndrome (ACS) — the leading cause of death in sickle cell disease.
+Increase O2. Consider NIV or intubation if SpO2 not responding.
+Antibiotics: Ceftriaxone 2g IV daily + azithromycin 500mg daily (cover atypicals).
+Exchange transfusion: Urgent — reduces HbS% to &lt;30%. Simple transfusion if exchange unavailable.
+Bronchodilators: Salbutamol nebulisation (bronchospasm component common).
+Incentive spirometry every 2 hours.
+Admit to ICU/HDU — ACS can progress to respiratory failure within hours.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-reasoning">
+    <div class="slide-label"><div class="slide-num-badge">4</div> Slide 4 — Reasoning</div>
+    <div class="slide-inner">
+      <div class="reasoning-text" contenteditable="true">ACS diagnosis: New pulmonary infiltrate on CXR + one or more of fever, chest pain, cough, hypoxia, tachypnoea. Aetiology: fat embolism from infarcted bone marrow, infection (S. pneumoniae, Mycoplasma, Chlamydia), and in situ pulmonary sickling. Exchange transfusion is superior to simple transfusion — reduces viscosity and HbS percentage simultaneously.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-pearl">
+    <div class="slide-label"><div class="slide-num-badge">5</div> Slide 5 — Clinical Pearl</div>
+    <div class="slide-inner">
+      <div class="pearl-text" contenteditable="true">Every sickle cell admission needs a baseline SpO2 and CXR — ACS can develop in a patient who arrives without respiratory symptoms. Hydroxyurea reduces crisis frequency by 50% — if your patient has more than 3 crises per year, they need it. Penicillin prophylaxis and pneumococcal vaccination reduce ACS risk. (CTA)</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ========== POST 10 ========== -->
+<div class="post-card">
+  <div class="post-header mnemonic">
+    <div class="post-num">10</div>
+    <div class="post-meta">
+      <div class="post-category" contenteditable="true">Mnemonics · Know Your Management · 1 day</div>
+      <div class="post-title" contenteditable="true">Anaemia in Pregnancy — WHO Thresholds and FIND IT</div>
+    </div>
+    <div class="post-type-tag">Mnemonic</div>
+  </div>
+
+  <div class="slide slide-scenario">
+    <div class="slide-label"><div class="slide-num-badge">1</div> Slide 1 — Scenario</div>
+    <div class="slide-inner">
+      <div class="scenario-text" contenteditable="true">24-year-old G2P1 at 28 weeks. Fatigue, dizziness, exertional dyspnoea. Hb 8.6g/dL on routine iron and folic acid supplementation. How do you classify her anaemia and what do you do next?</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">2</div> Slide 2 — WHO Thresholds in Pregnancy</div>
+    <div class="slide-inner">
+      <div class="drug-item"><div class="drug-title" contenteditable="true">Normal in pregnancy</div><div class="drug-detail" contenteditable="true">Hb ≥11.0g/dL. Physiological haemodilution is expected.</div></div>
+      <div class="drug-item"><div class="drug-title" contenteditable="true">Mild anaemia</div><div class="drug-detail" contenteditable="true">Hb 10.0–10.9g/dL.</div></div>
+      <div class="drug-item"><div class="drug-title" contenteditable="true">Moderate anaemia</div><div class="drug-detail" contenteditable="true">Hb 7.0–9.9g/dL. This patient: Hb 8.6 = moderate.</div></div>
+      <div class="drug-item"><div class="drug-title" contenteditable="true">Severe anaemia</div><div class="drug-detail" contenteditable="true">Hb &lt;7.0g/dL.</div></div>
+      <div class="key-point" contenteditable="true">Key point: Hb 10.5 in a pregnant woman IS anaemia. Hb 10.5 in a non-pregnant woman is NOT. Know your thresholds.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">3</div> Slide 3 — FIND IT: Why Is She Anaemic?</div>
+    <div class="slide-inner">
+      <div class="mnemonic-grid">
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">F</div><div class="mnemonic-desc" contenteditable="true"><strong>Folate deficiency</strong> — Inadequate supplementation, multiple pregnancy, haemolysis.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">I</div><div class="mnemonic-desc" contenteditable="true"><strong>Iron deficiency</strong> — Most common in Kenya. Poor dietary intake, malabsorption.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">N</div><div class="mnemonic-desc" contenteditable="true"><strong>Natural haemolysis</strong> — Malaria. Always screen with RDT/thick film in endemic areas.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">D</div><div class="mnemonic-desc" contenteditable="true"><strong>Deficiency of B12</strong> — Rare but consider in strict vegetarians.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">I</div><div class="mnemonic-desc" contenteditable="true"><strong>Infection</strong> — Hookworm, HIV, chronic infection.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">T</div><div class="mnemonic-desc" contenteditable="true"><strong>Thalassaemia/Sickle cell</strong> — Haemoglobinopathy screen if Hb not responding to treatment.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">4</div> Slide 4 — Management by Severity</div>
+    <div class="slide-inner">
+      <div class="drug-item"><div class="drug-title" contenteditable="true">Mild (Hb 10–10.9)</div><div class="drug-detail" contenteditable="true">Oral ferrous sulfate 200mg TDS + folic acid 5mg daily. Review at 4 weeks.</div></div>
+      <div class="drug-item"><div class="drug-title" contenteditable="true">Moderate (Hb 7–9.9)</div><div class="drug-detail" contenteditable="true">Oral iron. Consider IV iron sucrose if non-responsive or malabsorption suspected. Treat underlying cause.</div></div>
+      <div class="drug-item"><div class="drug-title" contenteditable="true">Severe (Hb &lt;7)</div><div class="drug-detail" contenteditable="true">IV iron or blood transfusion based on symptoms. If cardiac compromise or severe dyspnoea — transfuse. Admit.</div></div>
+      <div class="key-point" contenteditable="true">Always treat malaria first if co-infection present — Hb will not recover without treating the underlying cause.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-pearl">
+    <div class="slide-label"><div class="slide-num-badge">5</div> Slide 5 — Clinical Pearl</div>
+    <div class="slide-inner">
+      <div class="pearl-text" contenteditable="true">In Kenya, always pair anaemia workup with malaria screening and deworming (mebendazole after first trimester). If Hb does not rise after 4 weeks of adequate oral iron, something is being missed — check blood film, reticulocyte count, and haemoglobin electrophoresis. Severe anaemia at delivery is a leading contributor to maternal mortality. (CTA)</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ========== POST 11 ========== -->
+<div class="post-card">
+  <div class="post-header mnemonic">
+    <div class="post-num">11</div>
+    <div class="post-meta">
+      <div class="post-category" contenteditable="true">Mnemonics · Know Your Management · 1 day</div>
+      <div class="post-title" contenteditable="true">Pneumonia Severity — CURB-65</div>
+    </div>
+    <div class="post-type-tag">Mnemonic</div>
+  </div>
+
+  <div class="slide slide-scenario">
+    <div class="slide-label"><div class="slide-num-badge">1</div> Slide 1 — Scenario</div>
+    <div class="slide-inner">
+      <div class="scenario-text" contenteditable="true">58-year-old man, 4-day productive cough, fever, right-sided pleuritic pain. CXR confirms right lower lobe consolidation. BP 88/60, urea 12mmol/L, RR 28, mildly confused. How do you risk-stratify him and decide where to manage him?</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">2</div> Slide 2 — CURB-65: One Point Each</div>
+    <div class="slide-inner">
+      <div class="mnemonic-grid">
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">C</div><div class="mnemonic-desc" contenteditable="true"><strong>Confusion</strong> — New onset, AMT ≤8.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">U</div><div class="mnemonic-desc" contenteditable="true"><strong>Urea</strong> — >7mmol/L.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">R</div><div class="mnemonic-desc" contenteditable="true"><strong>Respiratory rate</strong> — ≥30 breaths/minute.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">B</div><div class="mnemonic-desc" contenteditable="true"><strong>Blood pressure</strong> — Systolic &lt;90 or diastolic ≤60.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">65</div><div class="mnemonic-desc" contenteditable="true"><strong>Age</strong> — ≥65 years.</div></div>
+      </div>
+      <div class="key-point" contenteditable="true">This patient: C✓ U✓ R✓ B✓ = Score 4. 30-day mortality ~27%. Score 0–1: home. Score 2: consider admission. Score 3–5: hospital/ICU.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">3</div> Slide 3 — Antibiotic Selection: Kenya Context</div>
+    <div class="slide-inner">
+      <div class="drug-item"><div class="drug-title" contenteditable="true">Mild (outpatient)</div><div class="drug-detail" contenteditable="true">Amoxicillin 1g TDS x5–7 days. Add azithromycin if atypical organism suspected.</div></div>
+      <div class="drug-item"><div class="drug-title" contenteditable="true">Moderate (inpatient)</div><div class="drug-detail" contenteditable="true">IV ceftriaxone 2g daily + azithromycin 500mg daily.</div></div>
+      <div class="drug-item"><div class="drug-title" contenteditable="true">Severe (ICU)</div><div class="drug-detail" contenteditable="true">IV ceftriaxone + IV azithromycin. Escalate to piperacillin-tazobactam if hospital-acquired or aspiration suspected.</div></div>
+      <div class="key-point" contenteditable="true">Always exclude TB: Any consolidation not responding at 48–72 hours = sputum AFB. Do not assume CAP.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">4</div> Slide 4 — When to Escalate</div>
+    <div class="slide-inner">
+      <div class="drug-item"><div class="drug-title" contenteditable="true">Not improving at 48–72 hours</div><div class="drug-detail" contenteditable="true">Consider: wrong diagnosis (TB, PE, malignancy), resistant organism, empyema (USS chest), wrong dose or route.</div></div>
+      <div class="drug-item"><div class="drug-title" contenteditable="true">Pleural effusion</div><div class="drug-detail" contenteditable="true">Aspirate if >50% hemithorax, loculated, or patient not improving. Send for LDH, protein, glucose, pH, MC&amp;S, ZN stain.</div></div>
+    </div>
+  </div>
+
+  <div class="slide slide-pearl">
+    <div class="slide-label"><div class="slide-num-badge">5</div> Slide 5 — Clinical Pearl</div>
+    <div class="slide-inner">
+      <div class="pearl-text" contenteditable="true">CURB-65 underestimates severity in young patients with no comorbidities — use clinical judgement alongside the score. In Kenya, screen for HIV in any CAP admission. Upper lobe consolidation + young patient + cough >2 weeks = TB first, CAP second. Blood cultures before antibiotics in all admitted patients. (CTA)</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ========== POST 12 — SCENARIO/TWIST ========== -->
+<div class="post-card">
+  <div class="post-header scenario">
+    <div class="post-num">12</div>
+    <div class="post-meta">
+      <div class="post-category" contenteditable="true">Senior Peer Review · Know Your Management · 1 day</div>
+      <div class="post-title" contenteditable="true">Typhoid Fever — When First-Line Treatment Fails</div>
+    </div>
+    <div class="post-type-tag">Scenario / Twist</div>
+  </div>
+
+  <div class="slide slide-scenario">
+    <div class="slide-label"><div class="slide-num-badge">1</div> Slide 1 — Scenario + Original Plan</div>
+    <div class="slide-inner">
+      <div class="plan-label">Scenario</div>
+      <div class="scenario-text" contenteditable="true">17-year-old student from Nairobi. 10-day stepwise rising fever, headache, relative bradycardia, rose spots, constipation. Widal: O antigen 1:160. Blood culture: Salmonella typhi.</div>
+      <div class="plan-label">Original Plan</div>
+      <div class="plan-text" contenteditable="true">Typhoid fever confirmed. Ciprofloxacin 500mg BD orally for 10–14 days. Paracetamol, IV fluids, strict isolation. Monitor for complications.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-twist">
+    <div class="slide-label"><div class="slide-num-badge">2</div> Slide 2 — Twist</div>
+    <div class="slide-inner">
+      <div class="twist-text" contenteditable="true">Sensitivity returns showing resistance to ciprofloxacin, ampicillin, and cotrimoxazole — a pattern consistent with extensively drug-resistant (XDR) typhoid.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-revised">
+    <div class="slide-label"><div class="slide-num-badge">3</div> Slide 3 — Revised Plan</div>
+    <div class="slide-inner">
+      <div class="revised-text" contenteditable="true">Switch to: Azithromycin 1g daily orally x7 days — first-line for uncomplicated XDR typhoid.
+Severe XDR typhoid (GCS depression, perforation, shock): Meropenem 1g IV TDS x10–14 days.
+Source control: Cultures from close contacts. Report to public health — XDR typhoid is notifiable.
+Monitor for complications: Intestinal perforation (sudden peritonism = surgical emergency), haemorrhage, myocarditis, hepatitis.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-reasoning">
+    <div class="slide-label"><div class="slide-num-badge">4</div> Slide 4 — Reasoning</div>
+    <div class="slide-inner">
+      <div class="reasoning-text" contenteditable="true">XDR Salmonella typhi carries resistance genes on a transferable plasmid — first emerged in Pakistan 2016, now reported across East Africa. Azithromycin achieves high intracellular concentration and is effective for uncomplicated disease. Carbapenems reserved for severe disease. Ceftriaxone resistance is emerging — do not assume it works without sensitivity data.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-pearl">
+    <div class="slide-label"><div class="slide-num-badge">5</div> Slide 5 — Clinical Pearl</div>
+    <div class="slide-inner">
+      <div class="pearl-text" contenteditable="true">Do not treat typhoid empirically with ciprofloxacin in Kenya without sensitivity data — resistance rates are rising. The Widal test has low specificity in endemic areas — blood culture is the gold standard. Week 3 is when perforation peaks — if your typhoid patient suddenly develops acute abdomen, this is a surgical emergency with >30% mortality. (CTA)</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ========== POST 13 ========== -->
+<div class="post-card">
+  <div class="post-header mnemonic">
+    <div class="post-num">13</div>
+    <div class="post-meta">
+      <div class="post-category" contenteditable="true">Mnemonics · Know Your Labs · 1 day</div>
+      <div class="post-title" contenteditable="true">High Anion Gap Metabolic Acidosis — MUDPILES</div>
+    </div>
+    <div class="post-type-tag">Mnemonic</div>
+  </div>
+
+  <div class="slide slide-scenario">
+    <div class="slide-label"><div class="slide-num-badge">1</div> Slide 1 — Scenario</div>
+    <div class="slide-inner">
+      <div class="scenario-text" contenteditable="true">ABG returns: pH 7.18, pCO2 28, HCO3 10, Na 138, Cl 102. Anion gap = 138 – (102+10) = 26 (normal 8–12). You have a high anion gap metabolic acidosis. The ABG tells you the what. MUDPILES tells you the why.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">2</div> Slide 2 — MUDPILES</div>
+    <div class="slide-inner">
+      <div class="mnemonic-grid">
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">M</div><div class="mnemonic-desc" contenteditable="true"><strong>Methanol</strong> — Illicit alcohol ingestion. Visual symptoms. Treat with ethanol/fomepizole + dialysis.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">U</div><div class="mnemonic-desc" contenteditable="true"><strong>Uraemia</strong> — Renal failure, organic acid accumulation. Check UECs and creatinine.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">D</div><div class="mnemonic-desc" contenteditable="true"><strong>DKA</strong> — Insulin deficiency, ketoacidosis. Check ketones and glucose.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">P</div><div class="mnemonic-desc" contenteditable="true"><strong>Propylene glycol</strong> — IV medication solvent (lorazepam, phenobarbitone infusions).</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">I</div><div class="mnemonic-desc" contenteditable="true"><strong>Isoniazid / Iron toxicity</strong> — TB medication history or ingestion.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">L</div><div class="mnemonic-desc" contenteditable="true"><strong>Lactic acidosis</strong> — Most common. Sepsis, shock, metformin in AKI, liver failure.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">E</div><div class="mnemonic-desc" contenteditable="true"><strong>Ethylene glycol</strong> — Antifreeze ingestion. Calcium oxalate crystaluria. Fomepizole + dialysis.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">S</div><div class="mnemonic-desc" contenteditable="true"><strong>Salicylates</strong> — Aspirin overdose. Mixed respiratory alkalosis + metabolic acidosis pattern.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">3</div> Slide 3 — ABG Interpretation Step by Step</div>
+    <div class="slide-inner">
+      <div class="drug-item"><div class="drug-title" contenteditable="true">Step 1</div><div class="drug-detail" contenteditable="true">pH — acidosis (&lt;7.35) or alkalosis (>7.45)?</div></div>
+      <div class="drug-item"><div class="drug-title" contenteditable="true">Step 2</div><div class="drug-detail" contenteditable="true">Primary disturbance — pCO2 (respiratory) or HCO3 (metabolic)?</div></div>
+      <div class="drug-item"><div class="drug-title" contenteditable="true">Step 3</div><div class="drug-detail" contenteditable="true">Appropriate compensation? Winter's formula for metabolic acidosis: expected pCO2 = (1.5 × HCO3) + 8 ±2.</div></div>
+      <div class="drug-item"><div class="drug-title" contenteditable="true">Step 4</div><div class="drug-detail" contenteditable="true">Anion gap = Na – (Cl + HCO3). Adjust for albumin: add 2.5 per 10g/L albumin below 40.</div></div>
+      <div class="drug-item"><div class="drug-title" contenteditable="true">Step 5</div><div class="drug-detail" contenteditable="true">AG elevated = MUDPILES. AG normal = HARDUPS (hyperchloraemic acidosis).</div></div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">4</div> Slide 4 — Kenya Context: Most Common Causes</div>
+    <div class="slide-inner">
+      <div class="drug-item"><div class="drug-title" contenteditable="true">Lactic acidosis</div><div class="drug-detail" contenteditable="true">Sepsis (most common), severe malaria (impaired hepatic lactate clearance), metformin in AKI.</div></div>
+      <div class="drug-item"><div class="drug-title" contenteditable="true">DKA</div><div class="drug-detail" contenteditable="true">Type 1 DM, new-onset type 2, omitted insulin.</div></div>
+      <div class="drug-item"><div class="drug-title" contenteditable="true">Uraemia</div><div class="drug-detail" contenteditable="true">Advanced CKD, AKI from any cause.</div></div>
+      <div class="key-point" contenteditable="true">Key point: Check lactate in any unwell patient with metabolic acidosis — it is the quickest answer.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-pearl">
+    <div class="slide-label"><div class="slide-num-badge">5</div> Slide 5 — Clinical Pearl</div>
+    <div class="slide-inner">
+      <div class="pearl-text" contenteditable="true">A normal-appearing bicarbonate can mask severe acidosis if concurrent metabolic alkalosis exists (vomiting + DKA). Calculate delta-delta if AG is elevated: (AG–12)/(24–HCO3). Result >2 = concurrent metabolic alkalosis. Result &lt;1 = concurrent normal AG metabolic acidosis. The ABG never lies — the interpretation does. (CTA)</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ========== POST 14 ========== -->
+<div class="post-card">
+  <div class="post-header mnemonic">
+    <div class="post-num">14</div>
+    <div class="post-meta">
+      <div class="post-category" contenteditable="true">Mnemonics · Obstetric Emergencies · 1 day</div>
+      <div class="post-title" contenteditable="true">Preeclampsia — ABCDE Management</div>
+    </div>
+    <div class="post-type-tag">Mnemonic</div>
+  </div>
+
+  <div class="slide slide-scenario">
+    <div class="slide-label"><div class="slide-num-badge">1</div> Slide 1 — Scenario</div>
+    <div class="slide-inner">
+      <div class="scenario-text" contenteditable="true">19-year-old primigravida at 34 weeks. Headache, visual disturbances, epigastric pain. BP 158/104 on two readings 4 hours apart. Urine PCR 45mg/mmol. Platelets 92. LFTs elevated. What are you dealing with and what do you do?</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">2</div> Slide 2 — Diagnosis and Severity</div>
+    <div class="slide-inner">
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Preeclampsia definition</div>
+        <div class="drug-detail" contenteditable="true">BP ≥140/90 x2, ≥4 hours apart after 20 weeks + proteinuria (PCR ≥30mg/mmol or dipstick ≥2+) OR end-organ dysfunction even without proteinuria.</div>
+      </div>
+      <div class="drug-item">
+        <div class="drug-title" contenteditable="true">Severe features (ANY ONE)</div>
+        <div class="drug-detail" contenteditable="true">BP ≥160/110, platelets &lt;100, creatinine >97, LFTs >2× normal, pulmonary oedema, new headache/visual changes, epigastric pain.</div>
+      </div>
+      <div class="key-point" contenteditable="true">This patient: BP + proteinuria + low platelets + elevated LFTs + symptoms = Severe Preeclampsia with HELLP.</div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">3</div> Slide 3 — Management: ABCDE</div>
+    <div class="slide-inner">
+      <div class="mnemonic-grid">
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">A</div><div class="mnemonic-desc" contenteditable="true"><strong>Antihypertensives</strong> — Target BP &lt;150/100. IV labetalol or hydralazine for acute severe BP. Oral nifedipine for maintenance.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">B</div><div class="mnemonic-desc" contenteditable="true"><strong>Blood tests</strong> — FBC, UECs, LFTs, LDH, coagulation, uric acid — at diagnosis and 6–12 hourly if deteriorating.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">C</div><div class="mnemonic-desc" contenteditable="true"><strong>Control seizures</strong> — MgSO4 prophylaxis for severe features. Pritchard protocol.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">D</div><div class="mnemonic-desc" contenteditable="true"><strong>Deliver</strong> — ≥37 weeks = deliver now. 34–37 weeks with severe features = deliver after steroids. &lt;34 weeks = multidisciplinary decision.</div></div>
+        <div class="mnemonic-row"><div class="mnemonic-letter" contenteditable="true">E</div><div class="mnemonic-desc" contenteditable="true"><strong>Evaluate fetus</strong> — CTG, biophysical profile, Dopplers. Betamethasone 12mg IM x2 doses 24 hours apart if &lt;34 weeks.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide slide-content">
+    <div class="slide-label"><div class="slide-num-badge">4</div> Slide 4 — What NOT to Do</div>
+    <div class="slide-inner">
+      <div class="drug-item"><div class="drug-title" contenteditable="true">Do NOT give furosemide routinely</div><div class="drug-detail" contenteditable="true">Preeclampsia patients are intravascularly volume-depleted despite oedema. Diuretics worsen placental perfusion.</div></div>
+      <div class="drug-item"><div class="drug-title" contenteditable="true">Do NOT delay MgSO4</div><div class="drug-detail" contenteditable="true">Give before transfer if referring. Do not withhold it waiting for "one more reading."</div></div>
+      <div class="drug-item"><div class="drug-title" contenteditable="true">Do NOT discharge without follow-up</div><div class="drug-detail" contenteditable="true">BP can spike in the first 48 hours postpartum. Postpartum preeclampsia can develop up to 6 weeks after delivery.</div></div>
+    </div>
+  </div>
+
+  <div class="slide slide-pearl">
+    <div class="slide-label"><div class="slide-num-badge">5</div> Slide 5 — Clinical Pearl</div>
+    <div class="slide-inner">
+      <div class="pearl-text" contenteditable="true">Preeclampsia is a disease of the placenta — delivery is the cure, not the last resort. Antihypertensives and MgSO4 are bridges to delivery, not alternatives to it. Hypertensive disease of pregnancy is the second leading cause of maternal death in Kenya. Know this condition well. (CTA)</div>
+    </div>
+  </div>
+</div>
+
+
+<div class="footer">
+  MedFlow AI — Daily Learning Sparks &nbsp;|&nbsp; 14-Post Series &nbsp;|&nbsp; 2026 &nbsp;|&nbsp; Click any text to edit &nbsp;|&nbsp; Ctrl+P to save as PDF
+</div>
+
+</body>
+</html>

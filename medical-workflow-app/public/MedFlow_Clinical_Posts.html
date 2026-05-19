@@ -1,0 +1,2155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MedFlow AI — Clinical Reasoning Posts</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f4f6f9;
+      color: #1a1a2e;
+      font-size: 13.5px;
+      line-height: 1.7;
+    }
+
+    /* Edit banner */
+    .edit-banner {
+      background: #1b5e20;
+      color: #fff;
+      text-align: center;
+      padding: 10px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .edit-banner span { opacity: 0.7; font-weight: 400; margin-left: 8px; }
+
+    /* Cover */
+    .cover {
+      background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #00695c 100%);
+      color: white;
+      padding: 70px 60px;
+      min-height: 220px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .cover h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px; }
+    .cover h2 { font-size: 17px; font-weight: 400; opacity: 0.8; margin-bottom: 16px; }
+    .cover .meta { font-size: 12px; opacity: 0.6; }
+
+    /* Format guide */
+    .format-guide {
+      background: #fff;
+      border-left: 5px solid #283593;
+      margin: 30px 40px;
+      padding: 22px 28px;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .format-guide h2 { font-size: 15px; color: #283593; font-weight: 700; margin-bottom: 12px; }
+    .format-guide p { font-size: 13px; color: #333; margin-bottom: 6px; }
+    .format-guide ul { padding-left: 18px; margin-top: 6px; }
+    .format-guide li { font-size: 13px; color: #333; margin-bottom: 4px; }
+
+    /* Week header */
+    .week-header {
+      background: linear-gradient(135deg, #1a237e, #283593);
+      color: white;
+      margin: 30px 40px 0;
+      padding: 16px 28px;
+      border-radius: 8px 8px 0 0;
+    }
+    .week-header h2 { font-size: 18px; font-weight: 800; }
+    .week-header p { font-size: 12px; opacity: 0.75; margin-top: 3px; }
+
+    /* Week body */
+    .week-body {
+      background: #fff;
+      margin: 0 40px 36px;
+      border-radius: 0 0 8px 8px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      overflow: hidden;
+    }
+
+    /* Post card */
+    .post-card {
+      border-bottom: 1px solid #e8edf5;
+      padding: 0;
+    }
+    .post-card:last-child { border-bottom: none; }
+
+    .post-day {
+      background: #f0f4ff;
+      padding: 9px 24px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: #283593;
+      border-bottom: 1px solid #e0e7ff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .day-num {
+      background: #283593;
+      color: white;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+    .specialty-tag {
+      margin-left: auto;
+      background: #e8f0fe;
+      color: #1a237e;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .post-inner { padding: 20px 28px; }
+
+    /* Hook section */
+    .hook-block {
+      background: #f8f9fe;
+      border-left: 4px solid #283593;
+      border-radius: 0 6px 6px 0;
+      padding: 14px 18px;
+      margin-bottom: 18px;
+    }
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      margin-bottom: 8px;
+    }
+    .hook-label { color: #283593; }
+    .medflow-label { color: #00695c; }
+    .impression-label { color: #b71c1c; }
+
+    .hook-text {
+      font-size: 13.5px;
+      line-height: 1.75;
+      color: #1a1a2e;
+      white-space: pre-wrap;
+    }
+    .hook-line { display: block; margin-bottom: 2px; }
+    .hook-clue {
+      display: block;
+      margin-top: 8px;
+      font-weight: 700;
+      color: #283593;
+      font-style: italic;
+    }
+
+    /* MedFlow output section */
+    .medflow-block {
+      background: #f0faf9;
+      border: 1px solid #b2dfdb;
+      border-radius: 6px;
+      padding: 16px 18px;
+      margin-bottom: 14px;
+    }
+    .medflow-block .medflow-label { color: #00695c; margin-bottom: 10px; }
+
+    .differential {
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px dashed #b2dfdb;
+    }
+    .differential:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+    .diff-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #00695c;
+      margin-bottom: 4px;
+    }
+    .diff-tests {
+      font-size: 12.5px;
+      color: #333;
+      line-height: 1.6;
+      white-space: pre-line;
+    }
+    .diff-rule {
+      font-size: 12px;
+      color: #555;
+      font-style: italic;
+      margin-top: 2px;
+      white-space: pre-line;
+    }
+
+    /* Impression */
+    .impression-block {
+      background: #ffebee;
+      border: 1px solid #ffcdd2;
+      border-radius: 6px;
+      padding: 14px 18px;
+    }
+    .impression-block .impression-label { margin-bottom: 6px; }
+    .impression-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #b71c1c;
+      margin-bottom: 6px;
+    }
+    .impression-reasoning {
+      font-size: 13px;
+      color: #3e2723;
+      line-height: 1.65;
+    }
+
+    /* Editable styles */
+    [contenteditable="true"] {
+      cursor: text;
+      border-radius: 4px;
+      transition: outline 0.15s, background 0.15s;
+      outline: 2px dashed transparent;
+    }
+    [contenteditable="true"]:hover {
+      outline: 2px dashed #283593;
+      background: #f0f7ff !important;
+    }
+    [contenteditable="true"]:focus {
+      outline: 2px solid #283593;
+      background: #e8f0fe !important;
+      box-shadow: 0 0 0 3px rgba(40,53,147,0.12);
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 28px;
+      font-size: 11px;
+      color: #999;
+    }
+
+    /* Print */
+    @media print {
+      body { background: white; }
+      .edit-banner { display: none; }
+      .cover, .week-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .day-num, .specialty-tag { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .post-day { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .week-body { box-shadow: none; border: 1px solid #ddd; }
+      .post-card { page-break-inside: avoid; }
+      [contenteditable="true"] { outline: none !important; background: inherit !important; box-shadow: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- EDIT BANNER -->
+<div class="edit-banner">
+  Click any text to edit directly in the browser
+  <span>— Ctrl+P → Save as PDF when ready</span>
+</div>
+
+<!-- COVER -->
+<div class="cover">
+  <h1>MedFlow AI</h1>
+  <h2>Clinical Reasoning Posts — 2-Week Series</h2>
+  <div class="meta">Format: Clinical clue → MedFlow differentials + tests → Impression &nbsp;|&nbsp; X &amp; TikTok</div>
+</div>
+
+<!-- FORMAT GUIDE -->
+<div class="format-guide">
+  <h2>How to Use These Posts</h2>
+  <p><strong>On X:</strong> Post the hook block as the opening tweet. Post the MedFlow output + impression as the first reply (thread). This keeps the hook clean and the clinical detail accessible for those who want it.</p>
+  <p><strong>On TikTok:</strong> Read the hook aloud (0–15s). Pause after the clue line. Then: "Here's what MedFlow gave for this case" — screen-record the MedFlow output being generated (15–55s). Close with the impression (55–60s).</p>
+  <ul>
+    <li>Never read the differentials robotically — say "MedFlow flagged three things" and walk through them conversationally.</li>
+    <li>Pause after the clue line every time. That pause is where the viewer stops scrolling.</li>
+    <li>The impression line is the payoff. Deliver it slowly and with confidence.</li>
+  </ul>
+</div>
+
+
+<!-- ==================== WEEK 1 ==================== -->
+<div class="week-header">
+  <h2>Week 1</h2>
+  <p>Internal medicine, respiratory, cardiology, endocrinology, neurology</p>
+</div>
+<div class="week-body">
+
+  <!-- POST 1 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">1</div>
+      Monday
+      <span class="specialty-tag">Respiratory / Infectious</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">You treated "community-acquired pneumonia" with amoxicillin for 5 days.</span><span class="hook-line">No improvement. Temperature still 38.9. Night sweats started.</span><span class="hook-clue">It was never pneumonia. The chest X-ray just looked that way.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Pulmonary Tuberculosis</div>
+          <div class="diff-tests" contenteditable="true">Sputum AFB x3, GeneXpert MTB/RIF, Mantoux/IGRA, CXR (upper lobe pattern, cavitation).</div>
+          <div class="diff-rule" contenteditable="true">Rules in: positive AFB smear or GeneXpert. Rules out: negative GeneXpert + negative culture at 6 weeks (with low pre-test probability).</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — Pulmonary Lymphoma</div>
+          <div class="diff-tests" contenteditable="true">CT chest (hilar/mediastinal adenopathy), LDH, serum protein electrophoresis, bronchoscopy with BAL and biopsy.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: hilar adenopathy + histological confirmation on biopsy. Rules out: normal CT and LDH with alternative diagnosis confirmed.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Pulmonary Vasculitis (GPA)</div>
+          <div class="diff-tests" contenteditable="true">ANCA (PR3/MPO), urine dipstick for haematuria, CT chest (cavitating nodules), renal function.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: positive PR3-ANCA + cavitating lesions + renal involvement + biopsy. Rules out: negative ANCA with alternative diagnosis confirmed.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Pulmonary Tuberculosis</div>
+        <div class="impression-reasoning" contenteditable="true">Antibiotic failure at 5 days + night sweats + upper lobe pattern = TB until proven otherwise. Isolate the patient. Initiate sputum collection. Refer to infectious disease before changing antibiotics empirically.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 2 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">2</div>
+      Tuesday
+      <span class="specialty-tag">Haematology / Gastroenterology</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Young woman. Iron deficiency anaemia confirmed. Started on oral iron.</span><span class="hook-line">Three months later — haemoglobin unchanged.</span><span class="hook-clue">The iron is not the problem. Something is stopping it from being absorbed.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Coeliac Disease</div>
+          <div class="diff-tests" contenteditable="true">Anti-tTG IgA + total IgA (to exclude IgA deficiency), upper GI endoscopy with duodenal biopsies (Marsh classification).</div>
+          <div class="diff-rule" contenteditable="true">Rules in: positive anti-tTG + villous atrophy on biopsy. Rules out: negative serology + normal duodenal histology.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — H. pylori Gastritis</div>
+          <div class="diff-tests" contenteditable="true">Urea breath test or stool antigen (off PPI x2 weeks before testing), upper GI endoscopy.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: positive breath test or stool antigen + response to eradication therapy. Rules out: negative test on adequate washout.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Ongoing Occult GI Blood Loss</div>
+          <div class="diff-tests" contenteditable="true">Faecal occult blood, colonoscopy, capsule endoscopy if colonoscopy negative.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: active bleeding source identified on endoscopy. Rules out: normal complete GI evaluation.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Coeliac Disease</div>
+        <div class="impression-reasoning" contenteditable="true">Non-response to oral iron in a young woman is malabsorption until proven otherwise. Screen with anti-tTG IgA before scoping. Do not increase the iron dose — find why it is not working.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 3 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">3</div>
+      Wednesday
+      <span class="specialty-tag">Respiratory / ENT</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Patient admitted with a "flare of asthma." Salbutamol given. No relief.</span><span class="hook-line">You listen again. The wheeze is loudest over the trachea, not the lung bases.</span><span class="hook-clue">It was never asthma. The obstruction is above the carina.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Tracheal Stenosis</div>
+          <div class="diff-tests" contenteditable="true">CT neck and chest (axial cuts through trachea), flow-volume loop (inspiratory plateau pattern), direct laryngoscopy.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: fixed narrowing on CT + flat inspiratory loop. Rules out: normal CT tracheal diameter + normal flow-volume loop.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — Laryngeal or Tracheal Mass</div>
+          <div class="diff-tests" contenteditable="true">Nasolaryngoscopy, CT neck with contrast, biopsy of any identified lesion.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: mass lesion on scope with histological confirmation. Rules out: normal laryngoscopy and CT.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Vocal Cord Dysfunction</div>
+          <div class="diff-tests" contenteditable="true">Flow-volume loop (variable extrathoracic obstruction — flattened inspiratory limb), laryngoscopy during symptomatic episode.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: paradoxical vocal cord adduction on laryngoscopy during episode. Rules out: normal laryngoscopy during symptoms.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Upper Airway Obstruction</div>
+        <div class="impression-reasoning" contenteditable="true">Monophonic wheeze loudest over the trachea is a large airway sign, not a small airway sign. Salbutamol will not help. Stop it. Get ENT. The flow-volume loop is the next investigation — not another nebuliser.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 4 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">4</div>
+      Thursday
+      <span class="specialty-tag">Cardiology / Rheumatology</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">28-year-old. Hypertension found incidentally. Started on amlodipine.</span><span class="hook-line">You check BP in both arms. Right: 160/100. Left: 112/74.</span><span class="hook-clue">The asymmetry just told you this isn't essential hypertension.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Takayasu's Arteritis</div>
+          <div class="diff-tests" contenteditable="true">ESR, CRP, CT angiography of aorta and branches (vessel wall thickening, stenosis, aneurysm), PET-CT if CT equivocal.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: vessel wall inflammation/stenosis on CTA + elevated inflammatory markers in a young woman. Rules out: normal CTA with alternative vascular cause identified.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — Coarctation of the Aorta (proximal to left subclavian)</div>
+          <div class="diff-tests" contenteditable="true">4-limb BP measurement (arm > leg), ECG (LVH), CXR (rib notching, figure-of-3 sign), CT aortogram, echocardiogram.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: pressure gradient on imaging + arm-leg BP discrepancy. Rules out: normal CT aortogram.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Aortic Dissection (Stanford B, involving left subclavian)</div>
+          <div class="diff-tests" contenteditable="true">Urgent CT angiography chest/abdomen/pelvis.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: intimal flap on CTA. Rules out: no dissection on CTA.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Takayasu's Arteritis</div>
+        <div class="impression-reasoning" contenteditable="true">Young patient + inter-arm BP difference >10mmHg + hypertension = large vessel vasculitis until excluded. Do not simply titrate the antihypertensive. Get the CTA. Check ESR and CRP today.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 5 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">5</div>
+      Friday
+      <span class="specialty-tag">Neurology / Nephrology</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Patient came in confused. CT head normal. Lumbar puncture normal.</span><span class="hook-line">You review the drug chart. She's been on 80mg furosemide daily for two weeks.</span><span class="hook-clue">The brain is fine. Check the sodium.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Diuretic-Induced Hyponatraemia</div>
+          <div class="diff-tests" contenteditable="true">Serum Na, serum osmolality, urine Na, urine osmolality, serum K (co-depletion common).</div>
+          <div class="diff-rule" contenteditable="true">Rules in: serum Na &lt;130 + urine Na >20 on loop diuretic + resolution with electrolyte correction. Rules out: normal serum Na.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — Hypomagnesaemia</div>
+          <div class="diff-tests" contenteditable="true">Serum magnesium (often co-depleted with loop diuretics and frequently not checked).</div>
+          <div class="diff-rule" contenteditable="true">Rules in: Mg &lt;0.7mmol/L + symptom resolution on replacement. Rules out: normal serum magnesium.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Wernicke's Encephalopathy</div>
+          <div class="diff-tests" contenteditable="true">Thiamine level, MRI brain (mamillary body and periaqueductal signal change), empirical IV thiamine 500mg TDS x3 days if clinical suspicion high.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: clinical triad (confusion + ophthalmoplegia + ataxia) + MRI findings. Rules out: no nutritional risk factors + alternative diagnosis confirmed.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Diuretic-Induced Hyponatraemia</div>
+        <div class="impression-reasoning" contenteditable="true">Loop diuretic + confusion + normal structural imaging = electrolyte cause first. Draw UECs before ordering the next investigation. Hyponatraemia at this level is enough to explain a GCS of 14.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 6 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">6</div>
+      Saturday
+      <span class="specialty-tag">Cardiology / Nephrology</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">You gave 2 litres of IV saline to a patient in "dehydration."</span><span class="hook-line">An hour later she's more short of breath than when she arrived.</span><span class="hook-clue">You treated the wrong diagnosis. Now find the right one.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Acute Decompensated Heart Failure</div>
+          <div class="diff-tests" contenteditable="true">BNP or NT-proBNP, CXR (pulmonary oedema, cardiomegaly, Kerley B lines), ECG, echocardiogram.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: elevated BNP + pulmonary oedema on CXR + echo showing reduced EF or diastolic dysfunction. Rules out: normal BNP + normal CXR + normal echo.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — SIADH Worsened by Isotonic Saline</div>
+          <div class="diff-tests" contenteditable="true">Serum Na, serum osmolality, urine Na, urine osmolality (urine osmolality >100mOsm/kg in a hypotonic patient = SIADH).</div>
+          <div class="diff-rule" contenteditable="true">Rules in: euvolaemic hyponatraemia + urine Na >40 + urine osmolality > serum osmolality. Rules out: normal serum Na.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Nephrotic Syndrome</div>
+          <div class="diff-tests" contenteditable="true">Urine protein:creatinine ratio, serum albumin, lipid profile, renal USS, renal biopsy if indicated.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: proteinuria >3.5g/day + hypoalbuminaemia &lt;30 + oedema. Rules out: normal urine protein and albumin.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Acute Decompensated Cardiac Failure</div>
+        <div class="impression-reasoning" contenteditable="true">Fluid-responsive dehydration improves with fluid. If the patient deteriorates after 2L of saline, the diagnosis was wrong. Check the BNP. Get the CXR. The fluid may have just tipped her into pulmonary oedema.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 7 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">7</div>
+      Sunday
+      <span class="specialty-tag">Endocrinology</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">19-year-old male. Brought in by his mother. "He's been sad for months."</span><span class="hook-line">On examination: slow movements, dry skin, cold hands, constipation, bradycardia.</span><span class="hook-clue">This isn't depression. Check the TSH.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Primary Hypothyroidism</div>
+          <div class="diff-tests" contenteditable="true">TSH (sensitive first-line test), free T4. If TSH elevated, confirm with free T4 before treating.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: elevated TSH + low free T4. Rules out: normal TSH (primary hypothyroidism excluded; consider central if high suspicion).</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — Addison's Disease (Primary Adrenal Insufficiency)</div>
+          <div class="diff-tests" contenteditable="true">Morning cortisol (8am), ACTH stimulation test, serum electrolytes (hyponatraemia + hyperkalaemia), ACTH level.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: failure to mount cortisol response >550nmol/L on ACTH stimulation + electrolyte pattern. Rules out: normal cortisol response.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Young-Onset Parkinson's Disease</div>
+          <div class="diff-tests" contenteditable="true">Clinical assessment (resting tremor, cogwheel rigidity, postural instability), DAT-SPECT scan, neurology referral.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: asymmetric parkinsonism + dopamine transporter deficit on SPECT. Rules out: no extrapyramidal features + alternative diagnosis confirmed.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Primary Hypothyroidism</div>
+        <div class="impression-reasoning" contenteditable="true">Bradycardia + cold intolerance + constipation + psychomotor slowing in a 19-year-old is a metabolic diagnosis first. Check the TSH before starting an antidepressant. It costs almost nothing and takes 24 hours.</div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- end week 1 -->
+
+
+<!-- ==================== WEEK 2 ==================== -->
+<div class="week-header">
+  <h2>Week 2</h2>
+  <p>Gastroenterology, surgery, haematology, obstetrics, neurology, infectious disease</p>
+</div>
+<div class="week-body">
+
+  <!-- POST 8 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">8</div>
+      Monday
+      <span class="specialty-tag">Gastroenterology</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Epigastric pain. Worse at night. Relieved by eating. Treated as gastritis for 3 months.</span><span class="hook-line">You scope him. Ulcers in the stomach and the third part of the duodenum simultaneously.</span><span class="hook-clue">One ulcer is a problem. Multiple ulcers in unusual locations is a diagnosis.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Zollinger-Ellison Syndrome (Gastrinoma)</div>
+          <div class="diff-tests" contenteditable="true">Fasting serum gastrin (off PPI x2 weeks), secretin stimulation test (gold standard), CT/MRI pancreas and duodenum, somatostatin receptor scintigraphy (Octreoscan).</div>
+          <div class="diff-rule" contenteditable="true">Rules in: fasting gastrin >1000pg/mL + >200pg/mL rise after secretin + pancreatic/duodenal mass. Rules out: normal fasting gastrin on adequate PPI washout.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — H. pylori with Complicated Ulcer Disease</div>
+          <div class="diff-tests" contenteditable="true">Rapid urease test on biopsy (at endoscopy), urea breath test (off PPI x2 weeks), stool antigen.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: positive H. pylori + typical single/duodenal ulcer pattern + response to eradication. Rules out: negative testing on adequate washout.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Crohn's Disease (Gastroduodenal)</div>
+          <div class="diff-tests" contenteditable="true">CT enterography, ileocolonoscopy with biopsies, faecal calprotectin, CRP.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: transmural granulomatous inflammation on biopsy + skip lesions on CT. Rules out: normal ileocolonoscopy and CT enterography.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Zollinger-Ellison Syndrome</div>
+        <div class="impression-reasoning" contenteditable="true">Distal duodenal ulcer + multiple simultaneous ulcers + PPI failure = gastrinoma until excluded. Do not scope and discharge. Check the fasting gastrin. If elevated, the tumour needs to be found — it may be malignant.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 9 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">9</div>
+      Tuesday
+      <span class="specialty-tag">Surgery / Post-operative</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Post-op day 2. Patient spiked a fever of 38.4°C.</span><span class="hook-line">You start antibiotics.</span><span class="hook-clue">The fever on post-op day 2 is almost never infection. You just treated the wrong thing.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered — The 5 W's of Post-operative Fever</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Wind — Days 1–2 (Atelectasis)</div>
+          <div class="diff-tests" contenteditable="true">Clinical: decreased air entry, dullness at bases. CXR. Incentive spirometry, chest physiotherapy, early mobilisation.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: clinical + CXR findings. Treatment: physiotherapy, NOT antibiotics.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Water — Days 3–5 (UTI)</div>
+          <div class="diff-tests" contenteditable="true">Urine dipstick, urine MC&amp;S. Common if urinary catheter in situ.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: positive nitrites/leucocytes on dipstick + positive MC&amp;S. Treat per sensitivities.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Wound — Days 5–7 (Surgical Site Infection)</div>
+          <div class="diff-tests" contenteditable="true">Wound inspection (erythema, induration, discharge), wound swab MC&amp;S.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: clinical signs of wound infection + positive swab culture.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Walking — Days 5+ (DVT / PE)</div>
+          <div class="diff-tests" contenteditable="true">D-dimer, USS doppler lower limbs, CTPA if PE suspected. Wells score to guide investigation.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: positive CTPA or USS. Anticoagulate immediately if confirmed.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Wonder Drugs — Any Day (Drug Fever)</div>
+          <div class="diff-tests" contenteditable="true">Review drug chart. Withdrawal of offending agent. Diagnosis of exclusion.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: fever resolves within 72 hours of drug withdrawal. Rules out: fever persists after withdrawal.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Post-operative Atelectasis (Day 2)</div>
+        <div class="impression-reasoning" contenteditable="true">Day 2 post-op fever is atelectasis until proven otherwise. Encourage deep breathing and early ambulation. Hold antibiotics unless a specific infectious source is identified. Starting antibiotics reflexively on day 2 fever is one of the most common errors on surgical wards.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 10 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">10</div>
+      Wednesday
+      <span class="specialty-tag">Haematology / Rheumatology</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">32-year-old woman. Second unprovoked DVT in 18 months. No surgery, no long flights.</span><span class="hook-line">You ask about family history. Her mother had a stroke at 40.</span><span class="hook-clue">Unprovoked. Recurrent. Familial. The clot is a symptom, not the diagnosis.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Antiphospholipid Syndrome</div>
+          <div class="diff-tests" contenteditable="true">Lupus anticoagulant, anticardiolipin IgG/IgM, anti-β2-glycoprotein I IgG/IgM — must be positive on two occasions at least 12 weeks apart.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: positive on two separate occasions 12 weeks apart in a patient with thrombosis or obstetric morbidity. Rules out: consistently negative antibody panel.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — Inherited Thrombophilia</div>
+          <div class="diff-tests" contenteditable="true">Factor V Leiden (PCR), Prothrombin G20210A mutation (PCR), Protein C activity, Protein S antigen, Antithrombin III levels — test off anticoagulation.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: identified mutation or deficiency. Rules out: normal full thrombophilia screen off anticoagulation.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Occult Malignancy</div>
+          <div class="diff-tests" contenteditable="true">CT chest/abdomen/pelvis, FBC + blood film, LDH, tumour markers where clinically appropriate.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: mass lesion or haematological malignancy on investigation. Rules out: normal CT and blood film.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Antiphospholipid Syndrome</div>
+        <div class="impression-reasoning" contenteditable="true">Young woman + recurrent unprovoked venous thrombosis + family history of early arterial event = APS first. Test before labelling her a thrombophilia and committing to lifelong anticoagulation without a diagnosis. The antibody panel is the starting point.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 11 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">11</div>
+      Thursday
+      <span class="specialty-tag">Haematology</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Patient's urine turned dark brown after an acute illness.</span><span class="hook-line">LFTs: normal. Bilirubin: normal. Urobilinogen: elevated.</span><span class="hook-clue">The liver is not the problem. Something is happening upstream of it.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Haemolytic Anaemia</div>
+          <div class="diff-tests" contenteditable="true">FBC + blood film (spherocytes, schistocytes, polychromasia), reticulocyte count, LDH, haptoglobin (low in haemolysis), direct Coombs test (DAT), bilirubin fractions (unconjugated elevated).</div>
+          <div class="diff-rule" contenteditable="true">Rules in: raised LDH + low haptoglobin + raised unconjugated bilirubin + abnormal blood film. Rules out: normal haptoglobin + normal blood film.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — Rhabdomyolysis</div>
+          <div class="diff-tests" contenteditable="true">Serum CK (markedly elevated), urine myoglobin, UECs (acute kidney injury — the main complication), urine dipstick (blood positive, no RBCs on microscopy).</div>
+          <div class="diff-rule" contenteditable="true">Rules in: CK >1000 IU/L + myoglobinuria + urine blood positive without RBCs on microscopy. Rules out: normal CK.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — G6PD Deficiency (Oxidative Haemolysis)</div>
+          <div class="diff-tests" contenteditable="true">G6PD enzyme assay (test after acute episode resolves — reticulocytes can give falsely normal result acutely), blood film (bite cells, Heinz bodies on supravital stain).</div>
+          <div class="diff-rule" contenteditable="true">Rules in: enzyme deficiency on assay + bite cells on film + trigger identified (acute illness, drug, food). Rules out: normal enzyme level on repeat testing when stable.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Haemolytic Anaemia — Query G6PD Deficiency</div>
+        <div class="impression-reasoning" contenteditable="true">Dark urine after acute illness with normal LFTs = red cell destruction, not liver disease. Elevated urobilinogen confirms the bilirubin load is coming from haemolysis. Check the film. Check the enzyme — but wait until the acute episode settles for an accurate result.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 12 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">12</div>
+      Friday
+      <span class="specialty-tag">Obstetrics</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Pregnant woman at 32 weeks. BP 148/96. Mild headache.</span><span class="hook-line">Urine: 2+ protein. Platelets: 89. LFTs elevated.</span><span class="hook-clue">She doesn't have hypertension. She has a syndrome — and it's worsening.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — HELLP Syndrome</div>
+          <div class="diff-tests" contenteditable="true">FBC (thrombocytopaenia, anaemia), blood film (schistocytes — microangiopathic haemolytic anaemia), LDH (elevated), LFTs (AST/ALT elevated), uric acid, urine protein:creatinine ratio.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: Haemolysis (abnormal film + raised LDH) + Elevated Liver enzymes + Low Platelets &lt;100. Rules out: normal platelet count + normal LFTs + no haemolysis.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — Acute Fatty Liver of Pregnancy</div>
+          <div class="diff-tests" contenteditable="true">Blood glucose (hypoglycaemia), coagulation screen (prolonged PT/APTT), ammonia, LFTs, USS liver (echogenic liver), liver biopsy if diagnosis uncertain.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: hypoglycaemia + coagulopathy + hepatic dysfunction in third trimester + microvesicular steatosis on biopsy. Rules out: normal glucose + normal coagulation.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Thrombotic Thrombocytopenic Purpura (TTP)</div>
+          <div class="diff-tests" contenteditable="true">Blood film (schistocytes), ADAMTS13 activity level, LDH, renal function.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: ADAMTS13 activity &lt;10% + schistocytes + neurological involvement. Rules out: normal ADAMTS13 activity.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">HELLP Syndrome</div>
+        <div class="impression-reasoning" contenteditable="true">Thrombocytopaenia + elevated LFTs + proteinuric hypertension at 32 weeks = HELLP. This is not managed outpatient. Admit immediately. Obstetrics and haematology today. Delivery timing is a clinical decision — but the decision needs to happen now.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 13 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">13</div>
+      Saturday
+      <span class="specialty-tag">Neurology / Geriatrics</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Elderly man on warfarin. Collapsed at home. GCS 14 on arrival. CT head: normal.</span><span class="hook-line">The fall was 3 weeks ago.</span><span class="hook-clue">A normal CT today doesn't mean what you think it means.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Chronic Subdural Haematoma</div>
+          <div class="diff-tests" contenteditable="true">MRI brain (isodense haematoma invisible on standard CT at 3 weeks — MRI FLAIR/T1 identifies it), repeat CT at 4–6 weeks if MRI unavailable, neurosurgery review.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: crescent-shaped collection on MRI + head trauma history + anticoagulation. Rules out: completely normal MRI at appropriate time post-injury.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — Subacute Subdural Haematoma (Evolving)</div>
+          <div class="diff-tests" contenteditable="true">CT head with thin cuts and bone windows, MRI FLAIR sequence. The isodense phase (approximately days 7–21) is the most dangerous — it looks normal on standard CT windows.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: hypodense or isodense collection on MRI at appropriate timeline. Rules out: normal MRI.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Supratherapeutic Anticoagulation as Contributing Factor</div>
+          <div class="diff-tests" contenteditable="true">INR, PT, APTT. Does not change the need for imaging — but influences management if a bleed is found.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: INR >4 as a contributing factor. Do not withhold imaging because the INR is normal.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Chronic Subdural Haematoma</div>
+        <div class="impression-reasoning" contenteditable="true">Warfarin + head trauma 3 weeks ago + fluctuating GCS = isodense subdural on CT that looks completely normal. CT sensitivity at 3 weeks is approximately 70%. A normal CT is not a normal brain. Get the MRI. Reverse the anticoagulation while you wait for it.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 14 -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">14</div>
+      Sunday
+      <span class="specialty-tag">Infectious Disease / Rheumatology</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">You started IV antibiotics for sepsis. 48 hours later the patient is worse.</span><span class="hook-line">Temperature up. WBC up. CRP up. Blood cultures: negative.</span><span class="hook-clue">Negative cultures on empirical antibiotics are not reassurance. They are a question.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Here's what MedFlow offered in this situation</div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 1 — Adult-Onset Still's Disease</div>
+          <div class="diff-tests" contenteditable="true">Serum ferritin (>10,000 in Still's — often in the tens of thousands), ANA, RF (both negative in Still's), CRP, LFTs, blood film.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: quotidian fever + evanescent salmon-coloured rash + arthralgia + extreme hyperferritinaemia + negative ANA/RF. Rules out: alternative infectious or malignant cause identified.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 2 — Haematological Malignancy (Lymphoma)</div>
+          <div class="diff-tests" contenteditable="true">CT chest/abdomen/pelvis, FBC + blood film, LDH, uric acid, bone marrow biopsy if indicated.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: lymphadenopathy + constitutional symptoms + abnormal blood film + histological confirmation. Rules out: normal CT and bone marrow biopsy.</div>
+        </div>
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Differential 3 — Culture-Negative Endocarditis</div>
+          <div class="diff-tests" contenteditable="true">Transoesophageal echocardiogram (TOE — more sensitive than TTE for vegetations), serology for HACEK organisms, Coxiella burnetii, Bartonella spp., Brucella spp.</div>
+          <div class="diff-rule" contenteditable="true">Rules in: vegetation on TOE + epidemiological exposure + modified Duke criteria. Rules out: normal TOE + negative extended serology.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Non-Infectious Systemic Inflammatory Condition — Query Adult-Onset Still's Disease</div>
+        <div class="impression-reasoning" contenteditable="true">Antibiotic failure at 48 hours + negative cultures + rising inflammatory markers = stop assuming infection. The ferritin is the next investigation. If it is four or five digits, you have your answer. Check it before ordering another antibiotic.</div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- end week 2 -->
+
+
+<!-- ==================== WEEK 3 — PAEDIATRICS ==================== -->
+<div class="week-header">
+  <h2>Week 3 — Paediatrics</h2>
+  <p>Convulsions · Dehydration · HIV/PMTCT · Birth Asphyxia &amp; CPAP</p>
+</div>
+<div class="week-body">
+
+  <!-- POST 15: Convulsions — Classification of Causes -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">15</div>
+      Monday
+      <span class="specialty-tag">Paediatrics / Neurology</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">You gave the anticonvulsant. The seizure stopped.</span><span class="hook-line">You wrote "febrile convulsion" and planned discharge.</span><span class="hook-line">Her capillary blood glucose was 1.2 mmol/L. Nobody had checked.</span><span class="hook-clue">She was back 4 hours later — seizing again. The fever was never the cause.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Convulsions in Children — Classification of Causes</div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Metabolic Causes — Remember MATCH</div>
+          <div class="diff-tests" contenteditable="true">M — Magnesium low (hypomagnesaemia — neonates, malnutrition)
+A — Ammonia high (inborn errors of metabolism, urea cycle defects)
+T — Timber! Glucose low (hypoglycaemia — the most common missed metabolic cause; check BGL in every seizing child)
+C — Calcium low (hypocalcaemia — neonates, vitamin D deficiency, hypoparathyroidism)
+H — Hyponatraemia (Na &lt;125 mmol/L — dilutional, gastroenteritis with hypotonic fluids)
+
+First-line bedside tests: capillary blood glucose, Na, Ca, Mg.</div>
+          <div class="diff-rule" contenteditable="true">Rule: "Febrile convulsion" is a diagnosis of exclusion. Check the glucose before you use that label — every time, without exception.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Infectious Causes — Remember BEAM</div>
+          <div class="diff-tests" contenteditable="true">B — Bacterial meningitis (fever + seizure + neck stiffness or bulging fontanelle → LP after stabilisation; do NOT delay antibiotics for imaging in a sick child)
+E — Encephalitis (viral — HSV most important; altered consciousness + personality change + fever → aciclovir empirically while awaiting PCR)
+A — Abscess (cerebral — subacute onset, focal neurological signs, raised ICP → CT with contrast first)
+M — Malaria (cerebral malaria — P. falciparum; any febrile child with seizures in an endemic region → thick &amp; thin blood film immediately)
+
+Key investigations: LP (if safe), blood cultures, thick film, HSV PCR on CSF.</div>
+          <div class="diff-rule" contenteditable="true">Rule: In a child under 18 months, absence of neck stiffness does NOT exclude bacterial meningitis. LP is mandatory if no contraindications.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Structural / Epileptic Causes</div>
+          <div class="diff-tests" contenteditable="true">Epilepsy (first unprovoked afebrile seizure → EEG + MRI brain)
+Neurocysticercosis (ring-enhancing lesions on CT — endemic area, exposure to undercooked pork; serology + CT head)
+Space-occupying lesion / vascular malformation (focal onset, focal signs → urgent CT)
+Hypoxic-ischaemic injury (perinatal history — relevant in neonates)
+
+CT head indications: focal signs, prolonged seizure (&gt;30 min), first unprovoked seizure, no metabolic or infectious cause identified.</div>
+          <div class="diff-rule" contenteditable="true">Rule: A normal CT does not rule out epilepsy — EEG is the key investigation for epilepsy, not imaging.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Every Seizing Child Gets a BGL and Na — Before Any Other Label</div>
+        <div class="impression-reasoning" contenteditable="true">MATCH the metabolic causes. BEAM through the infectious ones. "Febrile convulsion" only applies to a child over 6 months with a simple, brief, generalised seizure who has no signs of CNS infection and a normal BGL and electrolytes. Before you write it — prove it. One missed glucose is one preventable readmission.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 16: Dehydration in Paediatrics — Management -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">16</div>
+      Tuesday
+      <span class="specialty-tag">Paediatrics / Emergency</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">18-month-old. 3 days of watery diarrhoea. Sunken eyes. Crying without tears.</span><span class="hook-line">Skin pinch stays up for 2 seconds. Pulse rapid and weak. Lethargic.</span><span class="hook-line">You know he needs fluids. But which plan — and at exactly what rate?</span><span class="hook-clue">Most trainees give the right fluid. They give it at the wrong speed.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Dehydration in Paediatrics — WHO/IMCI Plan A, B, C</div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Step 1 — Assess Severity: The ESS Signs (Eyes, Skin, State)</div>
+          <div class="diff-tests" contenteditable="true">No dehydration: Alert, normal eyes, normal skin turgor, drinks normally → Plan A
+Some dehydration (5–10%): Restless/irritable, sunken eyes, skin pinch returns slowly (1–2 sec), drinks eagerly → Plan B
+Severe dehydration (&gt;10%): Lethargic or unconscious, very sunken eyes, skin pinch stays up &gt;2 seconds, unable to drink, weak or absent pulse → Plan C
+
+One of these three signs = severe: skin stays up, lethargic, unable to drink.</div>
+          <div class="diff-rule" contenteditable="true">Mnemonic — ESS: Eyes · Skin · State. If one of the "severe" ESS signs is present, go straight to Plan C. Do not use the oral route in severe dehydration.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Plan A, B, C — The ORS Ladder</div>
+          <div class="diff-tests" contenteditable="true">Plan A (No dehydration — prevention at home):
+→ ORS 10 ml/kg after each loose stool. Continue breastfeeding and normal feeds. Zinc 20 mg/day for 10 days (&lt;6 months: 10 mg/day).
+
+Plan B (Some dehydration — ORS in facility):
+→ ORS 75 ml/kg over 4 hours, given in small sips. Reassess every 1–2 hours. Improving → continue. Worsening → escalate to Plan C.
+
+Plan C (Severe dehydration — IV fluids):
+→ IV Ringer's Lactate (preferred) or Normal Saline
+→ Age ≤12 months: 30 ml/kg over 1 hour, then 70 ml/kg over 5 hours
+→ Age &gt;12 months: 30 ml/kg over 30 minutes, then 70 ml/kg over 2.5 hours</div>
+          <div class="diff-rule" contenteditable="true">Mnemonic — The 30-70 Rule: 30 fast (bolus), then 70 slow (rehydration). The total is always 100 ml/kg — just split by severity of the initial phase.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">The 3 Traps That Get Trainees in Trouble</div>
+          <div class="diff-tests" contenteditable="true">Trap 1 — Wrong Plan B volume: ORS in Plan B is 75 ml/kg over 4 hours — not 50, not 100. Fix the number in your memory.
+Trap 2 — ORS via NGT in severe dehydration: If the child cannot drink → IV only. Nasogastric ORS is not equivalent to IV fluid in severe dehydration — do not use it as first step.
+Trap 3 — Cholera-like watery diarrhoea: A child may look "some dehydration" clinically but be losing fluid faster than you think. Reassess aggressively every 30–60 minutes in rice-water stool presentations.</div>
+          <div class="diff-rule" contenteditable="true">Rule: After Plan C bolus, reassess after each phase. If the child can now drink and is improving → switch to ORS. If not improving → repeat the 30 ml/kg phase and consider other causes.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">ESS → Plan. 30 Fast, Then 70 Slow.</div>
+        <div class="impression-reasoning" contenteditable="true">The three signs that push a child to Plan C are: skin pinch stays up, lethargic or unconscious, unable to drink. If any one is present — go straight to IV. The 30 ml/kg bolus is given fast for a reason. Don't negotiate the rate in a severely dehydrated child. And don't forget zinc — it reduces stool output and duration of illness in every child with diarrhoea regardless of plan.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 17: HIV in Pregnancy — PMTCT & Prenatal Screening -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">17</div>
+      Wednesday
+      <span class="specialty-tag">OB/GYN / Infectious Disease</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">HIV-positive woman. First antenatal visit at 10 weeks.</span><span class="hook-line">She asks one question: "Will my baby be born negative?"</span><span class="hook-line">The answer is yes — with a transmission risk under 2%.</span><span class="hook-clue">But only if you hit every checkpoint in the pathway. Miss one and the window closes.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">HIV in Pregnancy — Screening Timeline &amp; PMTCT (WHO 2021 / Option B+)</div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">When to Screen — The 4 Windows</div>
+          <div class="diff-tests" contenteditable="true">Window 1 — 1st ANC contact (any gestation): Test ALL women at first visit. This is not optional. Early diagnosis = longer time on ART before delivery = lower viral load at term.
+
+Window 2 — 28 weeks (2nd trimester retest): Retest all women who were negative at booking. Seroconversion can occur during pregnancy. In high-prevalence settings: retest at every trimester.
+
+Window 3 — 36 weeks (3rd trimester): Final retest. If positive or known positive: check viral load. VL &gt;1000 copies/mL at 34–36 weeks → consider elective Caesarean section to reduce intrapartum transmission.
+
+Window 4 — Labour: Test any woman of unknown HIV status presenting in labour. Use rapid HIV test. If positive → start ART immediately and give infant NVP within 6 hours of delivery.</div>
+          <div class="diff-rule" contenteditable="true">Rule: "No HIV status = test at every contact." No woman should deliver without a documented HIV result from that pregnancy.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">ARV Regimen — Option B+ (Lifelong ART for All)</div>
+          <div class="diff-tests" contenteditable="true">Start ART in ALL HIV-positive pregnant women regardless of CD4 count and gestational age. Do not wait.
+
+Preferred regimen (WHO 2021): TDF + 3TC + DTG (dolutegravir)
+→ DTG preferred from the 2nd trimester onward. In the 1st trimester: use EFV if DTG is unavailable or there is a neural tube defect concern.
+→ Continue lifelong after delivery — never stop (Option B+ principle).
+
+Viral load monitoring: at ART initiation, at 3 months, at 34–36 weeks, and 6 months postpartum.
+
+Mnemonic — TLD = Triple Lifelong Durability: TDF + 3TC + DTG. Three drugs. For life.</div>
+          <div class="diff-rule" contenteditable="true">Rule: A suppressed viral load at delivery is the single most powerful intervention to prevent mother-to-child transmission. ART adherence from the first trimester onward achieves this.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Infant Prophylaxis + Feeding + PCR Timeline</div>
+          <div class="diff-tests" contenteditable="true">Infant NVP (nevirapine): Start within 6 hours of birth (maximum 72 hours).
+→ If mother on ART and VL suppressed: NVP for 6 weeks
+→ If mother not on ART or VL not suppressed: NVP for 12 weeks (extended prophylaxis)
+
+Feeding: In resource-limited settings — exclusive breastfeeding + maternal ART throughout. Mixed feeding increases MTCT risk; avoid it.
+In well-resourced settings where safe alternatives are available: formula feeding.
+
+Infant PCR testing schedule: 6 weeks, 10 weeks, 6 months, 9 months, 18 months, and at cessation of breastfeeding.
+
+With optimal ART + NVP + correct feeding: MTCT risk &lt;1–2%.</div>
+          <div class="diff-rule" contenteditable="true">Rule: If a mother arrives in labour HIV-positive with no prior ART — start her ART immediately, give infant NVP for 12 weeks, and schedule infant PCR at 6 weeks. The clock starts at birth.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">PMTCT Failure Is Almost Always a Gap in the Pathway</div>
+        <div class="impression-reasoning" contenteditable="true">Late booking. Interrupted ART. Unknown status in labour. Missed infant prophylaxis. Each one of those is a preventable transmission. Screen at 4 windows. Start TLD early. Check the viral load at 34–36 weeks. Give the infant NVP within 6 hours. Follow up with PCR at 6 weeks. A baby born to an HIV-positive mother on suppressive ART has a 98–99% chance of being negative. The pathway is the treatment.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 18: Birth Asphyxia — Role of CPAP -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">18</div>
+      Thursday
+      <span class="specialty-tag">Neonatology / Paediatrics</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Apgar 2 at 1 minute. You resuscitate — dry, stimulate, position, PPV.</span><span class="hook-line">At 5 minutes Apgar is 6. He's breathing. You exhale.</span><span class="hook-line">Fifteen minutes later: grunting on every breath, subcostal recessions, SpO₂ 88% on free-flow oxygen.</span><span class="hook-clue">The question is not whether he needs respiratory support. It's what kind — and whether you know the step before the ventilator.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Birth Asphyxia — The Role of CPAP</div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">What CPAP Does — and Why It's the Right Step Here</div>
+          <div class="diff-tests" contenteditable="true">CPAP (Continuous Positive Airway Pressure) delivers constant pressure through both phases of the respiratory cycle — it does not breathe for the baby, but it holds the airways open.
+
+Mechanism: Prevents alveolar collapse at end-expiration → reduces atelectasis → improves V/Q matching → better oxygenation with less work of breathing.
+
+Appropriate for: spontaneously breathing infant with grunting, intercostal/subcostal recessions, SpO₂ &lt;90% on free-flow O₂, tachypnoea &gt;60, or post-resuscitation respiratory distress.
+
+NOT appropriate for: apnoea without respiratory drive (needs PPV/intubation), choanal atresia, tracheo-oesophageal fistula, untreated pneumothorax.
+
+Core rule: CPAP requires a breathing baby. If there is no respiratory drive — CPAP will not help. Move to PPV or intubation immediately.</div>
+          <div class="diff-rule" contenteditable="true">Rule: CPAP is the bridge between free-flow oxygen and mechanical ventilation. It is not a minor step — a baby on CPAP is a sick baby who requires continuous monitoring.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Settings — Start Simple, Titrate Carefully</div>
+          <div class="diff-tests" contenteditable="true">Starting pressure: 5 cmH₂O — do not start higher without a specific reason.
+Increase: by 1–2 cmH₂O increments if hypoxia persists.
+Maximum: typically 8 cmH₂O in neonates before considering escalation.
+
+FiO₂: Start at 0.3–0.4. Titrate to maintain SpO₂ 90–95%.
+→ Target is NOT 100%. Hyperoxia causes retinopathy of prematurity and oxygen toxicity in neonates. Upper limit is 95%.
+
+Flow rate: typically 5–8 L/min (device-dependent — bubble CPAP or ventilator-derived CPAP).
+Interface: binasal prongs preferred over mask (better seal, less dead space).</div>
+          <div class="diff-rule" contenteditable="true">Mnemonic — "CPAP at 5, SpO₂ at 95": Starting pressure is 5 cmH₂O. Target saturation ceiling is 95%. Two numbers. Locked in.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">CPAP Failure — When to Escalate (The AFAR Criteria)</div>
+          <div class="diff-tests" contenteditable="true">A — Apnoea on CPAP (repeated episodes despite correct settings → intubate)
+F — FiO₂ &gt;0.6 required to maintain SpO₂ ≥90% (oxygen requirement too high for CPAP alone)
+A — Acidosis (respiratory acidosis on ABG — rising CO₂, pH falling, hypercapnia despite CPAP)
+R — Recessions worsening (increasing work of breathing, clinical exhaustion signs — infant tiring)
+
+If ANY one of these is present → escalate to intubation and mechanical ventilation.
+Do not wait for all four. One criterion is enough.</div>
+          <div class="diff-rule" contenteditable="true">Mnemonic — AFAR: Apnoea · FiO₂ &gt;0.6 · Acidosis · Recessions worsening = CPAP failure. Escalate early — a tired neonate decompensates faster than you expect.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">CPAP at 5. SpO₂ at 95. AFAR = Escalate.</div>
+        <div class="impression-reasoning" contenteditable="true">After resuscitation for birth asphyxia, CPAP buys time and lung recruitment when the baby has a drive to breathe but the lungs are failing. Start at 5 cmH₂O. Target SpO₂ 90–95% — not higher. Reassess at 30 minutes. If AFAR criteria are met — escalate to intubation early, not as a last resort. Delayed intubation in a deteriorating neonate is the more dangerous choice. The ventilator is not a failure — it is the next rung on the ladder.</div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ===== CONVULSIONS SERIES: 3 more posts ===== -->
+
+  <!-- POST 19: Status Epilepticus -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">19</div>
+      Friday
+      <span class="specialty-tag">Paediatrics — Convulsions</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">You gave diazepam. Seizure continued. You gave more diazepam.</span><span class="hook-line">It's been 22 minutes. You're still on benzodiazepines.</span><span class="hook-clue">You've hit status epilepticus — and you're already two drug steps behind the protocol.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Status Epilepticus in Children — The 3-Line Drug Ladder</div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Definition + Immediate Response</div>
+          <div class="diff-tests" contenteditable="true">Status epilepticus = seizure lasting &gt;5 minutes, OR two or more seizures without return to baseline in between.
+The clock starts when the seizure starts — not when you walk into the room.
+
+First move before any drug: check the blood glucose. Hypoglycaemia is the single most reversible cause of status in a child. A glucose of 1.2 mmol/L won't respond to any anticonvulsant.
+
+Secure airway. Oxygen. IV/IO access. Time it.</div>
+          <div class="diff-rule" contenteditable="true">Mnemonic — CALM: Check glucose · Airway · Lorazepam (or diazepam) · Monitor. In that order, every time.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Line 1 — Benzodiazepines (0–5 minutes)</div>
+          <div class="diff-tests" contenteditable="true">IV access available:
+→ Lorazepam 0.1 mg/kg IV (max 4 mg) — preferred: longer duration than diazepam
+→ OR Diazepam 0.3 mg/kg IV (max 10 mg)
+
+No IV access:
+→ Midazolam 0.3 mg/kg buccal or intranasal (max 10 mg) — as effective as IV diazepam, faster than trying to cannulate a seizing child
+→ OR Diazepam 0.5 mg/kg PR (rectal)
+
+Can repeat once after 5 minutes if seizure continues.
+Two doses of benzodiazepine maximum — do not give a third. Move to Line 2.</div>
+          <div class="diff-rule" contenteditable="true">Rule: Give Line 1 at 5 minutes — not 10. A third benzodiazepine dose does not add efficacy and significantly increases respiratory depression risk.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Line 2 + Line 3 — When Benzodiazepines Fail</div>
+          <div class="diff-tests" contenteditable="true">Line 2 (10–20 minutes — after 2 BZD doses):
+→ Phenobarbitone 20 mg/kg IV over 20 minutes (first choice in neonates; effective in all ages)
+→ OR Phenytoin/Fosphenytoin 20 mg/kg IV at max 1 mg/kg/min (cardiac monitoring required — do not push fast)
+→ OR Levetiracetam 40–60 mg/kg IV over 15 minutes (increasing evidence, fewer cardiac side effects than phenytoin)
+
+Line 3 (after 30–45 minutes — refractory status):
+→ RSI: intubate + thiopentone or midazolam infusion
+→ ICU admission mandatory
+→ EEG monitoring if available</div>
+          <div class="diff-rule" contenteditable="true">Mnemonic — LPR: Lorazepam → Phenobarbitone → RSI. Three lines. Each one has a time limit. Don't linger on any line.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Status Starts at 5 Minutes. The Ladder Has 3 Rungs. Know Them Before You Need Them.</div>
+        <div class="impression-reasoning" contenteditable="true">The drug ladder only works if you start it at the right time and advance it at the right time. Status epilepticus at 22 minutes with two doses of diazepam given means you delayed Line 2 by 10 minutes. Those 10 minutes cost neurons. Know your weight-based doses before you're in the room. Check glucose before any drug. Advance the ladder on schedule — not when you panic.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 20: Simple vs Complex Febrile Seizures -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">20</div>
+      Saturday
+      <span class="specialty-tag">Paediatrics — Convulsions</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">7-year-old. First seizure during a fever. 45 seconds, generalised, self-terminating.</span><span class="hook-line">Fully alert by the time you arrive. Parents terrified.</span><span class="hook-line">Do you LP? CT? EEG? Start anticonvulsants?</span><span class="hook-clue">The answer to all four questions is the same word.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Febrile Seizures — Simple vs Complex: When to Investigate</div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Simple Febrile Seizure — All 5 Must Be Present</div>
+          <div class="diff-tests" contenteditable="true">1. Generalised onset (not focal)
+2. Duration &lt;15 minutes
+3. Single episode within 24 hours
+4. Age 6 months to 5 years
+5. Returns to full neurological baseline within 1 hour
+
+If all 5 are present: LP not required. CT not required. EEG not required. Anticonvulsants not required. Discharge with parental education.
+
+Recurrence rate: approximately 30%. A recurrence does NOT change the management — it does not justify starting anticonvulsants in an otherwise normal child.</div>
+          <div class="diff-rule" contenteditable="true">The answer to all four questions above: No. Simple febrile seizures are benign, self-limited, and do not require investigation beyond identifying the source of fever.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Complex Febrile Seizure — Any ONE Changes the Category</div>
+          <div class="diff-tests" contenteditable="true">→ Focal onset or focal signs post-ictally
+→ Duration &gt;15 minutes (or status epilepticus)
+→ More than one seizure in 24 hours
+→ Age &lt;6 months or &gt;5 years (the age bracket is already atypical)
+→ Failure to return to baseline within 1 hour
+
+If ANY ONE is present:
+→ Consider LP (see age-based guidance below)
+→ EEG within 4 weeks
+→ CT head only if focal signs, raised ICP, or prolonged altered consciousness
+→ Admission for observation</div>
+          <div class="diff-rule" contenteditable="true">Rule: A first seizure in a child over 5 years with fever is NOT a febrile seizure — it requires full investigation regardless of other features.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">LP Decision — Guided by Age, Not Fear</div>
+          <div class="diff-tests" contenteditable="true">&lt;6 months: LP in all febrile seizures — meningism signs are absent or unreliable, and the risk of bacterial meningitis is highest.
+
+6–18 months: LP if any of: complex seizure, not fully vaccinated, antibiotics given before presentation (masks meningitis signs), or clinical concern for meningitis.
+
+&gt;18 months: LP only if clinical signs of meningism are present (neck stiffness, photophobia, petechial rash, Kernig/Brudzinski) or altered consciousness persisting &gt;1 hour.
+
+Always: LP is contraindicated if signs of raised ICP (papilloedema, bradycardia + hypertension, unequal pupils) — CT first.</div>
+          <div class="diff-rule" contenteditable="true">Key rule: Under 18 months, the absence of neck stiffness does NOT exclude bacterial meningitis. Your LP threshold is lower. Err toward doing it.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Simple = No. Complex = Investigate. Age Determines the LP Decision.</div>
+        <div class="impression-reasoning" contenteditable="true">A simple febrile seizure in a child between 6 months and 5 years who is fully alert and back to baseline needs one thing: parental education. Not an LP. Not a CT. Not phenobarbitone. Your job is to explain the 30% recurrence risk calmly, identify the fever source, and send them home with safety-netting. The diagnosis that causes the seizure is the fever's cause — not the seizure itself.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 21: Neonatal Seizures — Subtle Signs -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">21</div>
+      Sunday
+      <span class="specialty-tag">Paediatrics — Convulsions / Neonatology</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Day 2 newborn. Nurse calls: "Weird eye movements. Hands cycling. Lips smacking."</span><span class="hook-line">You watch for 30 seconds. No generalised shaking. No tonic jerking.</span><span class="hook-line">You write "jitteriness — likely benign."</span><span class="hook-clue">You just missed a neonatal seizure. One test would have told you immediately.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Neonatal Seizures — Recognition, Causes by Day, and Investigations</div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Subtle vs Overt — The Spectrum Nobody Taught You</div>
+          <div class="diff-tests" contenteditable="true">Subtle (most common in term neonates — and the most missed):
+→ Eye deviation, nystagmus, eyelid fluttering
+→ Lip smacking, sucking, chewing movements
+→ Cycling or pedalling of the limbs
+→ Apnoeic episodes
+→ Autonomic changes: sudden colour change, drooling, tachycardia
+
+Clonic: rhythmic repetitive jerking — focal (one limb) or multifocal
+Tonic: sustained flexion or extension posturing
+Myoclonic: sudden brief jerks — can be subtle
+
+THE ONE CLINICAL TEST — How to tell from jitteriness:
+→ Hold the limb firmly. Jitteriness STOPS when held. Seizure does NOT.
+→ Jitteriness is stimulus-sensitive (triggered by handling). Seizures are not.
+→ Jitteriness has no abnormal eye movements. Seizures often do.</div>
+          <div class="diff-rule" contenteditable="true">Rule: Lip smacking in a newborn = seizure until proven otherwise. Hold the limb. That test takes 5 seconds and it has a definitive result.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Causes by Timing — Different Days, Different Diagnoses</div>
+          <div class="diff-tests" contenteditable="true">Day 0–2 (perinatal window):
+→ Hypoxic-Ischaemic Encephalopathy (HIE) — most common overall; onset within first 24 hours of asphyxia
+→ Hypoglycaemia — always check first; most immediately treatable
+→ Hypocalcaemia — early onset (day 1–3): prematurity, asphyxia, infant of diabetic mother
+→ Hypomagnesaemia — particularly in preterm, may accompany hypocalcaemia
+
+Day 2–5:
+→ Bacterial sepsis and meningitis (Group B Streptococcus, E. coli) — fever, lethargy, bulging fontanelle
+→ Intracranial haemorrhage — traumatic delivery, coagulopathy, vascular malformation
+
+Any time:
+→ Inborn errors of metabolism — refractory seizures, metabolic acidosis, unusual odour
+→ Pyridoxine (B6) deficiency — rare but critical: seizures refractory to ALL anticonvulsants. Give pyridoxine 100 mg IV as diagnostic + therapeutic trial.</div>
+          <div class="diff-rule" contenteditable="true">Mnemonic: Day 0-2 = HIE-H (Hypoxia, Hypoglycaemia, Hypocalcaemia). Day 2-5 = Infection + Haemorrhage. Any day = Metabolic/Inborn error.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Investigations — Priority Order</div>
+          <div class="diff-tests" contenteditable="true">Immediate (bedside):
+→ Capillary blood glucose — first, always
+→ Blood gas (pH, lactate — acidosis suggests HIE or metabolic disorder)
+
+Urgent blood:
+→ Na, Ca, Mg, glucose (formal lab)
+→ FBC + CRP + blood culture (infection screen)
+→ Consider ammonia, lactate, amino acids if metabolic disorder suspected
+
+Imaging and EEG:
+→ Cranial ultrasound (bedside — haemorrhage, HIE pattern, hydrocephalus)
+→ LP when stable and no contraindications (meningitis/encephalitis)
+→ Amplitude-integrated EEG (aEEG) if available in NICU — identifies subclinical seizures</div>
+          <div class="diff-rule" contenteditable="true">Rule: The first investigation in a seizing neonate is always blood glucose. Before LP. Before cranial USS. Before anything. It is the most treatable cause and it takes 10 seconds.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Hold the Limb. Check the Glucose. Those Are the First Two Moves.</div>
+        <div class="impression-reasoning" contenteditable="true">Neonatal seizures are subtle by design — the immature brain cannot sustain generalised tonic-clonic activity. Lip smacking and eye deviation are seizures until the bedside test proves otherwise. Once you confirm it, the investigation follows a strict order: glucose first, then metabolic screen, then infection, then imaging. A child seizing on phenobarbitone who hasn't responded may need pyridoxine — give it before calling it refractory.</div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ===== DEHYDRATION SERIES: 3 more posts ===== -->
+
+  <!-- POST 22: Hypernatraemic Dehydration -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">22</div>
+      Monday
+      <span class="specialty-tag">Paediatrics — Dehydration</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Child. Severely dehydrated. Sodium 162 mmol/L.</span><span class="hook-line">You start Plan C. 30 ml/kg bolus. Rehydration underway.</span><span class="hook-line">An hour in — the child seizes.</span><span class="hook-clue">You corrected the hypovolaemia. You caused the cerebral oedema. The sodium was the trap.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Hypernatraemic Dehydration — Why Fast Correction Kills</div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">What High Sodium Does to the Brain — and Why It Fights Back</div>
+          <div class="diff-tests" contenteditable="true">High serum sodium pulls water OUT of cells by osmosis — including brain cells.
+The brain shrinks. This is dangerous.
+
+The brain's counter-move: it generates intracellular osmoles (called idiogenic osmoles or organic osmolytes — taurine, myoinositol, glutamine) to pull water back in. Over 24–48 hours, brain cell volume is restored.
+
+The trap: the brain is now packed with osmolytes. If you drop the sodium too fast, water floods into brain cells before osmolytes can be cleared → cells swell → cerebral oedema → seizures → herniation.
+
+The brain has adapted to the high sodium. It has not adapted to a rapid drop.
+
+Clinical clues to hypernatraemia (before the lab comes back):
+→ Skin has a "doughy" texture — different from normal dehydration pinch
+→ Irritability and high-pitched cry out of proportion to the clinical state
+→ Neurological signs: lethargy, hypotonia, opisthotonus in severe cases</div>
+          <div class="diff-rule" contenteditable="true">Rule: Hypernatraemia is corrected over 48–72 hours, not 4–6 hours. The deficit replacement rate is determined by the sodium — not by the severity of dehydration alone.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">How to Correct Safely — The 10–12 Rule</div>
+          <div class="diff-tests" contenteditable="true">Maximum rate of sodium correction: 10–12 mmol/L per 24 hours (approximately 0.5 mmol/L per hour).
+Do NOT target faster correction than this, even if the sodium is severely elevated.
+
+Fluid strategy:
+→ STEP 1 — If haemodynamically compromised (shocked): give 0.9% NaCl 10–20 ml/kg as a bolus first. Restoring perfusion takes priority over sodium correction speed.
+→ STEP 2 — Deficit replacement: use 0.45% NaCl (hypotonic) or calculate the free water deficit and replace gradually over 48–72 hours.
+→ Monitor Na every 4–6 hours during correction and adjust rate.
+
+Free water deficit formula (rough guide):
+→ Free water deficit (L) = 4 ml/kg × weight (kg) × (Na measured − Na target [145])
+
+Ongoing losses: replace with 0.45% NaCl or ORS concurrently if diarrhoea continues.</div>
+          <div class="diff-rule" contenteditable="true">Mnemonic — "10 in 24": Drop the sodium by no more than 10 mmol/L per 24 hours. Write it on the fluid order. Tell the nurses. Set a timer for the 4-hour Na recheck.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">The Common Presentation — Breastfeeding Hypernatraemia</div>
+          <div class="diff-tests" contenteditable="true">The most common cause of hypernatraemic dehydration in neonates:
+→ Breastfeeding failure in the first week of life — inadequate milk supply, poor latch, or delayed feeding establishment
+→ Baby loses &gt;10% birth weight, becomes lethargic, feeds poorly
+→ Na can reach 155–175 mmol/L within 5–7 days
+
+Why it's missed:
+→ Baby appears "sleepy and content" — actually profoundly dehydrated
+→ Parents are reassured by peaceful appearance
+→ Weight not checked after discharge
+
+Management:
+→ Supplement breastfeeding with expressed breast milk or formula immediately
+→ Correct sodium slowly as above — neonates are especially vulnerable to cerebral oedema
+→ Lactation consultant input for long-term breastfeeding support</div>
+          <div class="diff-rule" contenteditable="true">Rule: A sleepy newborn at day 5–7 who has lost &gt;10% birth weight is not "doing well on breastfeeding." Check the sodium before reassuring the parents.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Check Na Before Choosing Your Rehydration Rate. Fast Correction + High Na = Cerebral Oedema.</div>
+        <div class="impression-reasoning" contenteditable="true">The Plan C fluid rate is designed for isonatraemic dehydration. If the sodium is above 150, that rate is dangerous. The haemodynamic bolus is still appropriate — restore the circulation first. Then switch gears: slow deficit replacement over 48–72 hours, Na recheck every 4–6 hours, and a maximum drop of 10 mmol/L per day. One lab result changes the entire plan. Check it before you write the fluid order.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 23: ORS — Why Sugar + Salt = Life -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">23</div>
+      Tuesday
+      <span class="specialty-tag">Paediatrics — Dehydration</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">In the 1970s, a cholera outbreak was killing thousands. Two researchers discovered that adding glucose to saltwater reduced mortality by 80%.</span><span class="hook-line">WHO later called it "potentially the most important medical advance of the 20th century."</span><span class="hook-clue">It costs 30 cents. And most people giving it don't understand why it works — or why substitutes can make things worse.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">ORS — The Science Behind the Sachet</div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">The Mechanism — SGLT1 Is Why It Works</div>
+          <div class="diff-tests" contenteditable="true">Cholera toxin forces chloride channels open permanently → sodium, chloride, and water pour into the gut lumen (secretory diarrhoea). This process cannot be switched off.
+
+BUT: the sodium-glucose cotransporter (SGLT1) in the enterocyte wall remains fully functional.
+
+SGLT1's rule: it will actively transport glucose AND sodium together into the cell — only when BOTH are present simultaneously.
+
+When glucose is in the gut lumen:
+→ SGLT1 pulls glucose + Na into the enterocyte
+→ Water follows osmotically
+→ Net absorption occurs even during active secretory diarrhoea
+
+ORS is not a fluid replacement — it is a pharmacological exploit of SGLT1. The glucose is not food. The salt is not seasoning. Together they are the mechanism.</div>
+          <div class="diff-rule" contenteditable="true">Rule: ORS works because of the glucose-sodium cotransporter — not glucose alone, not salt alone. The ratio is the medicine.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">WHO Low-Osmolarity ORS Composition — Know the Numbers</div>
+          <div class="diff-tests" contenteditable="true">Sodium:     75 mmol/L
+Glucose:    75 mmol/L  (ratio to Na ≈ 1:1 — critical for cotransport)
+Chloride:   65 mmol/L
+Potassium:  20 mmol/L  (replaces stool losses — prevents hypokalaemia)
+Citrate:    10 mmol/L  (base to correct acidosis)
+Total osmolarity: 245 mOsm/L
+
+Why low osmolarity matters:
+→ The original 1975 WHO formula had osmolarity of 311 mOsm/L
+→ The 2002 reduced-osmolarity formula (245 mOsm/L) reduces stool output by 20–25% and reduces need for IV supplementation
+→ Lower osmolarity = less osmotic load in the gut = better net absorption</div>
+          <div class="diff-rule" contenteditable="true">Mnemonic — "75-75": Sodium 75, Glucose 75. The 1:1 ratio is the active ingredient. Everything else is supporting chemistry.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">What NOT to Use as Substitutes — and Why They Fail</div>
+          <div class="diff-tests" contenteditable="true">Cola / soft drinks (Coke, Pepsi, lemonade):
+→ Glucose:sodium ratio is approximately 60:1 (not 1:1)
+→ Osmolarity 500–700 mOsm/L (far above WHO ORS)
+→ Result: SGLT1 is overwhelmed; osmotic load worsens diarrhoea; net dehydration increases
+→ Do not give cola to a dehydrated child. It makes it worse.
+
+Plain fruit juice:
+→ High glucose, negligible sodium → SGLT1 does not activate without sodium → no absorption
+→ Additional fructose load → osmotic diarrhoea
+
+Plain water:
+→ No sodium → SGLT1 cannot engage → minimal net absorption → can dilute serum Na
+
+Rice water / home remedies:
+→ Inconsistent sodium concentration → unreliable absorption
+→ Can be used as a bridge when nothing else is available but not equivalent to WHO ORS
+
+The correct substitute if sachets unavailable:
+→ 1 litre clean water + 6 level teaspoons sugar + 0.5 teaspoon salt — rough WHO home recipe</div>
+          <div class="diff-rule" contenteditable="true">Rule: ORS is a drug. Substitutes that get the glucose:sodium ratio wrong don't just fail — they can actively worsen dehydration. Teach this to families before you discharge them.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">The Ratio Is the Medicine. Cola Is Not ORS. Teach Families This Before Discharge.</div>
+        <div class="impression-reasoning" contenteditable="true">Every parent handing a seizing or lethargic child a can of Coke was told by someone that "flat Coke is good for tummy bugs." It is not. The glucose-sodium ratio is wrong by a factor of 60. The osmolarity is double. It worsens diarrhoea and can worsen dehydration. The sachet costs almost nothing. When you prescribe ORS, explain that it is a drug — a precisely formulated one — and that nothing from the kitchen cupboard replaces it.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 24: Dysentery vs Watery Diarrhoea -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">24</div>
+      Wednesday
+      <span class="specialty-tag">Paediatrics — Dehydration / Infectious</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Child with diarrhoea. You start ORS. Nurse mentions there's blood in the stool.</span><span class="hook-line">Do you continue ORS? Add antibiotics? Culture first?</span><span class="hook-clue">Blood in the stool changes the category entirely. The treatment that was right 5 minutes ago is now incomplete.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Dysentery vs Watery Diarrhoea — Different Disease, Different Treatment</div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Clinical Distinction — Secretory vs Invasive</div>
+          <div class="diff-tests" contenteditable="true">Watery diarrhoea (secretory — osmotic mechanism):
+→ Large volumes, watery, no blood, no mucus
+→ Causes: Rotavirus (most common cause in children &lt;5), cholera (rice-water stool), ETEC, Cryptosporidium
+→ Treatment: ORS + zinc. No antibiotics routinely (except cholera).
+→ Dehydration is the main danger.
+
+Dysentery (invasive — mucosal inflammation):
+→ Smaller volumes, blood and/or mucus in stool, abdominal cramps, tenesmus
+→ Fever often present (invasion = systemic inflammation)
+→ Causes: Shigella (most common worldwide), Campylobacter, Salmonella, EIEC, Entamoeba histolytica
+→ Treatment: ORS + antibiotics REQUIRED
+→ Mucosal damage + septicaemia risk is the main danger.
+
+Key test: stool microscopy (blood, mucus, white cells = dysentery; watery no cells = secretory)</div>
+          <div class="diff-rule" contenteditable="true">Rule: Blood in the stool = start antibiotics. The causative agent determines which one, but the category change is immediate.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Antibiotic Choice in Dysentery — Shigella First, Then Adjust</div>
+          <div class="diff-tests" contenteditable="true">Empirical first-line (Shigella most common):
+→ Ciprofloxacin 15 mg/kg/dose BD for 3–5 days (oral preferred if child can drink)
+→ NOT cotrimoxazole empirically — resistance &gt;50% in most regions
+
+Amoebic dysentery (suspect if: gradual onset, less fever, mucus-heavy stool, negative bacterial culture):
+→ Metronidazole 30–50 mg/kg/day in 3 divided doses for 7–10 days
+→ Followed by luminal agent (diloxanide furoate) to clear cysts
+
+Salmonella-specific rules:
+→ Do NOT give antibiotics for non-typhoidal Salmonella in an otherwise healthy child &gt;3 months — prolongs carrier state
+→ DO give antibiotics if: &lt;3 months, immunocompromised, severe systemic illness (bacteraemia), or sickle cell disease
+
+Campylobacter: usually self-limiting. Azithromycin if severe or immunocompromised.</div>
+          <div class="diff-rule" contenteditable="true">Mnemonic: "Shigella = Cipro. Amoeba = Metro. Salmonella = usually nothing (unless very young, very sick, or immunocompromised)."</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Red Flags That Change the Urgency in Any Diarrhoea</div>
+          <div class="diff-tests" contenteditable="true">→ Blood in stool → dysentery protocol (above)
+→ Bilious vomiting + abdominal distension + pain → surgical cause (intussusception, volvulus) — NOT gastroenteritis
+→ Diarrhoea &gt;14 days (persistent diarrhoea) → stool microscopy for Giardia, Cryptosporidium; assess nutritional status; consider coeliac disease in older children
+→ No improvement after 4 hours of ORS Plan B → reassess dehydration grade, consider IV
+→ Diarrhoea + petechial rash + haemolytic anaemia → Haemolytic Uraemic Syndrome (E. coli O157:H7) — avoid antibiotics (worsens Shiga toxin release); urgent renal function
+→ Rectal prolapse in a malnourished child with bloody diarrhoea → consider trichuriasis (Trichuris trichiura)</div>
+          <div class="diff-rule" contenteditable="true">Rule: Bilious vomiting + abdominal distension in a child is not gastroenteritis. It is a surgical emergency until proven otherwise. Do not send home on ORS.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Blood in Stool = Dysentery. Dysentery = Ciprofloxacin. ORS Continues — But It's No Longer Enough.</div>
+        <div class="impression-reasoning" contenteditable="true">Watery diarrhoea is a fluid problem. Dysentery is an infection problem. Blood in the stool is the dividing line. When you see it — ORS continues (fluid losses still happen) but you add ciprofloxacin empirically for Shigella. The one exception to "antibiotics in dysentery" is Salmonella in a child over 3 months who is otherwise well — antibiotics prolong the carrier state in that situation. Every other bloody diarrhoea gets treated.</div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ===== HIV SERIES: 3 more posts ===== -->
+
+  <!-- POST 25: Early Infant Diagnosis — DNA PCR at 6 Weeks -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">25</div>
+      Thursday
+      <span class="specialty-tag">Paediatrics — HIV</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Baby born to HIV-positive mother. On NVP from birth. You do the HIV test at 6 weeks.</span><span class="hook-line">Result: positive. Mother bursts into tears.</span><span class="hook-clue">Before you counsel her — do you actually know what that positive result means in a 6-week-old?</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Early Infant Diagnosis — Why Antibody Tests Fail in Infants, and What to Use Instead</div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Why the Rapid HIV Test Is Wrong in Any Infant Under 18 Months</div>
+          <div class="diff-tests" contenteditable="true">Standard HIV tests (rapid antibody tests, ELISA, Western blot) detect HIV ANTIBODIES — not the virus itself.
+
+The problem: maternal HIV antibodies cross the placenta freely during pregnancy and persist in infant blood for 12–18 months.
+
+This means:
+→ A rapid HIV antibody test will be POSITIVE in EVERY HIV-exposed infant until 12–18 months of age — regardless of whether the baby is actually infected.
+→ A negative rapid test before 18 months also cannot confidently exclude infection in a recently exposed infant.
+
+The solution: HIV DNA PCR (qualitative PCR)
+→ Detects HIV proviral DNA integrated into the infant's own CD4 T-cells
+→ Not affected by maternal antibodies
+→ Can detect infection as early as 2–4 weeks (but 6 weeks is the standard first test)</div>
+          <div class="diff-rule" contenteditable="true">Rule: Never use a rapid HIV antibody test to diagnose or exclude HIV infection in a child under 18 months. The test measures the mother's immune response — not the baby's infection status.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Early Infant Diagnosis (EID) Schedule — When to Test</div>
+          <div class="diff-tests" contenteditable="true">6 weeks (First PCR):
+→ The earliest standardly reliable test. Send as part of the routine 6-week visit.
+→ A positive result strongly suggests infection — confirm with repeat PCR within 4 weeks.
+→ If symptomatic and positive: start ART immediately without waiting for confirmation.
+
+10 weeks (Second PCR if 6-week positive):
+→ Confirmatory test. Positive on two PCRs = confirmed HIV infection → start ART now.
+
+6 months (Third PCR):
+→ Routine follow-up. Negative here + non-breastfeeding = infection unlikely but not excluded.
+
+At cessation of breastfeeding AND at 3 months post-cessation:
+→ Breastfeeding continues to transmit HIV. Each feed is a new exposure event.
+→ Do not declare the baby HIV-negative until 3 months after the last breastfeed.
+
+18 months (Final confirmatory test):
+→ Maternal antibodies have cleared → HIV antibody test is now interpretable.
+→ Negative at 18 months + no breastfeeding = definitive HIV-negative.</div>
+          <div class="diff-rule" contenteditable="true">Mnemonic — 6, 10, 6m, Cessation +3m, 18m: these are the 5 PCR/antibody checkpoints for every HIV-exposed infant.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Interpreting a Positive PCR — What to Do Next</div>
+          <div class="diff-tests" contenteditable="true">Positive PCR at 6 weeks:
+→ Repeat PCR within 2–4 weeks (confirmatory sample) — the "first positive, second positive" rule
+→ If symptomatic (failure to thrive, recurrent infections, oral thrush): do NOT wait for confirmation → start ART immediately
+→ If asymptomatic: wait for confirmation before starting ART
+
+Confirmed positive (2 positive PCRs):
+→ Start ART immediately — all HIV-positive children under 5 years start ART regardless of CD4 count
+→ Refer to paediatric HIV programme
+→ Ensure cotrimoxazole prophylaxis is already running (should have been started at 6 weeks)
+
+False positive PCR: rare but occurs — always confirm with a second independent sample on a second blood draw. Do not start lifelong ART on one result alone in an asymptomatic infant.</div>
+          <div class="diff-rule" contenteditable="true">Rule: One positive PCR = confirm. Two positive PCRs = start ART. One negative PCR + breastfeeding = continue testing. HIV-free status is declared only 3 months after the last breastfeed.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">A Positive Rapid Test at 6 Weeks Tells You About the Mother. A Positive PCR Tells You About the Baby.</div>
+        <div class="impression-reasoning" contenteditable="true">Before counselling that mother, know what you're reading. A positive rapid test at 6 weeks means nothing — all HIV-exposed infants test positive on antibody tests. A positive DNA PCR at 6 weeks means the baby may be infected — confirm before starting lifelong ART. PCP peaks at 3–6 months in infected infants and is rapidly fatal. That is why cotrimoxazole starts at 6 weeks regardless of PCR result. The prophylaxis doesn't wait. The ART waits for confirmation.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 26: Cotrimoxazole Prophylaxis -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">26</div>
+      Friday
+      <span class="specialty-tag">Paediatrics — HIV</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">HIV-exposed infant. 6-week visit. PCR result pending.</span><span class="hook-line">Registrar says: "We'll wait for the PCR before starting anything."</span><span class="hook-clue">They just missed the single most important preventive medication in this baby's life. And the window for PCP closes fast.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Cotrimoxazole Prophylaxis — Start at 6 Weeks, Don't Wait for the PCR</div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Who Needs It, When, and Why It Can't Wait</div>
+          <div class="diff-tests" contenteditable="true">Who:
+→ ALL HIV-exposed infants: start at 6 weeks, regardless of PCR result
+→ ALL HIV-positive children: continue until criteria for stopping are met
+→ HIV-positive adults and adolescents: start if CD4 &lt;200 or WHO stage 3/4
+
+When: 6 weeks of age — the same visit as the first PCR. Start that day.
+
+Why it cannot wait for the PCR:
+→ PCP (Pneumocystis jirovecii pneumonia) is the most common AIDS-defining illness in HIV-positive children under 1 year
+→ PCP onset typically at 3–6 months
+→ PCR result takes days to weeks in many settings
+→ PCP without prophylaxis = rapidly fatal, often within days of onset
+→ Starting cotrimoxazole at 6 weeks covers the window before the result returns — and the window before PCP peaks
+
+Additional protection:
+→ Toxoplasma gondii encephalitis
+→ Common bacterial infections (Streptococcus pneumoniae, Salmonella)
+→ Malaria in endemic settings</div>
+          <div class="diff-rule" contenteditable="true">Rule: Cotrimoxazole at 6 weeks is given because PCP is too fast and too fatal to wait for diagnostic confirmation. The prophylaxis is the bridge between the 6-week test and the result.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Dosing — Weight-Based, Once Daily</div>
+          <div class="diff-tests" contenteditable="true">All doses are given once daily:
+
+&lt;5 kg:   SMX 100 mg + TMP 20 mg (= 2.5 ml paediatric suspension)
+5–15 kg:  SMX 200 mg + TMP 40 mg (= 5 ml suspension OR half adult tablet)
+15–30 kg: SMX 400 mg + TMP 80 mg (= 1 adult tablet)
+&gt;30 kg:  SMX 800 mg + TMP 160 mg (= 2 adult tablets)
+
+Paediatric suspension: 200 mg SMX + 40 mg TMP per 5 ml.
+Formulation note: use liquid suspension in infants &lt;6 months (tablet crushing is unreliable).</div>
+          <div class="diff-rule" contenteditable="true">Mnemonic for 5–15 kg dose: "Half a tablet, once a day." For &gt;30 kg: "Two tablets, once a day." These two cover most children you'll see in an HIV clinic.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">When to Stop — Criteria for Discontinuation</div>
+          <div class="diff-tests" contenteditable="true">HIV-exposed but PCR-negative:
+→ Stop when HIV infection is definitively excluded
+→ If not breastfeeding: at 18 months (when maternal antibodies have cleared and antibody test is interpretable)
+→ If breastfeeding: 3 months after the last breastfeed AND PCR/antibody test is negative
+
+HIV-positive child on ART:
+→ Stop when: on ART for ≥6 months AND CD4% ≥25% (children &lt;5 years) OR CD4 count ≥350 cells/μL (children ≥5 years)
+→ Do not stop cotrimoxazole in a child who is not yet virally suppressed on ART — immunosuppression continues even if CD4 looks adequate early on
+
+Never stop cotrimoxazole without checking the PCR/CD4 status first. "The baby looks well" is not a criterion for stopping.</div>
+          <div class="diff-rule" contenteditable="true">Rule: You start cotrimoxazole without waiting for PCR. You stop it only with confirmed HIV-free status or confirmed immune recovery on ART. Those are the only two exits.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Start at 6 Weeks. Don't Wait. PCP Is Too Fast and Too Fatal for That.</div>
+        <div class="impression-reasoning" contenteditable="true">The 6-week visit is where PCP prophylaxis starts — not where it gets discussed and deferred pending results. An HIV-positive infant without cotrimoxazole is an infant without a lung defence against a universally fatal fungal pneumonia. The dose is weight-based. It is once daily. It costs almost nothing. The question at the 6-week visit is not "should we start it?" — the question is "what weight is the baby today?"</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 27: HIV in Children — WHO Staging and Treat-All -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">27</div>
+      Saturday
+      <span class="specialty-tag">Paediatrics — HIV</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">2-year-old. HIV-positive confirmed. Asymptomatic. Normal weight. CD4% 38%.</span><span class="hook-line">You wonder whether to wait until she gets sicker before starting ART.</span><span class="hook-clue">That wait has a name — and it costs 30–40% of untreated children their lives before age 2. The answer has been "treat now" since 2013.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">HIV in Children — WHO Staging and the Treat-All Era</div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Treat All — WHO 2021: The Decision Is Already Made</div>
+          <div class="diff-tests" contenteditable="true">ALL HIV-positive children should start ART — regardless of:
+→ CD4 count or CD4%
+→ WHO clinical stage (including Stage 1 — asymptomatic)
+→ Viral load
+→ Age
+
+Urgency by age:
+→ &lt;18 months: START WITHIN DAYS. HIV progression in infants is explosive. Without ART, 30–40% die before age 2, and 50% before age 5.
+→ &lt;5 years: start within 2 weeks of diagnosis.
+→ ≥5 years: start within 2 weeks. No waiting for a CD4 threshold.
+
+Why "asymptomatic" is not a reason to wait:
+→ HIV in children is a rapidly progressive disease. An asymptomatic 9-month-old on no ART may be Stage 3 within weeks.
+→ Early ART prevents immune collapse, neurodevelopmental damage, and AIDS-defining illness.
+→ The CD4% at which brain damage begins is higher in children than in adults.</div>
+          <div class="diff-rule" contenteditable="true">Rule: In children under 18 months, "wait and see" kills. There is no clinical scenario in which an HIV-positive child should not be on ART. Start it.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">WHO Clinical Staging — Still Important for Monitoring and Prophylaxis Decisions</div>
+          <div class="diff-tests" contenteditable="true">Stage 1 (Asymptomatic):
+→ Asymptomatic, or persistent generalised lymphadenopathy only
+→ Start ART immediately despite stage 1
+
+Stage 2 (Mild symptoms):
+→ Molluscum contagiosum, fungal nail infections, angular cheilitis, recurrent mouth ulcers
+→ Recurrent URTI (&gt;3 per year), herpes zoster, papular pruritic eruptions
+
+Stage 3 (Advanced):
+→ Unexplained severe malnutrition not responding to treatment
+→ Unexplained persistent fever &gt;1 month, or chronic diarrhoea &gt;1 month
+→ Oral candidiasis (beyond neonatal period), pulmonary TB, severe recurrent bacterial pneumonia
+→ Unexplained anaemia, neutropaenia, or thrombocytopaenia
+
+Stage 4 (AIDS-defining — Severe):
+→ Pneumocystis jirovecii pneumonia (PCP)
+→ Cryptococcal meningitis
+→ Oesophageal candidiasis
+→ Toxoplasmosis of CNS
+→ Disseminated/extrapulmonary TB
+→ HIV encephalopathy (developmental regression, motor deficit)
+→ Kaposi's sarcoma</div>
+          <div class="diff-rule" contenteditable="true">Mnemonic for Stage 3 vs 4: Stage 3 = "Sick but alive" (TB, malnutrition, chronic fever). Stage 4 = "Life-threatening opportunistic infection" (PCP, cryptococcus, encephalopathy, Kaposi's).</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Preferred Paediatric ART Regimens (WHO 2021)</div>
+          <div class="diff-tests" contenteditable="true">&lt;3 years OR &lt;10 kg:
+→ ABC (abacavir) + 3TC (lamivudine) + LPV/r (lopinavir/ritonavir) — given twice daily
+→ Note: LPV/r requires cold chain and is bitter — adherence is a real challenge in infants
+
+≥3 years AND ≥10 kg:
+→ ABC + 3TC + DTG (dolutegravir) — PREFERRED (once daily, well-tolerated, high barrier to resistance)
+→ Mnemonic: ABD — Abacavir + 3TC (lami) + DTG
+
+≥10 years AND ≥35 kg (approaching adult regimen):
+→ TDF (tenofovir) + 3TC + DTG — once daily
+→ Same as WHO preferred adult first-line regimen
+
+Transition principle: switch from LPV/r-based regimen to DTG-based as soon as weight and age criteria are met — DTG has significantly better tolerability and higher resistance barrier.</div>
+          <div class="diff-rule" contenteditable="true">Rule: As soon as a child is ≥3 years AND ≥10 kg — switch to ABC + 3TC + DTG (ABD). Once daily. Better tolerability. Higher barrier to resistance. This is the target regimen.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Asymptomatic Does Not Mean "Not Urgent." Under 18 Months: Start Within Days.</div>
+        <div class="impression-reasoning" contenteditable="true">A CD4% of 38% in a 2-year-old is not reassurance — it is a warning that decline is coming and ART should already have been started. The treat-all era means clinical stage and CD4 count determine prophylaxis decisions, not ART initiation. For children under 18 months, "I'll review in a month" is not appropriate. That month is the margin between early immune preservation and irreversible neurodevelopmental damage. Start ART, start cotrimoxazole, schedule the first viral load in 3 months.</div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ===== BIRTH ASPHYXIA SERIES: 3 more posts ===== -->
+
+  <!-- POST 28: The Golden Minute -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">28</div>
+      Sunday
+      <span class="specialty-tag">Neonatology — Birth Asphyxia</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Baby is born. Not crying. Limp. Pale.</span><span class="hook-line">Nurse hands the baby to you.</span><span class="hook-line">You have 60 seconds before permanent brain injury probability begins to rise exponentially.</span><span class="hook-clue">What are your first 4 moves — and in what order? Most trainees get the order wrong.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Birth Asphyxia — The Golden Minute</div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">The First 30 Seconds — WADS</div>
+          <div class="diff-tests" contenteditable="true">W — Warm: Dry immediately and place under a radiant warmer. Remove wet towels and replace. Hypothermia in an asphyxiated neonate doubles mortality — cold is the enemy.
+
+A — Airway: Position the head in neutral "sniffing" position. Suction only if secretions or meconium are visible at the mouth or nose. Avoid deep suction — it causes bradycardia and laryngospasm.
+
+D — Dry and Stimulate: Dry vigorously with a warm towel. Rub the back and soles of the feet firmly. This is adequate stimulation for the vast majority of neonates.
+
+S — Simultaneously Assess: Is the baby breathing? What is the heart rate? (Count for 6 seconds and multiply by 10, or feel the umbilical cord pulse)
+
+Mnemonic — WADS: Warm · Airway · Dry/Stimulate · Assess. In that order.</div>
+          <div class="diff-rule" contenteditable="true">Rule: Drying and warming happen simultaneously with airway positioning. They are not sequential — you are doing all of this at once in the first 30 seconds.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">30 Seconds to 60 Seconds — If Not Breathing or HR &lt;100</div>
+          <div class="diff-tests" contenteditable="true">If baby is not breathing adequately OR heart rate &lt;100 bpm after 30 seconds of WADS:
+
+→ START POSITIVE PRESSURE VENTILATION (PPV)
+→ Rate: 40–60 breaths per minute ("breathe-2-3, breathe-2-3")
+→ FiO₂: Room air (21%) for TERM infants — do NOT start with 100% oxygen
+→ Pressure: 20–25 cmH₂O for initial breaths; 15–20 cmH₂O for maintenance
+→ Check: mask seal is tight, chest rises with each breath, breath sounds audible
+
+At 60 seconds (re-assess):
+→ HR ≥100 + breathing: continue supportive care, wean O₂
+→ HR 60–99: continue PPV, adjust technique, consider increasing FiO₂
+→ HR &lt;60 despite 30 seconds of effective PPV: start chest compressions immediately (3:1 ratio of compressions to ventilations)</div>
+          <div class="diff-rule" contenteditable="true">Rule: Start with room air in term infants. The landmark NRP/WHO evidence shows worse neurological outcomes with 100% O₂ at birth. Titrate FiO₂ up only if SpO₂ remains below target despite effective PPV.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Common Errors in the Golden Minute — What to Unlearn</div>
+          <div class="diff-tests" contenteditable="true">Error 1 — Suctioning before drying:
+No evidence of benefit in non-meconium deliveries. Costs time. Causes bradycardia. Dry first — always.
+
+Error 2 — Starting with 100% O₂:
+Multiple RCTs show worse neurological outcomes and higher mortality with 100% O₂ vs room air at birth in term neonates. Oxygen is a drug. Titrate it.
+
+Error 3 — Delayed cord clamping in a compromised infant:
+Delayed clamping (30–60 seconds) is recommended for healthy term and preterm infants. If the baby needs immediate resuscitation at the warmer → clamp now, move fast.
+
+Error 4 — Waiting for the 1-minute Apgar before acting:
+The Apgar score is a retrospective documentation tool. If the baby is not breathing, start PPV — do not wait 1 minute to confirm with a score.
+
+Error 5 — Trying to resuscitate alone:
+Call for help before 60 seconds. Chest compressions + ventilation require two people. A solo resuscitator will be compromised at that point.</div>
+          <div class="diff-rule" contenteditable="true">Rule: The Apgar score does not guide resuscitation. Your assessment of breathing and heart rate does. Act on those — the Apgar gets filled in afterward.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">WADS. Room Air. Act at 30 Seconds. Call for Help Before 60.</div>
+        <div class="impression-reasoning" contenteditable="true">The golden minute protocol works — but only if the sequence is correct and the timing is adhered to. The single most common error is suction before drying (costs 10 seconds, no benefit). The most consequential error is 100% O₂ in a term infant (evidence of harm). Know your weight-adjusted PPV pressures before you enter the delivery room. Know your team roles. Neonatal resuscitation is not improvised — every second is protocol.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 29: HIE Staging — Sarnat Classification -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">29</div>
+      Monday
+      <span class="specialty-tag">Neonatology — Birth Asphyxia</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Baby resuscitated for birth asphyxia. Now 2 hours old. Irritable. Hypotonic. Some abnormal posturing. Apgar 3 at 5 minutes.</span><span class="hook-line">The family asks: "Will there be permanent damage?"</span><span class="hook-clue">The answer begins with a clinical staging system — and the staging determines whether the next intervention can still change the outcome.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Hypoxic-Ischaemic Encephalopathy (HIE) — Sarnat Staging</div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Sarnat Grades — Mild, Moderate, Severe</div>
+          <div class="diff-tests" contenteditable="true">Grade 1 — Mild HIE:
+→ Hyperalert, irritable, pupils dilated, tone mildly increased, mild feeding difficulty
+→ Deep tendon reflexes brisk, Moro exaggerated
+→ EEG: normal or mildly abnormal
+→ Duration: resolves completely within 24–48 hours
+→ Prognosis: excellent — normal neurodevelopmental outcome in the vast majority
+→ Management: supportive. Do NOT cool.
+
+Grade 2 — Moderate HIE:
+→ Lethargic, hypotonic, abnormal primitive reflexes (weak or absent Moro, poor grasp, absent suck)
+→ Seizures — typically onset at 12–24 hours of age
+→ EEG: abnormal — burst suppression or low voltage
+→ Duration: abnormalities persist &gt;7 days
+→ Prognosis: 25–30% have significant disability; 10–20% die
+→ Management: THERAPEUTIC HYPOTHERMIA if within 6 hours of birth
+
+Grade 3 — Severe HIE:
+→ Comatose, flaccid, absent brainstem reflexes (absent pupillary response, absent oculocephalic reflex)
+→ Prolonged, poorly controlled seizures; apnoea
+→ EEG: burst suppression pattern or flat (isoelectric) trace
+→ Prognosis: majority die or survive with severe disability (cerebral palsy, intellectual disability, epilepsy)
+→ Management: cooling if within 6 hours (benefit less certain than grade 2); intensive care; family counselling</div>
+          <div class="diff-rule" contenteditable="true">Mnemonic — "Irritable → Lethargic → Comatose": Mild Grade 1 → Moderate Grade 2 → Severe Grade 3. The grade at 6 hours is the most predictive. Document it every time.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">The Thompson Score — Bedside Staging Without a Neurologist</div>
+          <div class="diff-tests" contenteditable="true">The Thompson score allows bedside HIE grading using 9 clinical parameters scored 0–3 each:
+Tone · Level of consciousness · Fits (seizures) · Posture · Moro reflex · Grasp · Suck · Pupils · Respiration
+
+Total score: 0–22
+→ Thompson score &lt;7: likely mild HIE (Grade 1) — monitor
+→ Thompson score ≥7 at 4–6 hours: moderate or severe HIE — consider therapeutic hypothermia
+
+Why the Thompson score matters:
+→ Full Sarnat classification requires detailed neurological examination — takes time
+→ Thompson can be completed by any clinician at the bedside
+→ Reproducible between observers
+→ Validated threshold for cooling decisions in resource-limited settings</div>
+          <div class="diff-rule" contenteditable="true">Rule: If you cannot complete a full Sarnat exam, use the Thompson score. A Thompson ≥7 at 4–6 hours of age is the practical threshold for initiating cooling discussion.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">The 6-Hour Window — Why Staging at 4–6 Hours Is Critical</div>
+          <div class="diff-tests" contenteditable="true">After birth asphyxia, brain injury occurs in two phases:
+
+Phase 1 — Primary energy failure (0–6 hours):
+→ Neurons deplete ATP → immediate cell death. Largely irreversible. Nothing stops this phase.
+
+Phase 2 — Secondary energy failure (6–72 hours):
+→ Reperfusion injury + glutamate excitotoxicity + oxidative stress → apoptotic cascade → THIS IS REVERSIBLE
+→ This is exactly what therapeutic hypothermia targets.
+
+The window: therapeutic hypothermia must be started WITHIN 6 HOURS of birth.
+→ After 6 hours: the secondary cascade is already underway — cooling no longer alters the trajectory
+→ Assessment at 4–6 hours is the last clinical decision point before the window closes
+
+Grade 1 at 6 hours: observe, no cooling, reassess at 24 hours
+Grade 2 at 6 hours: cool — within the window — this is where outcome is modifiable
+Grade 3 at 6 hours: cool if possible, recognise guarded prognosis regardless</div>
+          <div class="diff-rule" contenteditable="true">Rule: Staging at birth is insufficient — grade at 6 hours. An infant who appears mildly affected at birth can evolve to Grade 2 by 6 hours as the full picture emerges. The 6-hour grade drives the cooling decision.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">Grade 1 = Monitor. Grade 2 = Cool. Grade 3 = Cool + Counsel. Stage at 6 Hours — Not at Birth.</div>
+        <div class="impression-reasoning" contenteditable="true">Every asphyxiated neonate needs a Sarnat grade documented at 6 hours. That one number determines whether therapeutic hypothermia is indicated, guides prognosis conversations with families, and frames the next 72 hours of care. Grade 1 infants do well — do not cool them. Grade 2 infants have a modifiable trajectory — cool them within the window. Grade 3 infants have a guarded prognosis regardless — cooling may still be offered but the family discussion is equally important.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POST 30: Therapeutic Hypothermia -->
+  <div class="post-card">
+    <div class="post-day">
+      <div class="day-num">30</div>
+      Tuesday
+      <span class="specialty-tag">Neonatology — Birth Asphyxia</span>
+    </div>
+    <div class="post-inner">
+
+      <div class="hook-block">
+        <div class="section-label hook-label">Hook</div>
+        <div class="hook-text" contenteditable="true"><span class="hook-line">Moderate HIE. Thompson score 9. Baby is 3 hours old.</span><span class="hook-line">Your registrar says: "We don't have a cooling machine."</span><span class="hook-line">Transfer to the tertiary centre is 2.5 hours away.</span><span class="hook-clue">The window closes at 6 hours. You have 3 hours left — and there's something you can start right now.</span></div>
+      </div>
+
+      <div class="medflow-block">
+        <div class="section-label medflow-label">Therapeutic Hypothermia — Who, How, and What to Do Without Equipment</div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">What Cooling Does to the Injured Brain</div>
+          <div class="diff-tests" contenteditable="true">After birth asphyxia, the brain's secondary injury cascade (6–72 hours) involves:
+→ Glutamate excitotoxicity — excess glutamate overstimulates NMDA receptors → calcium influx → mitochondrial failure
+→ Oxygen free radical production — oxidative damage to cell membranes
+→ Inflammatory cascade — microglia activation, cytokine release
+→ Apoptosis — programmed cell death in vulnerable neurones
+
+What hypothermia at 33–34°C does:
+→ Reduces cerebral metabolic rate by 25–30% (less ATP needed, less failure)
+→ Suppresses glutamate release
+→ Reduces free radical production
+→ Inhibits apoptotic signalling pathways
+
+Outcome evidence:
+→ Reduces combined outcome of death or major neurodisability by approximately 25% in moderate HIE
+→ Number needed to treat: approximately 7 (for one additional baby to survive without disability)
+→ Effect is greatest in Grade 2 HIE. Grade 3: less certain benefit, but cooling is still offered.</div>
+          <div class="diff-rule" contenteditable="true">Rule: Cooling does not reverse Phase 1 injury. It specifically targets Phase 2 (secondary energy failure). This is why the 6-hour window exists — Phase 2 begins then.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">Eligibility Criteria — All Must Be Present</div>
+          <div class="diff-tests" contenteditable="true">1. Gestational age ≥36 weeks (preterm &lt;36 weeks: cooling may cause harm — evidence insufficient)
+2. Birth weight ≥1800 g (proxy for ≥36 weeks gestation)
+3. Age ≤6 hours from delivery
+4. Evidence of perinatal asphyxia — at least ONE of:
+   → Apgar ≤5 at 10 minutes
+   → Continued need for resuscitation at 10 minutes
+   → Umbilical cord/early blood gas pH &lt;7.0 OR base excess ≤−16 mmol/L
+   → Acute sentinel event (uterine rupture, cord prolapse, severe bradycardia)
+5. PLUS clinical evidence of moderate or severe HIE (Sarnat grade 2 or 3, or Thompson ≥7)
+
+Exclusion:
+→ Major congenital anomaly incompatible with life
+→ Life-threatening coagulopathy
+→ Severe growth restriction (&lt;1800g regardless of gestation)</div>
+          <div class="diff-rule" contenteditable="true">Rule: All 5 criteria must be present. If the baby is ≥36 weeks, has a cord gas pH &lt;7.0, and has a Thompson ≥7 — start the cooling conversation immediately. You have 6 hours from birth, not from diagnosis.</div>
+        </div>
+
+        <div class="differential">
+          <div class="diff-title" contenteditable="true">When There Is No Cooling Machine — Passive Cooling Protocol</div>
+          <div class="diff-tests" contenteditable="true">Servo-controlled cooling (standard care): specialised mattress or blanket maintains rectal temperature at 33–34°C for exactly 72 hours. Available in NICU/tertiary settings.
+
+When equipment is unavailable — "Passive" or improvised cooling:
+→ Remove all clothing and blankets from the baby
+→ Turn OFF the radiant warmer
+→ Place in a room at ambient temperature (approximately 22–24°C)
+→ Monitor temperature every 15–30 minutes with a rectal probe (target 33–34°C)
+→ RISK: passive cooling is imprecise — overcooling (&lt;33°C) causes cardiac arrhythmias and coagulopathy; undercooling (&gt;34°C) reduces efficacy
+→ Use passive cooling as a BRIDGE during transfer — not as definitive treatment if a cooling centre is reachable within the window
+
+During any cooling (protocol):
+→ Monitor: blood glucose every 1–2 hours (hypothermia causes hypoglycaemia), Na, Ca, coagulation
+→ EEG monitoring: subclinical seizures are common in HIE — treat with phenobarbitone
+→ Maintain normal glucose, electrolytes, blood pressure throughout
+
+Rewarming: after 72 hours, rewarm SLOWLY at 0.2–0.5°C per hour. Rapid rewarming = seizure risk.</div>
+          <div class="diff-rule" contenteditable="true">Mnemonic — "33 for 72, then warm slowly": Target temperature 33–34°C. Duration 72 hours. Rewarm at &lt;0.5°C/hour. Three numbers to remember before your patient needs them.</div>
+        </div>
+      </div>
+
+      <div class="impression-block">
+        <div class="section-label impression-label">MedFlow Impression</div>
+        <div class="impression-title" contenteditable="true">No Machine? Remove the Clothes. Turn Off the Warmer. Transfer Fast. The Window Is 6 Hours.</div>
+        <div class="impression-reasoning" contenteditable="true">Therapeutic hypothermia is not exclusive to tertiary centres. Passive cooling — removing warmth deliberately and monitoring temperature carefully — is a bridge that can be started in any delivery unit. A baby meeting criteria in a district hospital at 3 hours of age has 3 hours left. Use that time: remove clothing, turn off the heater, insert a rectal probe, and call the transfer team. Document the temperature every 15 minutes. Monitor glucose. The evidence for cooling at 33–34°C for 72 hours is strong. The evidence for doing nothing while you wait is not.</div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- end week 3 -->
+
+
+<div class="footer">
+  MedFlow AI — Clinical Reasoning Posts &nbsp;|&nbsp; 2026 &nbsp;|&nbsp; Click any text to edit &nbsp;|&nbsp; Ctrl+P to save as PDF
+</div>
+
+</body>
+</html>

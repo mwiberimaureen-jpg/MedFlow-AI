@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MedFlow AI — 4-Week Content Calendar</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f4f6f9;
+      color: #1a1a2e;
+      font-size: 13.5px;
+      line-height: 1.65;
+    }
+
+    /* Edit mode banner */
+    .edit-banner {
+      background: #1b5e20;
+      color: #fff;
+      text-align: center;
+      padding: 10px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .edit-banner span { opacity: 0.75; font-weight: 400; margin-left: 8px; }
+
+    /* Editable field styles */
+    [contenteditable="true"] {
+      cursor: text;
+      border-radius: 4px;
+      transition: outline 0.15s, background 0.15s;
+      outline: 2px dashed transparent;
+    }
+    [contenteditable="true"]:hover {
+      outline: 2px dashed #1565c0;
+      background: #f0f7ff !important;
+    }
+    [contenteditable="true"]:focus {
+      outline: 2px solid #1565c0;
+      background: #e8f0fe !important;
+      box-shadow: 0 0 0 3px rgba(21,101,192,0.15);
+    }
+
+    /* Cover */
+    .cover {
+      background: linear-gradient(135deg, #0d3b6e 0%, #1565c0 60%, #00897b 100%);
+      color: white;
+      padding: 80px 60px;
+      min-height: 260px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .cover h1 { font-size: 36px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px; }
+    .cover h2 { font-size: 18px; font-weight: 400; opacity: 0.85; margin-bottom: 20px; }
+    .cover .meta { font-size: 12px; opacity: 0.65; }
+
+    /* Bios section */
+    .bios {
+      background: #fff;
+      border-left: 5px solid #1565c0;
+      margin: 30px 40px;
+      padding: 24px 28px;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .bios h2 { font-size: 16px; color: #1565c0; margin-bottom: 16px; font-weight: 700; }
+    .bio-block { margin-bottom: 16px; }
+    .bio-block .platform { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #00897b; margin-bottom: 4px; }
+    .bio-block .bio-text { background: #f0f4ff; border-radius: 4px; padding: 10px 14px; font-style: italic; border-left: 3px solid #1565c0; }
+
+    /* Pinned post */
+    .pinned {
+      background: #fff8e1;
+      border-left: 5px solid #f9a825;
+      margin: 0 40px 30px;
+      padding: 24px 28px;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .pinned h2 { font-size: 16px; color: #e65100; margin-bottom: 12px; font-weight: 700; }
+    .pinned .label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #f9a825; margin-bottom: 6px; }
+
+    /* Info / rule boxes */
+    .rule-box {
+      background: #fff;
+      border-left: 5px solid #0d3b6e;
+      margin: 0 40px 30px;
+      padding: 22px 28px;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .rule-box h2 { font-size: 16px; color: #0d3b6e; margin-bottom: 14px; font-weight: 700; }
+    .rule-box h3 { font-size: 13px; color: #1565c0; margin: 14px 0 6px; font-weight: 700; }
+    .rule-box p, .rule-box li { font-size: 13px; color: #333; margin-bottom: 5px; }
+    .rule-box ul { padding-left: 18px; }
+    .rule-box .tag {
+      display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; padding: 2px 7px; border-radius: 3px; margin-right: 6px; vertical-align: middle;
+    }
+    .tag-red { background: #fce4ec; color: #c62828; }
+    .tag-green { background: #e8f5e9; color: #2e7d32; }
+    .tag-blue { background: #e8f0fe; color: #1565c0; }
+
+    /* Pre-launch section */
+    .prelaunch {
+      background: #fff3e0;
+      border-left: 5px solid #e65100;
+      margin: 0 40px 30px;
+      padding: 24px 28px;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .prelaunch h2 { font-size: 16px; color: #e65100; margin-bottom: 14px; font-weight: 700; }
+    .prelaunch h3 { font-size: 13px; color: #bf360c; margin: 12px 0 5px; font-weight: 700; }
+    .prelaunch p, .prelaunch li { font-size: 13px; color: #3e2723; margin-bottom: 5px; }
+    .prelaunch ul { padding-left: 18px; }
+    .spreadsheet-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12px; }
+    .spreadsheet-table th { background: #e65100; color: white; padding: 7px 10px; text-align: left; }
+    .spreadsheet-table td { border: 1px solid #ffccbc; padding: 6px 10px; background: #fff8f5; }
+    .spreadsheet-table td[contenteditable="true"]:hover { background: #fff3e0 !important; }
+
+    /* Week headers */
+    .week-header {
+      background: linear-gradient(135deg, #0d3b6e, #1565c0);
+      color: white;
+      margin: 40px 40px 0;
+      padding: 18px 28px;
+      border-radius: 8px 8px 0 0;
+    }
+    .week-header h2 { font-size: 20px; font-weight: 800; }
+    .week-header p { font-size: 12px; opacity: 0.8; margin-top: 4px; }
+
+    /* Week body */
+    .week-body {
+      background: #fff;
+      margin: 0 40px 40px;
+      border-radius: 0 0 8px 8px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      overflow: hidden;
+    }
+
+    /* Day block */
+    .day-block { border-bottom: 1px solid #e8edf5; }
+    .day-block:last-child { border-bottom: none; }
+
+    .day-title {
+      background: #f0f4ff;
+      padding: 10px 24px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #1565c0;
+      border-bottom: 1px solid #e0e7ff;
+    }
+
+    .post-pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .post-block { padding: 18px 24px; }
+    .post-block:first-child { border-right: 1px solid #e8edf5; }
+
+    .platform-label {
+      display: inline-block;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      padding: 3px 8px; border-radius: 3px; margin-bottom: 10px;
+    }
+    .x-label { background: #e8f0fe; color: #1565c0; }
+    .tt-label { background: #fce4ec; color: #c62828; }
+    .poll-label { background: #e8f5e9; color: #2e7d32; }
+    .reply-label { background: #fff8e1; color: #e65100; }
+
+    .post-text {
+      font-size: 13px; line-height: 1.7;
+      white-space: pre-wrap; color: #2d2d2d;
+    }
+
+    .caption-line {
+      margin-top: 12px; padding-top: 10px;
+      border-top: 1px dashed #dde3f0;
+      font-size: 11.5px; color: #555;
+    }
+    .caption-line strong { color: #1565c0; }
+
+    .cta-note {
+      margin-top: 10px; padding: 7px 10px;
+      background: #fff8e1; border-radius: 4px;
+      font-size: 11.5px; color: #e65100;
+      border-left: 3px solid #f9a825;
+    }
+
+    .poll-options { margin-top: 8px; }
+    .poll-option {
+      background: #f5f7ff; border: 1px solid #dde3f0;
+      border-radius: 4px; padding: 6px 12px;
+      margin-bottom: 5px; font-size: 12.5px; color: #333;
+    }
+
+    /* Tips box */
+    .tips-box {
+      background: #e8f5e9; border-left: 5px solid #43a047;
+      margin: 0 40px 30px; padding: 20px 26px; border-radius: 6px;
+    }
+    .tips-box h3 { color: #2e7d32; font-size: 14px; margin-bottom: 10px; }
+    .tips-box ul { padding-left: 18px; }
+    .tips-box li { margin-bottom: 6px; font-size: 13px; }
+
+    /* Reddit / repurpose section */
+    .ops-section {
+      background: #fff; border-left: 5px solid #00897b;
+      margin: 0 40px 30px; padding: 24px 28px;
+      border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .ops-section h2 { font-size: 16px; color: #00695c; margin-bottom: 14px; font-weight: 700; }
+    .ops-section h3 { font-size: 13px; color: #00897b; margin: 14px 0 6px; font-weight: 700; }
+    .ops-section p, .ops-section li { font-size: 13px; color: #333; margin-bottom: 5px; }
+    .ops-section ul { padding-left: 18px; }
+    .ops-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12.5px; }
+    .ops-table th { background: #00897b; color: white; padding: 7px 12px; text-align: left; }
+    .ops-table td { border: 1px solid #b2dfdb; padding: 6px 12px; }
+    .ops-table tr:nth-child(even) td { background: #f0faf9; }
+
+    /* Footer */
+    .footer {
+      text-align: center; padding: 30px;
+      font-size: 11px; color: #888;
+    }
+
+    /* Print */
+    @media print {
+      body { background: white; font-size: 12px; }
+      .edit-banner { display: none; }
+      .cover, .week-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .platform-label, .day-title { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .week-body { box-shadow: none; border: 1px solid #ddd; }
+      .post-pair { page-break-inside: avoid; }
+      .day-block { page-break-inside: avoid; }
+      [contenteditable="true"] { outline: none !important; background: inherit !important; box-shadow: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- EDIT BANNER -->
+<div class="edit-banner">
+  Click any text to edit directly in the browser
+  <span>— then Ctrl+P → Save as PDF</span>
+</div>
+
+<!-- COVER -->
+<div class="cover">
+  <h1>MedFlow AI</h1>
+  <h2>4-Week B2C Content Calendar — X &amp; TikTok</h2>
+  <div class="meta">Target audience: Junior doctors, interns, medical students &nbsp;|&nbsp; 2026</div>
+</div>
+
+<!-- BIOS -->
+<div class="bios">
+  <h2>Platform Bios</h2>
+  <div class="bio-block">
+    <div class="platform">TikTok Bio (80 characters)</div>
+    <div class="bio-text" contenteditable="true">Your Clinical AI. Analyses histories, builds your management plan &amp; predicts complications in under a minute.</div>
+  </div>
+  <div class="bio-block">
+    <div class="platform">X (Twitter) Bio (160 characters)</div>
+    <div class="bio-text" contenteditable="true">Your Clinical AI. Analyses patient histories, builds &amp; corrects your management plan, and predicts complications — in under a minute. [LINK]</div>
+  </div>
+</div>
+
+<!-- PINNED POST -->
+<div class="pinned">
+  <h2>Pinned X Post — Pin this on day one, before anything else goes up</h2>
+  <div class="label">X — Pinned</div>
+  <div class="post-text" contenteditable="true">I want to be honest about why I built MedFlow.
+
+I was a junior doctor who kept second-guessing myself. Not because I didn't know medicine — but because I was tired, rushed, and had no one to think out loud with.
+
+MedFlow is the co-intern I needed. It doesn't replace your thinking. It gives your thinking somewhere to start.
+
+[LINK]</div>
+</div>
+
+<!-- CTA RULE -->
+<div class="rule-box">
+  <h2>The CTA Rule — Read Before You Post Anything</h2>
+  <p><span class="tag tag-red">Wrong</span> Hard-selling in every video: "Free trial, link in bio" at the end of every post. This is ad behaviour. It kills watch time and signals spam.</p>
+  <p style="margin-top:10px;"><span class="tag tag-green">Right</span> Main videos get a soft 2-second mention or nothing at all. The hard sell only happens in <strong>comment reply videos</strong>.</p>
+  <h3>How comment reply videos work</h3>
+  <p>When a post gets traction and someone comments "what app is this?" or "where do I sign up?" — reply with a video. That reply video appears inside your viral post's comments, inheriting its audience. That is where you name the product, show the features, and say "link in bio." Nowhere else.</p>
+  <h3>Soft CTA options for main videos</h3>
+  <ul>
+    <li>"I use MedFlow for this." — then end the video.</li>
+    <li>Show the app on screen naturally without naming it — let comments ask.</li>
+    <li>End with the clinical payoff, no product mention at all. Let curiosity do the work.</li>
+  </ul>
+  <p style="margin-top:10px;"><span class="tag tag-blue">X posts</span> Having the link in X posts is fine — text posts don't have watch time. But the post should never feel like an ad. The link sits quietly at the bottom, never in the opening line.</p>
+</div>
+
+<!-- PRE-LAUNCH RESEARCH -->
+<div class="prelaunch">
+  <h2>Pre-Launch: Do This Before You Record Anything (3–5 Days)</h2>
+  <p>Before posting a single video, spend 3–5 days on TikTok mapping what already goes viral in your niche. You are not inventing a format — you are copying what already works and putting your product inside it.</p>
+  <h3>Step 1 — Search these keywords on TikTok</h3>
+  <ul>
+    <li>junior doctor &nbsp;|&nbsp; ward round &nbsp;|&nbsp; medical intern &nbsp;|&nbsp; medtok &nbsp;|&nbsp; on call &nbsp;|&nbsp; hospital life &nbsp;|&nbsp; medstudent &nbsp;|&nbsp; internalmedicine &nbsp;|&nbsp; obgyn &nbsp;|&nbsp; nightshift nurse (overlapping audience)</li>
+  </ul>
+  <h3>Step 2 — Filter by Most Liked → All Time</h3>
+  <p>Tap the three dots (top right) → Filters → Sort by Most Liked. You want posts with the highest engagement, not the most recent.</p>
+  <h3>Step 3 — Log 30+ videos in this spreadsheet</h3>
+  <table class="spreadsheet-table">
+    <thead>
+      <tr>
+        <th>Video / Creator</th>
+        <th>Hook (first 3 seconds)</th>
+        <th>Format</th>
+        <th>Why it worked</th>
+        <th>Views</th>
+        <th>Can I replicate?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td contenteditable="true">e.g. @medtok_intern</td>
+        <td contenteditable="true">"It's 5am and I have 9 patients..."</td>
+        <td contenteditable="true">Face to camera, no edits</td>
+        <td contenteditable="true">Relatable exhaustion, specific detail</td>
+        <td contenteditable="true">2.4M</td>
+        <td contenteditable="true">Yes — Week 1 Day 1</td>
+      </tr>
+      <tr>
+        <td contenteditable="true"></td>
+        <td contenteditable="true"></td>
+        <td contenteditable="true"></td>
+        <td contenteditable="true"></td>
+        <td contenteditable="true"></td>
+        <td contenteditable="true"></td>
+      </tr>
+      <tr>
+        <td contenteditable="true"></td>
+        <td contenteditable="true"></td>
+        <td contenteditable="true"></td>
+        <td contenteditable="true"></td>
+        <td contenteditable="true"></td>
+        <td contenteditable="true"></td>
+      </tr>
+      <tr>
+        <td contenteditable="true"></td>
+        <td contenteditable="true"></td>
+        <td contenteditable="true"></td>
+        <td contenteditable="true"></td>
+        <td contenteditable="true"></td>
+        <td contenteditable="true"></td>
+      </tr>
+      <tr>
+        <td contenteditable="true"></td>
+        <td contenteditable="true"></td>
+        <td contenteditable="true"></td>
+        <td contenteditable="true"></td>
+        <td contenteditable="true"></td>
+        <td contenteditable="true"></td>
+      </tr>
+    </tbody>
+  </table>
+  <h3>Step 4 — Check trending sounds weekly</h3>
+  <p>Go to <strong>TikTok Creative Center → Trending → Sounds</strong> (free, no login). Filter by your region. Pick one trending sound per week and fit a MedFlow moment inside it — a ward walkthrough, a before/after, a reaction. This is low-hanging fruit reach on a new account.</p>
+</div>
+
+<!-- OPERATIONAL RULES -->
+<div class="tips-box">
+  <h3>Operational Rules — Applies Every Week</h3>
+  <ul>
+    <li><strong>Post times:</strong> X — 7am and 7pm local. TikTok — 8pm local only. Post every single day — the algorithm needs volume to learn your content.</li>
+    <li><strong>Reply to every comment within 4 hours.</strong> When a comment asks "what is this?" or "where do I get it?" — reply with a video. That is your hard sell moment.</li>
+    <li><strong>Repurpose every TikTok to 3 other platforms</strong> (see Repurposing System section at the end of this document).</li>
+    <li><strong>Log every post:</strong> date, platform, views, comments, profile visits, trial signups. Track one metric: signups per 1,000 impressions.</li>
+    <li><strong>Pin your best-performing video</strong> once you have one with significantly higher traffic. Check weekly and swap if a better performer emerges.</li>
+    <li><strong>DM every doctor who engages</strong> — one genuine sentence per person, no copy-paste templates.</li>
+  </ul>
+</div>
+
+
+<!-- ==================== WEEK 1 ==================== -->
+<div class="week-header">
+  <h2>Week 1 — Pain Point + Transformation</h2>
+  <p>Lead with a relatable problem. Show the solution naturally. No hard selling — let the product speak in the demo. CTA is soft or absent in the main video.</p>
+</div>
+<div class="week-body">
+
+  <div class="day-block">
+    <div class="day-title">Day 1 — Monday — Origin Story</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label x-label">X Post</span>
+        <div class="post-text" contenteditable="true">Last month I presented 9 patients on a post-call round running on 3 hours of sleep.
+
+I built MedFlow so I never walk into a ward round unprepared again.
+
+[LINK]</div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok — 45s</span>
+        <div class="post-text" contenteditable="true"><strong>Hook (0–4s):</strong> "It's 5:47am. I have 9 patients to present in 13 minutes. This is what I do now."
+
+<strong>Body (4–35s):</strong> Screen-record. Paste admission note into MedFlow. Show impression, differentials, management plan generating. Read the first line of the output aloud.
+
+<strong>End (35–45s):</strong> "That's my impression and my plan. I walked into that round ready." — end there. No CTA.</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "What I do now at 5:47am. #medtok #juniordoctor #wardround #internship #medstudent"</div>
+        <div class="cta-note">Soft CTA only. If comments ask "what app is this?" — reply with a video and name the product there.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 2 — Tuesday — The 5 New Admissions</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label x-label">X Post</span>
+        <div class="post-text" contenteditable="true">You ever arrived late, and there are 5 new admissions you haven't touched, and ward rounds are in 20 minutes?
+
+Yeah. Me too.
+
+I built something for that. [LINK]</div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok — 50s</span>
+        <div class="post-text" contenteditable="true"><strong>Hook (0–4s):</strong> "You ever walked onto the ward late, the nurse hands you 5 new folders, and rounds start in 20 minutes?" (wide eyes, slow nod)
+
+<strong>Body (4–35s):</strong> Screen-record. Type a brief history into MedFlow. Show impression, differentials with confirmatory tests, management plan loading.
+
+<strong>End (35–50s):</strong> "That's my impression, my differentials, my plan. In under a minute. I walked into that round ready." End the video. No CTA.</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "5 new admissions, 20 minutes to rounds. Here's what I do. #medtok #juniordoctor #wardround"</div>
+        <div class="cta-note">Let the demo speak. Name the app only in comment replies.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 3 — Wednesday — The 3am Notes</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label x-label">X Post</span>
+        <div class="post-text" contenteditable="true">You ever been asked to present a patient you clerked at 3am, and your notes look like they were written by someone who was clearly not okay?
+
+I was that person. Then I changed how I prep. [LINK]</div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok — 45s</span>
+        <div class="post-text" contenteditable="true"><strong>Hook (0–4s):</strong> "My 3am admission notes are a crime scene. Words missing. Vitals in the margin. Abbreviations I made up." (hold up messy notebook)
+
+<strong>Body (4–32s):</strong> Type the rough history into MedFlow. Show the structured impression, differentials, and plan that comes out.
+
+<strong>End (32–45s):</strong> "I presented that patient. My registrar asked if I'd reviewed her before rounds. I said yes. I did." End there.</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "3am notes shouldn't ruin your 7am presentation. #internship #medicalstudent #medtok"</div>
+        <div class="cta-note">No CTA. The "I did" implies a tool. Comments will ask what it is.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 4 — Thursday — Defend Your Differential</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label x-label">X Post</span>
+        <div class="post-text" contenteditable="true">You ever been asked "what's your differential?" and your brain just... left the building?
+
+The problem isn't the differential. It's knowing which tests prove it. [LINK]</div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok — 55s</span>
+        <div class="post-text" contenteditable="true"><strong>Hook (0–4s):</strong> "The most terrifying question in medicine is not 'what's the diagnosis.' It's 'what's your differential and how are you going to prove it?'"
+
+<strong>Body (4–40s):</strong> Show MedFlow differential output. Read one aloud with its confirmatory test: "Septic arthritis — ruled in by joint aspiration WBC >50,000, ruled out by normal synovial fluid." Show two more examples.
+
+<strong>End (40–55s):</strong> "You're not guessing anymore. You're reasoning. That's what they want to hear." End there.</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "A differential without a confirmatory plan is just a guess. #internalmedicine #medschool #clinicalreasoning"</div>
+        <div class="cta-note">Show the app screen without naming it. Let curiosity drive the comments.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 5 — Friday — New Rotation, Zero Experience</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label x-label">X Post</span>
+        <div class="post-text" contenteditable="true">Day 3 of my OB/GYN rotation. I had never clerked an obstetric patient in my life.
+
+I caught a complication my registrar hadn't flagged yet. I wasn't smarter than usual — I was better prepared. [LINK]</div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok — 50s</span>
+        <div class="post-text" contenteditable="true"><strong>Hook (0–4s):</strong> "Day 3 of my OB/GYN rotation. I'd never clerked an obstetric patient in my life. Rounds in one hour."
+
+<strong>Body (4–35s):</strong> Show OB/GYN history entered into MedFlow. Show the complication flagged. Show the management plan.
+
+<strong>End (35–50s):</strong> "My consultant brought up that complication in rounds. I was ready for it. That was day 3." End there.</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "Day 3 of a rotation I'd never done. Here's what happened. #obgyn #medtok #juniordoctor"</div>
+        <div class="cta-note">Soft CTA: "I use MedFlow for this" as the very last line — optional. Otherwise end on the story.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 6 — Saturday — Community Poll</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label x-label">X Poll</span>
+        <div class="post-text" contenteditable="true">Be honest — how long does ward round prep take you on a busy day?</div>
+        <div class="poll-options">
+          <div class="poll-option" contenteditable="true">⬜ Less than 15 minutes</div>
+          <div class="poll-option" contenteditable="true">⬜ 15–30 minutes</div>
+          <div class="poll-option" contenteditable="true">⬜ 30–60 minutes</div>
+          <div class="poll-option" contenteditable="true">⬜ Over 1 hour (I cry)</div>
+        </div>
+        <div class="cta-note" style="margin-top:10px;">Reply to every comment. This is where the relationship builds. No product mention in the poll itself.</div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok — 30s (optional)</span>
+        <div class="post-text" contenteditable="true"><strong>Hook:</strong> "POV: your consultant asks 'what was her HB yesterday?'"
+
+Open MedFlow on screen. Scroll to the value. Read it out immediately.
+
+No words needed. No CTA. Just the moment.</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "The detail you always forget. #medtok #wardround"</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 7 — Sunday — Why I Built This (also the Pinned Post)</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label x-label">X Post — PIN THIS</span>
+        <div class="post-text" contenteditable="true">I want to be honest about why I built MedFlow.
+
+I was a junior doctor who kept second-guessing myself. Not because I didn't know medicine — but because I was tired, rushed, and had no one to think out loud with.
+
+MedFlow is the co-intern I needed. It doesn't replace your thinking. It gives your thinking somewhere to start.
+
+[LINK]</div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok — 60s</span>
+        <div class="post-text" contenteditable="true"><strong>Hook (0–5s):</strong> "I didn't build this because I was bad at medicine. I built it because being good at medicine while exhausted is genuinely hard."
+
+<strong>Body (5–50s):</strong> "Junior doctors second-guess themselves not from lack of knowledge — from lack of time to think. You have 8 patients in 40 minutes. You're going to miss something. I needed a second opinion in under a minute. So I built one."
+
+<strong>End (50–60s):</strong> "It's called MedFlow. It doesn't replace you. It makes sure you've covered the ground before you walk in. Link in bio." — This is one of the few videos where naming the product in the main video is appropriate because it's the founder story.</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "The co-intern I never had. #medflow #juniordoctor #medicalai #medtok"</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end week 1 -->
+
+
+<!-- ==================== WEEK 2 ==================== -->
+<div class="week-header">
+  <h2>Week 2 — "Diagnose This" Series</h2>
+  <p>Tricky HPI → ask for 3 differentials → reveal MedFlow output in a comment reply video at 8pm. Never pitch the product in the original post — the reply video is the sell.</p>
+</div>
+<div class="week-body">
+
+  <div class="day-block">
+    <div class="day-title">Day 1 — Monday</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label x-label">X Post</span>
+        <div class="post-text" contenteditable="true">Diagnose This:
+
+32F. 3-day history of fever, RUQ pain, and jaundice. Murphy's sign positive. Recent travel to a rural area. No prior surgeries.
+
+What are your top 3 differentials? Drop them below. I'll reply at 8pm with the full workup.</div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok</span>
+        <div class="post-text" contenteditable="true">Read HPI aloud slowly. Pause between each finding. End with: "Comment your top 3 differentials. I'll reply with the full workup tonight."
+
+No product mention. No CTA. Pure clinical engagement.</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "32F, jaundiced, RUQ pain, rural travel. What are you thinking? 3 differentials below. #medtok #clinicalreasoning #medschool"</div>
+        <div class="cta-note">Reply video at 8pm: show MedFlow generating the impression and differential list. "This is what MedFlow gave me — link in bio if you want to run your own cases."</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 2 — Tuesday</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label x-label">X Post</span>
+        <div class="post-text" contenteditable="true">Diagnose This:
+
+28M. 2-week history of progressive dyspnea, pleuritic chest pain, weight loss, night sweats. Lives with his elderly grandmother. CXR: upper lobe infiltrates.
+
+Top 3 differentials? Go.</div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok</span>
+        <div class="post-text" contenteditable="true">Read HPI aloud. Pause deliberately on "lives with his elderly grandmother." Let the implication hang. Ask for 3 differentials in comments.</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "Young guy, losing weight, night sweats, upper lobe changes. Lives with grandma. 3 differentials. #medschool #internalmedicine #medtok"</div>
+        <div class="cta-note">Reply video: MedFlow output with TB as impression. Hard sell only here.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 3 — Wednesday</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label x-label">X Post</span>
+        <div class="post-text" contenteditable="true">Diagnose This:
+
+45F. Sudden onset severe headache — "worst of her life." Vomiting x3, photophobia. No fever. Neck stiffness present. BP 160/100.
+
+What are you ruling in and ruling out first?</div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok</span>
+        <div class="post-text" contenteditable="true">Read HPI with urgency in your voice. No music. Pause after "worst of her life." "Clock is ticking. 3 differentials in the comments."</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "Worst headache of her life. Neck stiffness. No fever. BP through the roof. Differentials in the comments. #neurology #medtok"</div>
+        <div class="cta-note">Reply video: SAH impression, CT head plan, product name + link.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 4 — Thursday</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label x-label">X Post</span>
+        <div class="post-text" contenteditable="true">Diagnose This:
+
+19F. G2P1+0, 28 weeks pregnant. Sudden onset right-sided abdominal pain. Uterus tense on palpation. Initially painless vaginal bleeding, now worsening.
+
+3 differentials. What do you do first?</div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok</span>
+        <div class="post-text" contenteditable="true">Read HPI straight to camera. "You're the doctor on call. 3 differentials — and what's the first thing you do?" Ask for comments.</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "28 weeks, tense uterus, bleeding. Top 3 differentials and your first move. #obgyn #medicalstudent #medtok"</div>
+        <div class="cta-note">Reply video: placental abruption impression, USS + CTG plan, product pitch.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 5 — Friday — Ward-Round Friday Edition</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label x-label">X Post</span>
+        <div class="post-text" contenteditable="true">Diagnose This — Ward Round Friday:
+
+55M, diabetic. 3-day left foot ulcer, blackened edges, foul odour, crepitus on palpation. Afebrile. WBC 18.
+
+Three differentials. Does crepitus change your answer?</div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok</span>
+        <div class="post-text" contenteditable="true">Read HPI. Pause after "crepitus on palpation." "One word. Does that change your differential?" Ask for 3 in comments.</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "Diabetic foot, crepitus, WBC 18. Does crepitus change your answer? #surgery #medicaltok #medtok"</div>
+        <div class="cta-note">Reply video: necrotising fasciitis impression, surgical emergency plan, product pitch.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 6 — Saturday</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label x-label">X Post</span>
+        <div class="post-text" contenteditable="true">Diagnose This:
+
+16F. 3 months of intermittent abdominal pain, bloating, alternating diarrhea and constipation. No weight loss, no blood PR. Symptoms peak before exams.
+
+Tricky one. Top 3 differentials?</div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok</span>
+        <div class="post-text" contenteditable="true">Read HPI conversationally. "This one looks simple. It isn't. 3 differentials — and think before you say IBS."</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "Teenage girl, 3 months of gut symptoms, no red flags. Is it really that simple? #gastroenterology #medtok"</div>
+        <div class="cta-note">Reply video: IBS as impression, coeliac screen + calprotectin to exclude IBD, product pitch.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 7 — Sunday</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label x-label">X Post</span>
+        <div class="post-text" contenteditable="true">Diagnose This:
+
+60F. 2-week progressive bilateral leg swelling, SOB on exertion, orthopnea, PND. Known hypertensive on amlodipine. JVP raised, bilateral basal crackles.
+
+Three differentials — and which one kills her if you miss it?</div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok</span>
+        <div class="post-text" contenteditable="true">Read HPI. "Three differentials — and which one kills her if you miss it? Tell me below."</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "Bilateral swelling, raised JVP, crackles. Which one kills her if you miss it? #cardiology #internalmedicine #medtok"</div>
+        <div class="cta-note">Reply video: CCF impression, Echo + BNP + diuresis plan, product pitch.</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end week 2 -->
+
+
+<!-- ==================== WEEK 3 ==================== -->
+<div class="week-header">
+  <h2>Week 3 — Same HPIs, Now Polls + Reveal Videos</h2>
+  <p>Revisit each Week 2 case. X poll with 4 impression options. TikTok reveal: "Last week you gave your differentials. Here's what the workup shows." Hard sell only in the reveal — this is the appropriate moment to name the product and show it working.</p>
+</div>
+<div class="week-body">
+
+  <div class="day-block">
+    <div class="day-title">Day 1 — Monday (Case: 32F, RUQ, Jaundice)</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label poll-label">X Poll</span>
+        <div class="post-text" contenteditable="true">Same patient from last Monday:
+
+32F, fever, RUQ pain, jaundice, positive Murphy's, rural travel history.
+
+Most appropriate impression?</div>
+        <div class="poll-options">
+          <div class="poll-option" contenteditable="true">⬜ Acute cholecystitis</div>
+          <div class="poll-option" contenteditable="true">⬜ Amoebic liver abscess</div>
+          <div class="poll-option" contenteditable="true">⬜ Ascending cholangitis</div>
+          <div class="poll-option" contenteditable="true">⬜ Hepatitis A</div>
+        </div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok — Reveal</span>
+        <div class="post-text" contenteditable="true"><strong>Hook:</strong> "Last week's case. Here's what the workup shows." (show top comments from Week 2)
+
+<strong>Body:</strong> Show MedFlow impression and confirmatory plan on screen. Read it aloud.
+
+<strong>Hard sell (end):</strong> "This is MedFlow. I ran this case in under a minute. Link in bio — free trial."</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "The reveal. Did you get it? #clinicalreasoning #medtok #medflow"</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 2 — Tuesday (Case: 28M, Upper Lobe Infiltrates)</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label poll-label">X Poll</span>
+        <div class="post-text" contenteditable="true">28M, upper lobe infiltrates, night sweats, weight loss, lives with elderly grandmother.
+
+Most appropriate impression?</div>
+        <div class="poll-options">
+          <div class="poll-option" contenteditable="true">⬜ Community-acquired pneumonia</div>
+          <div class="poll-option" contenteditable="true">⬜ Pulmonary tuberculosis</div>
+          <div class="poll-option" contenteditable="true">⬜ Hodgkin's lymphoma</div>
+          <div class="poll-option" contenteditable="true">⬜ Sarcoidosis</div>
+        </div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok — Reveal</span>
+        <div class="post-text" contenteditable="true"><strong>Hook:</strong> "The clue most people missed: he lives with his elderly grandmother."
+
+<strong>Body:</strong> Show MedFlow — TB impression, sputum AFB x3, GeneXpert, Mantoux, contact tracing flagged.
+
+<strong>Hard sell:</strong> "MedFlow. Link in bio."</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "The clue was who he lives with. #tuberculosis #medtok #medflow"</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 3 — Wednesday (Case: 45F, Worst Headache)</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label poll-label">X Poll</span>
+        <div class="post-text" contenteditable="true">45F, worst headache of her life, neck stiffness, photophobia, no fever, BP 160/100.
+
+Most appropriate impression?</div>
+        <div class="poll-options">
+          <div class="poll-option" contenteditable="true">⬜ Hypertensive emergency</div>
+          <div class="poll-option" contenteditable="true">⬜ Bacterial meningitis</div>
+          <div class="poll-option" contenteditable="true">⬜ Subarachnoid haemorrhage</div>
+          <div class="poll-option" contenteditable="true">⬜ Migraine with aura</div>
+        </div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok — Reveal</span>
+        <div class="post-text" contenteditable="true"><strong>Hook:</strong> "'Worst headache of her life' is a red flag phrase. Here's why it changes everything."
+
+<strong>Body:</strong> SAH impression, non-contrast CT head, LP if CT negative. Show MedFlow screen.
+
+<strong>Hard sell:</strong> "The BP is the red herring. MedFlow caught it. Link in bio."</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "Thunderclap headache. The phrase that changes everything. #neurology #medtok"</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 4 — Thursday (Case: 19F, 28 Weeks, Bleeding)</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label poll-label">X Poll</span>
+        <div class="post-text" contenteditable="true">19F, 28 weeks, tense uterus, right-sided pain, worsening vaginal bleeding.
+
+Most appropriate impression?</div>
+        <div class="poll-options">
+          <div class="poll-option" contenteditable="true">⬜ Placenta praevia</div>
+          <div class="poll-option" contenteditable="true">⬜ Placental abruption</div>
+          <div class="poll-option" contenteditable="true">⬜ Preterm labour</div>
+          <div class="poll-option" contenteditable="true">⬜ Uterine rupture</div>
+        </div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok — Reveal</span>
+        <div class="post-text" contenteditable="true"><strong>Hook:</strong> "Tense uterus plus pain plus bleeding. The word is tense."
+
+<strong>Body:</strong> Placental abruption, USS + CTG + coagulation screen + crossmatch. MedFlow screen shown.
+
+<strong>Hard sell:</strong> "Praevia is painless. This isn't. MedFlow knows the difference. Link in bio."</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "The one word that separates abruption from praevia. #obgyn #medtok"</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 5 — Friday (Case: 55M Diabetic Foot)</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label poll-label">X Poll</span>
+        <div class="post-text" contenteditable="true">55M diabetic, foot ulcer, crepitus on palpation, blackened edges, WBC 18, afebrile.
+
+Most appropriate impression?</div>
+        <div class="poll-options">
+          <div class="poll-option" contenteditable="true">⬜ Osteomyelitis</div>
+          <div class="poll-option" contenteditable="true">⬜ Necrotising fasciitis</div>
+          <div class="poll-option" contenteditable="true">⬜ Wet gangrene</div>
+          <div class="poll-option" contenteditable="true">⬜ Infected diabetic ulcer, no deep tissue involvement</div>
+        </div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok — Reveal</span>
+        <div class="post-text" contenteditable="true"><strong>Hook:</strong> "Crepitus means gas in the tissue. That is a surgical emergency. You do not wait."
+
+<strong>Body:</strong> Necrotising fasciitis, urgent surgical consult, IV broad-spectrum antibiotics, theatre prep. MedFlow screen.
+
+<strong>Hard sell:</strong> "MedFlow flagged this as a surgical emergency. Link in bio."</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "Crepitus = gas in tissue = do not wait. #surgery #medicaltok #medflow"</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 6 — Saturday (Case: 16F, Abdominal Pain)</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label poll-label">X Poll</span>
+        <div class="post-text" contenteditable="true">16F, 3 months of bloating, alternating diarrhea/constipation, no red flags, symptoms peak before exams.
+
+Most appropriate impression?</div>
+        <div class="poll-options">
+          <div class="poll-option" contenteditable="true">⬜ Irritable bowel syndrome</div>
+          <div class="poll-option" contenteditable="true">⬜ Crohn's disease</div>
+          <div class="poll-option" contenteditable="true">⬜ Coeliac disease</div>
+          <div class="poll-option" contenteditable="true">⬜ Functional abdominal pain disorder</div>
+        </div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok — Reveal</span>
+        <div class="post-text" contenteditable="true"><strong>Hook:</strong> "IBS is a diagnosis of exclusion. Here's what you have to rule out first."
+
+<strong>Body:</strong> IBS impression, FBC + CRP + coeliac screen + stool calprotectin to exclude IBD. MedFlow screen.
+
+<strong>Hard sell:</strong> "MedFlow builds the exclusion workup automatically. Link in bio."</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "IBS is not a lazy diagnosis. Here's how you earn it. #gastroenterology #medtok"</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 7 — Sunday (Case: 60F, Bilateral Oedema)</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label poll-label">X Poll</span>
+        <div class="post-text" contenteditable="true">60F hypertensive, bilateral leg oedema, raised JVP, basal crackles, orthopnea, PND.
+
+Most appropriate impression?</div>
+        <div class="poll-options">
+          <div class="poll-option" contenteditable="true">⬜ Nephrotic syndrome</div>
+          <div class="poll-option" contenteditable="true">⬜ Congestive cardiac failure</div>
+          <div class="poll-option" contenteditable="true">⬜ Liver cirrhosis with portal hypertension</div>
+          <div class="poll-option" contenteditable="true">⬜ Bilateral deep vein thrombosis</div>
+        </div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok — Reveal</span>
+        <div class="post-text" contenteditable="true"><strong>Hook:</strong> "Raised JVP separates cardiac from everything else. Here's the anchor sign."
+
+<strong>Body:</strong> CCF impression, Echo + BNP + diuresis + cardiology review. MedFlow screen.
+
+<strong>Hard sell:</strong> "MedFlow. Impression, plan, complications — under a minute. Link in bio."</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "The one sign that clinches CCF. #cardiology #internalmedicine #medflow"</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end week 3 -->
+
+
+<!-- ==================== WEEK 4 ==================== -->
+<div class="week-header">
+  <h2>Week 4 — Transformation Stories</h2>
+  <p>No feature lists. No product brochures. Every post is a before-and-after story told through the doctor's identity. The product is present but never the headline. Soft CTAs only — hard sell lives in comment replies.</p>
+</div>
+<div class="week-body">
+
+  <div class="day-block">
+    <div class="day-title">Day 1 — Monday — The First Good Presentation</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label x-label">X Post</span>
+        <div class="post-text" contenteditable="true">My consultant said "good presentation" for the first time last week.
+
+I've been an intern for 4 months. It took me this long to stop dreading rounds.
+
+What changed wasn't my knowledge. It was how I prepared.</div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok — 50s</span>
+        <div class="post-text" contenteditable="true"><strong>Hook (0–4s):</strong> "My consultant said 'good presentation' for the first time last week. I've been an intern for 4 months."
+
+<strong>Body (4–40s):</strong> "The difference wasn't that I suddenly knew more medicine. It was that I walked in knowing exactly what my impression was, what my differentials were, and what I was going to order. I wasn't guessing in front of them. I was presenting."
+
+<strong>End (40–50s):</strong> "I use MedFlow to prep now. That's the difference." End there.</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "4 months to hear 'good presentation.' Here's what changed. #juniordoctor #medtok #internship"</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 2 — Tuesday — The Complication I Almost Missed</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label x-label">X Post</span>
+        <div class="post-text" contenteditable="true">There was a patient last month I almost missed a complication on.
+
+Not because I didn't know medicine. Because I was tired, I had 7 other patients, and I didn't have time to think through all the possibilities.
+
+Something flagged it before my consultant asked about it. I was ready.</div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok — 55s</span>
+        <div class="post-text" contenteditable="true"><strong>Hook (0–4s):</strong> "There's a patient I almost missed a serious complication on last month."
+
+<strong>Body (4–45s):</strong> Tell the story — a real de-identified case. Patient on day 4, fever not settling, antibiotic course nearing end. You were focused on the fever, not on what a persistent fever at day 4 on the right antibiotic actually means. "MedFlow flagged: consider drug-resistant organism, escalate cover, check cultures. My consultant asked about it in rounds. I had the answer."
+
+<strong>End (45–55s):</strong> "I was ready because I had already asked the question I didn't know to ask." End there.</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "The complication I almost missed — and what caught it. #medtok #juniordoctor #wardround"</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 3 — Wednesday — Day 1 vs Day 30</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label x-label">X Post</span>
+        <div class="post-text" contenteditable="true">Day 1 of internship: I presented a patient and forgot the potassium.
+
+Day 30: I presented 8 patients and knew the potassium on all of them.
+
+The medicine didn't change. The system did.</div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok — 45s</span>
+        <div class="post-text" contenteditable="true"><strong>Hook (0–3s):</strong> "Day 1 of internship vs day 30. Here's what actually changed."
+
+<strong>Body (3–35s):</strong> Split format or straight to camera. Day 1: scrambling, forgetting labs, guessing the plan. Day 30: every patient prepped, impression ready, complications considered. "It wasn't experience that changed. It was building a system for how I prepare."
+
+<strong>End (35–45s):</strong> "MedFlow is part of that system now." End there.</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "Day 1 vs day 30 of internship. What actually changes. #intern #medtok #hospitalmedicine"</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 4 — Thursday — Alone on Call</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label x-label">X Post</span>
+        <div class="post-text" contenteditable="true">It's 2am. A nurse calls about a patient you've never seen. You're the only doctor on the floor.
+
+The walk down that corridor used to terrify me. It doesn't anymore.
+
+Not because I'm braver. Because I'm better prepared.</div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok — 50s</span>
+        <div class="post-text" contenteditable="true"><strong>Hook (0–4s):</strong> "It's 2am. Nurse calls. 'Can you review bed 7?' You've never seen this patient." (walking corridor, low light)
+
+<strong>Body (4–38s):</strong> "I used to walk into those rooms hoping I'd know what to do. Now I walk in having already thought through the differentials, already knowing what I need to examine for, already having a starting plan." Show phone screen with MedFlow open, plan visible.
+
+<strong>End (38–50s):</strong> "The nurse looked at me like I'd seen the patient before. I hadn't." End there.</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "The 2am review you were never prepared for. Now you are. #oncall #nightshift #medtok"</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 5 — Friday — You Are Not a Bad Doctor</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label x-label">X Post</span>
+        <div class="post-text" contenteditable="true">You are not a bad doctor because you miss things when you're tired.
+
+You're a tired doctor who needs a better system.
+
+Those are very different problems with very different solutions.</div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok — 35s</span>
+        <div class="post-text" contenteditable="true"><strong>Hook (0–3s):</strong> "I want to say something to every junior doctor who's gone home worried they missed something."
+
+<strong>Body (3–28s):</strong> "You're not failing. You're under-resourced. There's a difference. Failing means your knowledge is the problem. Being under-resourced means your system is the problem. Fix the system."
+
+<strong>End (28–35s):</strong> "That's why I built MedFlow." End there. Flat, no music, no CTA.</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "You're not a bad doctor. You're an under-resourced one. #medtok #juniordoctor #medicalai"</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 6 — Saturday — I Used to Dread Rounds</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label x-label">X Post</span>
+        <div class="post-text" contenteditable="true">I used to dread ward rounds. Not because I didn't know medicine — because I was never sure I'd covered everything.
+
+That feeling is gone now.
+
+[LINK]</div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok — 40s</span>
+        <div class="post-text" contenteditable="true"><strong>Hook (0–3s):</strong> "I used to get a knot in my stomach every morning before rounds."
+
+<strong>Body (3–32s):</strong> "Not because I hadn't read my patients. Because I was never confident I'd considered everything — every complication, every differential, every plan detail. The anxiety wasn't about knowledge. It was about coverage."
+
+<strong>End (32–40s):</strong> "I don't have that feeling anymore. MedFlow is why." End there.</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "I used to dread ward rounds. Here's what changed. #wardround #medtok #juniordoctor"</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-block">
+    <div class="day-title">Day 7 — Sunday — Week 4 Close</div>
+    <div class="post-pair">
+      <div class="post-block">
+        <span class="platform-label x-label">X Post</span>
+        <div class="post-text" contenteditable="true">4 weeks. Still building. Still posting. Still a junior doctor who believes this tool should exist for every intern who feels like they're barely keeping up.
+
+If you've been watching and haven't tried it — the trial is free, no card, 7 days.
+
+What's the worst that happens? You have a better round.
+
+[LINK]</div>
+      </div>
+      <div class="post-block">
+        <span class="platform-label tt-label">TikTok — 50s</span>
+        <div class="post-text" contenteditable="true"><strong>Hook (0–4s):</strong> "4 weeks of posting. Still here. Still building this."
+
+<strong>Body (4–38s):</strong> "I've shown you the demos, the cases, the differentials. What I haven't said enough is this: if you are a junior doctor who feels like you're barely keeping up — that's not a you problem. That's a system problem. And MedFlow is the system fix."
+
+<strong>End (38–50s):</strong> "Free trial. No card. Link in bio. One better ward round is worth 30 seconds to sign up." End there.</div>
+        <div class="caption-line" contenteditable="true"><strong>Caption:</strong> "4 weeks in. One free trial. One better round. #medflow #juniordoctor #medtok"</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end week 4 -->
+
+
+<!-- ==================== REPURPOSING SYSTEM ==================== -->
+<div class="ops-section">
+  <h2>Repurposing System — Every TikTok Becomes 4 Posts</h2>
+  <p>Never let a video live on one platform only. One recording session = four pieces of content at zero extra cost.</p>
+  <table class="ops-table">
+    <thead>
+      <tr><th>Step</th><th>Platform</th><th>Action</th><th>Tool (free)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td>TikTok</td><td>Post first. Let it run for 24hrs to test performance.</td><td>—</td></tr>
+      <tr><td>2</td><td>Instagram Reels</td><td>Download your TikTok without watermark, re-upload to Reels.</td><td>SnapTik or SaveTok</td></tr>
+      <tr><td>3</td><td>YouTube Shorts</td><td>Same watermark-free file, upload as a Short.</td><td>—</td></tr>
+      <tr><td>4</td><td>Facebook Reels</td><td>Same file, post to Facebook. Lowest effort, still real reach.</td><td>—</td></tr>
+    </tbody>
+  </table>
+  <h3>When to cross-post</h3>
+  <p>Post TikTok at 8pm. Download and cross-post to the other 3 platforms the following morning. If TikTok performs poorly (under 500 views in 24hrs), still cross-post — different algorithms reward different content. If TikTok goes above 5,000 views, prioritise responding to comments before cross-posting.</p>
+  <h3>X repurposing</h3>
+  <p>Every TikTok script also becomes an X post — paste the core hook + payoff as text. Do not post the video natively on X until you have an audience there; text outperforms video on X for new accounts.</p>
+</div>
+
+<!-- ==================== REDDIT STRATEGY ==================== -->
+<div class="ops-section">
+  <h2>Reddit Strategy — Your First Highly Engaged Users</h2>
+  <p>Reddit is where early adopters live and where honest product feedback comes from. Do not treat it as a distribution channel. Treat it as a community you are joining.</p>
+  <h3>The rule before you post anything</h3>
+  <p>Spend 5–7 days commenting on other posts in your target subreddits before ever mentioning MedFlow. Add genuine value — clinical insights, founder advice, honest opinions. When you eventually post, the community recognises you as a contributor, not a spammer.</p>
+  <table class="ops-table">
+    <thead>
+      <tr><th>Subreddit</th><th>What to post</th><th>Tone</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>r/medicalstudents</td><td>Founder story + ask for honest feedback on the product</td><td>Humble, curious</td></tr>
+      <tr><td>r/medicine</td><td>Clinical pearls only — no pitch. Build credibility first.</td><td>Clinical, peer-to-peer</td></tr>
+      <tr><td>r/Residency</td><td>"How do you prep for ward rounds?" — listen, then share your solution</td><td>Conversational</td></tr>
+      <tr><td>r/SaaS</td><td>Build-in-public update: what you shipped, what you learned, what broke</td><td>Founder, transparent</td></tr>
+      <tr><td>r/SideProject</td><td>Launch post: the problem, the solution, a live link. Ask for feedback.</td><td>Direct, honest</td></tr>
+      <tr><td>r/AskDocs (read-only)</td><td>Mine for real patient pain points to inform content and product direction</td><td>Research only</td></tr>
+    </tbody>
+  </table>
+  <h3>What a good Reddit post looks like</h3>
+  <p><strong>Lead with the problem, not the product.</strong> Example: "I'm a junior doctor who got tired of dreading ward rounds. Spent 6 months building a tool that generates clinical impressions and management plans from admission notes. Would love brutal feedback from anyone willing to try it." Then include the link. No hype, no features list.</p>
+  <p style="margin-top:8px;"><strong>Aim for 2 posts per week</strong> across your target subreddits once you've established presence.</p>
+</div>
+
+<div class="footer">
+  MedFlow AI — 4-Week Content Calendar &nbsp;|&nbsp; 2026 &nbsp;|&nbsp; Replace [LINK] and [FOUNDER] before publishing
+</div>
+
+</body>
+</html>
