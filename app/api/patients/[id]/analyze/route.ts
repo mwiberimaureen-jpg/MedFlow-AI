@@ -73,7 +73,7 @@ export async function POST(
     }
 
     // Trial quota gate: 5 free admission analyses per account
-    const quota = await getTrialQuota(supabase, user.id)
+    const quota = await getTrialQuota(supabase, user.id, user.email)
 
     // Review gate: must submit review before accessing analyses 4 and 5
     if (quota.reviewRequired) {

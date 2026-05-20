@@ -34,10 +34,14 @@ function getExemptEmails(): Set<string> {
 /**
  * Check whether the user can run another admission analysis.
  * Active subscribers and exempt admins bypass the quota entirely.
+ *
+ * Pass authEmail (from supabase.auth.getUser()) so the exempt check
+ * uses the verified auth email rather than a potentially missing users table field.
  */
 export async function getTrialQuota(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
+  authEmail?: string | null
 ): Promise<TrialQuota> {
   const { data: userRow } = await supabase
     .from('users')
@@ -46,7 +50,7 @@ export async function getTrialQuota(
     .maybeSingle()
 
   const subscribed = userRow?.subscription_status === 'active'
-  const email = (userRow?.email || '').toLowerCase()
+  const email = (authEmail || userRow?.email || '').toLowerCase()
   const exempt = email !== '' && getExemptEmails().has(email)
   const reviewSubmitted = userRow?.review_submitted === true
 

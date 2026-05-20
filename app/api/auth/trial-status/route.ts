@@ -18,7 +18,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const quota = await getTrialQuota(supabase, user.id)
+    const quota = await getTrialQuota(supabase, user.id, user.email)
     return NextResponse.json(quota)
   } catch (error: any) {
     console.error('Error in GET /api/auth/trial-status:', error)
