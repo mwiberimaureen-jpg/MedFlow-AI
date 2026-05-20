@@ -9,16 +9,16 @@
 
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
-      background: #f4f6f9;
-      color: #1a1a2e;
-      font-size: 13.5px;
-      line-height: 1.7;
+      background: #0d1117;
+      color: #dce8f8;
+      font-size: 16px;
+      line-height: 1.75;
     }
 
     /* Edit banner */
     .edit-banner {
-      background: #1b5e20;
-      color: #fff;
+      background: #14321f;
+      color: #86efac;
       text-align: center;
       padding: 10px 20px;
       font-size: 13px;
@@ -26,6 +26,7 @@
       position: sticky;
       top: 0;
       z-index: 100;
+      border-bottom: 1px solid #166534;
     }
     .edit-banner span { opacity: 0.7; font-weight: 400; margin-left: 8px; }
 
@@ -33,186 +34,191 @@
     .cover {
       background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #00695c 100%);
       color: white;
-      padding: 70px 60px;
-      min-height: 220px;
+      padding: 60px 40px;
+      min-height: 200px;
       display: flex;
       flex-direction: column;
       justify-content: center;
     }
-    .cover h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px; }
-    .cover h2 { font-size: 17px; font-weight: 400; opacity: 0.8; margin-bottom: 16px; }
-    .cover .meta { font-size: 12px; opacity: 0.6; }
+    .cover h1 { font-size: 36px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px; }
+    .cover h2 { font-size: 17px; font-weight: 400; opacity: 0.85; margin-bottom: 16px; }
+    .cover .meta { font-size: 13px; opacity: 0.6; }
 
     /* Format guide */
     .format-guide {
-      background: #fff;
-      border-left: 5px solid #283593;
-      margin: 30px 40px;
-      padding: 22px 28px;
+      background: #161c2c;
+      border-left: 5px solid #4f5bd2;
+      border: 1px solid #252f45;
+      border-left: 5px solid #4f5bd2;
+      margin: 24px 32px;
+      padding: 20px 24px;
       border-radius: 6px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     }
-    .format-guide h2 { font-size: 15px; color: #283593; font-weight: 700; margin-bottom: 12px; }
-    .format-guide p { font-size: 13px; color: #333; margin-bottom: 6px; }
+    .format-guide h2 { font-size: 15px; color: #818cf8; font-weight: 700; margin-bottom: 12px; }
+    .format-guide p { font-size: 14px; color: #8ba3c4; margin-bottom: 6px; }
     .format-guide ul { padding-left: 18px; margin-top: 6px; }
-    .format-guide li { font-size: 13px; color: #333; margin-bottom: 4px; }
+    .format-guide li { font-size: 14px; color: #8ba3c4; margin-bottom: 4px; }
 
     /* Week header */
     .week-header {
       background: linear-gradient(135deg, #1a237e, #283593);
       color: white;
-      margin: 30px 40px 0;
-      padding: 16px 28px;
+      margin: 24px 32px 0;
+      padding: 16px 24px;
       border-radius: 8px 8px 0 0;
     }
-    .week-header h2 { font-size: 18px; font-weight: 800; }
-    .week-header p { font-size: 12px; opacity: 0.75; margin-top: 3px; }
+    .week-header h2 { font-size: 19px; font-weight: 800; }
+    .week-header p { font-size: 13px; opacity: 0.75; margin-top: 4px; }
 
     /* Week body */
     .week-body {
-      background: #fff;
-      margin: 0 40px 36px;
+      background: #161c2c;
+      margin: 0 32px 32px;
       border-radius: 0 0 8px 8px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      border: 1px solid #252f45;
+      border-top: none;
       overflow: hidden;
     }
 
     /* Post card */
     .post-card {
-      border-bottom: 1px solid #e8edf5;
+      border-bottom: 1px solid #252f45;
       padding: 0;
     }
     .post-card:last-child { border-bottom: none; }
 
     .post-day {
-      background: #f0f4ff;
-      padding: 9px 24px;
-      font-size: 11px;
+      background: #1a2035;
+      padding: 10px 22px;
+      font-size: 12px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 1.2px;
-      color: #283593;
-      border-bottom: 1px solid #e0e7ff;
+      color: #818cf8;
+      border-bottom: 1px solid #252f45;
       display: flex;
       align-items: center;
       gap: 10px;
     }
     .day-num {
-      background: #283593;
+      background: #3730a3;
       color: white;
       border-radius: 50%;
-      width: 22px;
-      height: 22px;
+      width: 26px;
+      height: 26px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 800;
       flex-shrink: 0;
     }
     .specialty-tag {
       margin-left: auto;
-      background: #e8f0fe;
-      color: #1a237e;
+      background: #1e2a4a;
+      color: #93c5fd;
       font-size: 10px;
       font-weight: 700;
-      padding: 2px 8px;
+      padding: 3px 10px;
       border-radius: 10px;
       text-transform: uppercase;
       letter-spacing: 0.8px;
     }
 
-    .post-inner { padding: 20px 28px; }
+    .post-inner { padding: 20px 24px; }
 
     /* Hook section */
     .hook-block {
-      background: #f8f9fe;
-      border-left: 4px solid #283593;
+      background: #141e38;
+      border-left: 4px solid #6366f1;
       border-radius: 0 6px 6px 0;
-      padding: 14px 18px;
+      padding: 16px 18px;
       margin-bottom: 18px;
     }
     .section-label {
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 1.2px;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
-    .hook-label { color: #283593; }
-    .medflow-label { color: #00695c; }
-    .impression-label { color: #b71c1c; }
+    .hook-label { color: #818cf8; }
+    .medflow-label { color: #34d399; }
+    .impression-label { color: #f87171; }
 
     .hook-text {
-      font-size: 13.5px;
-      line-height: 1.75;
-      color: #1a1a2e;
+      font-size: 16px;
+      line-height: 1.85;
+      color: #e2e8f8;
       white-space: pre-wrap;
     }
-    .hook-line { display: block; margin-bottom: 2px; }
+    .hook-line { display: block; margin-bottom: 3px; }
     .hook-clue {
       display: block;
-      margin-top: 8px;
+      margin-top: 12px;
       font-weight: 700;
-      color: #283593;
+      color: #a5b4fc;
       font-style: italic;
     }
 
     /* MedFlow output section */
     .medflow-block {
-      background: #f0faf9;
-      border: 1px solid #b2dfdb;
+      background: #0c2420;
+      border: 1px solid #1a5c4a;
       border-radius: 6px;
-      padding: 16px 18px;
+      padding: 18px;
       margin-bottom: 14px;
     }
-    .medflow-block .medflow-label { color: #00695c; margin-bottom: 10px; }
+    .medflow-block .medflow-label { color: #34d399; margin-bottom: 12px; }
 
     .differential {
-      margin-bottom: 12px;
-      padding-bottom: 12px;
-      border-bottom: 1px dashed #b2dfdb;
+      margin-bottom: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px dashed #1a4a3a;
     }
     .differential:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
 
     .diff-title {
-      font-size: 13px;
+      font-size: 15px;
       font-weight: 700;
-      color: #00695c;
-      margin-bottom: 4px;
+      color: #4ade80;
+      margin-bottom: 8px;
     }
     .diff-tests {
-      font-size: 12.5px;
-      color: #333;
-      line-height: 1.6;
+      font-size: 15px;
+      color: #b8d4bc;
+      line-height: 1.75;
       white-space: pre-line;
     }
     .diff-rule {
-      font-size: 12px;
-      color: #555;
+      font-size: 14px;
+      color: #6ee7b7;
       font-style: italic;
-      margin-top: 2px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #1a4a3a;
       white-space: pre-line;
     }
 
     /* Impression */
     .impression-block {
-      background: #ffebee;
-      border: 1px solid #ffcdd2;
+      background: #280e15;
+      border: 1px solid #7f1d1d;
       border-radius: 6px;
-      padding: 14px 18px;
+      padding: 16px 18px;
     }
-    .impression-block .impression-label { margin-bottom: 6px; }
+    .impression-block .impression-label { margin-bottom: 8px; }
     .impression-title {
-      font-size: 14px;
+      font-size: 16px;
       font-weight: 800;
-      color: #b71c1c;
-      margin-bottom: 6px;
+      color: #fca5a5;
+      margin-bottom: 10px;
+      line-height: 1.5;
     }
     .impression-reasoning {
-      font-size: 13px;
-      color: #3e2723;
-      line-height: 1.65;
+      font-size: 15px;
+      color: #f0d0d0;
+      line-height: 1.8;
     }
 
     /* Editable styles */
@@ -223,33 +229,73 @@
       outline: 2px dashed transparent;
     }
     [contenteditable="true"]:hover {
-      outline: 2px dashed #283593;
-      background: #f0f7ff !important;
+      outline: 2px dashed #6366f1;
+      background: rgba(99,102,241,0.08) !important;
     }
     [contenteditable="true"]:focus {
-      outline: 2px solid #283593;
-      background: #e8f0fe !important;
-      box-shadow: 0 0 0 3px rgba(40,53,147,0.12);
+      outline: 2px solid #6366f1;
+      background: rgba(99,102,241,0.14) !important;
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.18);
     }
 
     /* Footer */
     .footer {
       text-align: center;
       padding: 28px;
-      font-size: 11px;
-      color: #999;
+      font-size: 12px;
+      color: #3d4f68;
     }
 
-    /* Print */
+    /* Mobile — full bleed, larger tap targets */
+    @media (max-width: 640px) {
+      body { font-size: 15px; }
+      .cover { padding: 36px 20px; }
+      .cover h1 { font-size: 28px; }
+      .cover h2 { font-size: 15px; }
+      .format-guide { margin: 14px 10px; padding: 16px 14px; }
+      .week-header { margin: 14px 10px 0; padding: 14px 14px; }
+      .week-body { margin: 0 10px 20px; }
+      .post-day { padding: 10px 14px; font-size: 11px; }
+      .specialty-tag { font-size: 9px; padding: 2px 7px; letter-spacing: 0.3px; max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .post-inner { padding: 14px 14px; }
+      .hook-block { padding: 14px 14px; }
+      .hook-text { font-size: 15px; }
+      .medflow-block { padding: 14px 14px; }
+      .diff-title { font-size: 14px; }
+      .diff-tests { font-size: 14px; }
+      .diff-rule { font-size: 13px; }
+      .impression-block { padding: 14px 14px; }
+      .impression-title { font-size: 15px; }
+      .impression-reasoning { font-size: 14px; }
+    }
+
+    /* Print — switch back to light for paper */
     @media print {
-      body { background: white; }
+      body { background: white; color: #1a1a2e; font-size: 13px; }
       .edit-banner { display: none; }
+      .format-guide { background: #f8f9fe; border-left: 5px solid #283593; border-color: #e8edf5; }
+      .format-guide h2 { color: #283593; }
+      .format-guide p, .format-guide li { color: #333; }
+      .week-header { margin: 24px 40px 0; }
+      .week-body { background: white; margin: 0 40px 28px; border: 1px solid #ddd; box-shadow: none; }
+      .post-day { background: #f0f4ff; color: #283593; border-bottom: 1px solid #e0e7ff; }
+      .day-num { background: #283593 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .specialty-tag { background: #e8f0fe; color: #1a237e; max-width: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .post-card { border-bottom: 1px solid #e8edf5; page-break-inside: avoid; }
+      .post-inner { padding: 16px 24px; }
+      .hook-block { background: #f8f9fe; border-left: 4px solid #283593; }
+      .hook-text { color: #1a1a2e; font-size: 13px; }
+      .hook-clue { color: #283593; }
+      .medflow-block { background: #f0faf9; border: 1px solid #b2dfdb; }
+      .diff-title { color: #00695c; font-size: 12px; }
+      .diff-tests { color: #333; font-size: 12px; }
+      .diff-rule { color: #555; border-top: 1px solid #b2dfdb; font-size: 11.5px; }
+      .impression-block { background: #ffebee; border: 1px solid #ffcdd2; }
+      .impression-title { color: #b71c1c; font-size: 13px; }
+      .impression-reasoning { color: #3e2723; font-size: 12px; }
       .cover, .week-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      .day-num, .specialty-tag { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      .post-day { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      .week-body { box-shadow: none; border: 1px solid #ddd; }
-      .post-card { page-break-inside: avoid; }
       [contenteditable="true"] { outline: none !important; background: inherit !important; box-shadow: none !important; }
+      .footer { color: #999; }
     }
   </style>
 </head>
