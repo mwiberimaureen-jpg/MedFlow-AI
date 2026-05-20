@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { ReviewModal } from '@/components/ReviewModal'
 
 interface UserProfile {
   id: string
@@ -443,6 +444,9 @@ export default function SettingsPage() {
         </div>
       </Card>
 
+      {/* Leave a Review */}
+      <LeaveReviewCard email={profile?.email || ''} fullName={fullName} />
+
       {/* Reformat existing summaries to new short factual format */}
       <GeneratePatientIdsCard />
       <ReformatSummariesCard />
@@ -536,6 +540,41 @@ function ReformatRoundNotesCard() {
         {running ? 'Reformatting round notes…' : 'Reformat All Round Notes'}
       </Button>
     </Card>
+  )
+}
+
+function LeaveReviewCard({ email, fullName }: { email: string; fullName: string }) {
+  const [showModal, setShowModal] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+
+  return (
+    <>
+      <Card>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Leave a Review</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Your feedback helps us improve MedFlow AI for clinicians everywhere. Takes 30 seconds.
+        </p>
+        {submitted ? (
+          <div className="px-4 py-3 rounded-lg text-sm bg-green-50 border border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400">
+            Thank you for your review! 🙏
+          </div>
+        ) : (
+          <Button variant="secondary" onClick={() => setShowModal(true)}>
+            ⭐ Rate MedFlow AI
+          </Button>
+        )}
+      </Card>
+
+      {showModal && (
+        <ReviewModal
+          userEmail={email}
+          userName={fullName}
+          context="trial"
+          onClose={() => setShowModal(false)}
+          onSubmitted={() => { setShowModal(false); setSubmitted(true) }}
+        />
+      )}
+    </>
   )
 }
 

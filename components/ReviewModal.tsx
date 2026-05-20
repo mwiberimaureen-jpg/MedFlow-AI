@@ -5,11 +5,11 @@ import { useState } from 'react'
 interface ReviewModalProps {
   userEmail: string
   userName?: string
-  // required  = trial gate (no skip)
-  // renewal   = mandatory before 2nd month payment (no skip)
-  // paid      = optional before 3rd month payment (skippable)
-  // trial     = voluntary (skippable)
-  context: 'trial' | 'paid' | 'required' | 'renewal'
+  // unlock  = free tier exhausted, review unlocks 5 more analyses (no skip)
+  // renewal = mandatory before 2nd month payment (no skip)
+  // paid    = optional before 3rd month payment (skippable)
+  // trial   = voluntary from settings (skippable)
+  context: 'trial' | 'paid' | 'unlock' | 'renewal'
   onClose: () => void
   onSubmitted: () => void
 }
@@ -25,7 +25,7 @@ export function ReviewModal({ userEmail, userName, context, onClose, onSubmitted
   const [done, setDone] = useState(false)
 
   async function handleSubmit() {
-    if (rating === 0) { setError('Please select a star rating first.'); return }
+    if (rating === 0) { setError('Please select a star rating.'); return }
     setSubmitting(true)
     setError(null)
 
@@ -50,9 +50,20 @@ export function ReviewModal({ userEmail, userName, context, onClose, onSubmitted
 
   const activeStars = hovered || rating
 
+  const title =
+    context === 'unlock' ? 'Unlock 5 more free analyses' :
+    context === 'renewal' ? 'Before you renew — share your experience' :
+    context === 'trial' ? 'How are you finding MedFlow AI?' :
+    'Enjoying MedFlow AI?'
+
+  const subtitle =
+    context === 'unlock' ? "You've used your 5 free analyses. Leave a quick review to unlock 5 more — it takes 30 seconds." :
+    context === 'renewal' ? 'A quick review is required before renewing. It takes 30 seconds.' :
+    context === 'trial' ? "Your early feedback shapes what we build next." :
+    'Leave a review before renewing — it means a lot to our small team.'
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Only skippable contexts can close by clicking outside */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={isSkippable ? onClose : undefined} />
 
       <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
@@ -78,38 +89,22 @@ export function ReviewModal({ userEmail, userName, context, onClose, onSubmitted
           <>
             <div className="text-center mb-5">
               <div className="text-3xl mb-2">🩺</div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                {context === 'required'
-                  ? 'One quick review to unlock your last 2 analyses'
-                  : context === 'renewal'
-                  ? 'Before you renew — share your experience'
-                  : context === 'trial'
-                  ? 'How are you finding MedFlow AI?'
-                  : 'Enjoying MedFlow AI?'}
-              </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {context === 'required'
-                  ? 'Submit a review to access your remaining admission analyses. It takes 30 seconds.'
-                  : context === 'renewal'
-                  ? "A quick review is required to renew your subscription. It takes 30 seconds."
-                  : context === 'trial'
-                  ? "You're 3 analyses in — your early feedback shapes the product."
-                  : 'Leave a review before renewing — it means a lot to our small team.'}
-              </p>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
             </div>
 
             {/* Star rating */}
-            <div className="flex justify-center gap-1 mb-5">
+            <div className="flex justify-center gap-2 mb-5">
               {[1, 2, 3, 4, 5].map(star => (
                 <button
                   key={star}
                   onMouseEnter={() => setHovered(star)}
                   onMouseLeave={() => setHovered(0)}
                   onClick={() => setRating(star)}
-                  className="text-4xl transition-transform hover:scale-110 focus:outline-none"
+                  className="text-5xl leading-none transition-transform hover:scale-110 focus:outline-none"
                   aria-label={`${star} star`}
                 >
-                  <span className={activeStars >= star ? 'text-yellow-400' : 'text-gray-200 dark:text-gray-600'}>
+                  <span className={activeStars >= star ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-500'}>
                     ★
                   </span>
                 </button>
@@ -133,7 +128,7 @@ export function ReviewModal({ userEmail, userName, context, onClose, onSubmitted
                   onClick={onClose}
                   className="flex-1 py-2.5 rounded-lg text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 >
-                  {context === 'paid' ? 'Skip for now' : 'Maybe Later'}
+                  {context === 'paid' ? 'Skip for now' : 'Maybe later'}
                 </button>
               )}
               <button
