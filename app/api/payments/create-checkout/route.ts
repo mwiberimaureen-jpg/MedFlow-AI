@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     const apiRef = `SUB_${userId.substring(0, 8)}_${Date.now()}`;
 
     // Subscription plan details
-    const MONTHLY_PRICE = 2000; // KES 2,000/month
+    const MONTHLY_PRICE = 1000; // KES 1,000/month
     const CURRENCY = 'KES';
 
     // Parse full name
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Error creating checkout session:', error);
     return NextResponse.json(
-      { error: 'Failed to create checkout session' },
+      { error: error?.message || 'Failed to create checkout session' },
       { status: 500 }
     );
   }

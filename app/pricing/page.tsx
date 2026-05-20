@@ -123,16 +123,16 @@ export default function PricingPage() {
 
               <div className="text-center mb-8">
                 <div className="flex items-baseline justify-center">
-                  <span className="text-5xl font-extrabold text-gray-900 dark:text-white">KES 2,000</span>
+                  <span className="text-5xl font-extrabold text-gray-900 dark:text-white">KES 1,000</span>
                   <span className="text-xl text-gray-600 dark:text-gray-400 ml-2">/month</span>
                 </div>
               </div>
 
               <div className="mb-8 space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">What&apos;s included:</h3>
-                <Feature text="100 patient history analyses per month" />
+                <Feature text="Unlimited patient history analyses per month" />
                 <Feature text="AI-powered diagnostic suggestions" />
-                <Feature text="Structured to-do lists for patient care" />
+                <Feature text="Structured to-do list for patient care" />
                 <Feature text="Secure cloud storage" />
                 <Feature text="Mobile and desktop access" />
                 <Feature text="Priority support" />
