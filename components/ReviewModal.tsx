@@ -94,19 +94,23 @@ export function ReviewModal({ userEmail, userName, context, onClose, onSubmitted
             </div>
 
             {/* Star rating */}
-            <div className="flex justify-center gap-2 mb-5">
+            <div className="flex justify-center gap-3 mb-5">
               {[1, 2, 3, 4, 5].map(star => (
                 <button
                   key={star}
                   onMouseEnter={() => setHovered(star)}
                   onMouseLeave={() => setHovered(0)}
                   onClick={() => setRating(star)}
-                  className="text-5xl leading-none transition-transform hover:scale-110 focus:outline-none"
-                  aria-label={`${star} star`}
+                  className="transition-transform hover:scale-110 focus:outline-none"
+                  aria-label={`${star} star${star !== 1 ? 's' : ''}`}
                 >
-                  <span className={activeStars >= star ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-500'}>
-                    ★
-                  </span>
+                  <svg
+                    className={`w-11 h-11 transition-colors ${activeStars >= star ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600'}`}
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                  </svg>
                 </button>
               ))}
             </div>

@@ -126,12 +126,12 @@ export default function PricingPage() {
                   </div>
                   <ul className="space-y-3 mb-8 flex-1">
                     <Feature text="30 patient analyses per month" />
+                    <Feature text="Each analysis = Day 1, 2 & 3 for one patient" />
+                    <Feature text="Notes & summaries always accessible" />
                     <Feature text="AI-powered diagnostic suggestions" />
                     <Feature text="Structured to-do list for patient care" />
                     <Feature text="Secure cloud storage" />
                     <Feature text="Mobile and desktop access" />
-                    <Feature text="Priority support" />
-                    <Feature text="Regular feature updates" />
                   </ul>
                   <button
                     onClick={() => handlePlanSelect('basic')}
@@ -156,12 +156,12 @@ export default function PricingPage() {
                   </div>
                   <ul className="space-y-3 mb-8 flex-1">
                     <Feature text="75 patient analyses per month" />
+                    <Feature text="Each analysis = Day 1, 2 & 3 for one patient" />
+                    <Feature text="Notes & summaries always accessible" />
                     <Feature text="AI-powered diagnostic suggestions" />
                     <Feature text="Structured to-do list for patient care" />
                     <Feature text="Secure cloud storage" />
                     <Feature text="Mobile and desktop access" />
-                    <Feature text="Priority support" />
-                    <Feature text="Regular feature updates" />
                   </ul>
                   <button
                     onClick={() => handlePlanSelect('pro')}

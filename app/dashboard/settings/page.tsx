@@ -382,8 +382,11 @@ export default function SettingsPage() {
           )}
 
           <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
               Payments processed securely via Intasend. Accepted: M-PESA, Visa, Mastercard.
+            </p>
+            <p className="text-xs text-blue-600 dark:text-blue-400 mb-3">
+              Your notes, summaries, and patient data remain accessible even without an active subscription.
             </p>
             <div className="flex items-center gap-3">
               {!subscription && (
@@ -547,6 +550,12 @@ function LeaveReviewCard({ email, fullName }: { email: string; fullName: string 
   const [showModal, setShowModal] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
+  function handleSubmitted() {
+    setShowModal(false)
+    setSubmitted(true)
+    setTimeout(() => setSubmitted(false), 4000)
+  }
+
   return (
     <>
       <Card>
@@ -554,15 +563,14 @@ function LeaveReviewCard({ email, fullName }: { email: string; fullName: string 
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
           Your feedback helps us improve MedFlow AI for clinicians everywhere. Takes 30 seconds.
         </p>
-        {submitted ? (
-          <div className="px-4 py-3 rounded-lg text-sm bg-green-50 border border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400">
+        {submitted && (
+          <div className="mb-3 px-4 py-3 rounded-lg text-sm bg-green-50 border border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400">
             Thank you for your review! 🙏
           </div>
-        ) : (
-          <Button variant="secondary" onClick={() => setShowModal(true)}>
-            ⭐ Rate MedFlow AI
-          </Button>
         )}
+        <Button variant="secondary" onClick={() => setShowModal(true)}>
+          ⭐ Rate MedFlow AI
+        </Button>
       </Card>
 
       {showModal && (
@@ -571,7 +579,7 @@ function LeaveReviewCard({ email, fullName }: { email: string; fullName: string 
           userName={fullName}
           context="trial"
           onClose={() => setShowModal(false)}
-          onSubmitted={() => { setShowModal(false); setSubmitted(true) }}
+          onSubmitted={handleSubmitted}
         />
       )}
     </>
