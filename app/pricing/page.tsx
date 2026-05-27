@@ -186,7 +186,7 @@ export default function PricingPage() {
                 <FAQ question="What counts as one patient file?" answer="One patient file covers up to 15 analyses — daily round notes, learning sparks, and the discharge summary are all included. Editing the patient history and re-running analysis also counts toward the 15." />
                 <FAQ question="Can I edit a patient's history?" answer="Yes — you can always edit a patient's initial history. When you re-run analysis after an edit, it uses one analysis slot from that patient's file. This keeps things fair while still letting you correct or update the history as the admission progresses." />
                 <FAQ question="What happens when I reach my patient limit?" answer="You can still view, edit, and access all existing patient notes, summaries, and histories. You just can't open new patient files or run new analyses until you renew your subscription." />
-                <FAQ question="How long does activation take?" answer="Once you submit your M-Pesa confirmation code, we verify the payment and activate your account manually — usually within a few hours." />
+                <FAQ question="How long does activation take?" answer="Your account is activated immediately when you submit your M-Pesa confirmation code. You can start using MedFlow AI right away." />
                 <FAQ question="Can I upgrade from Basic to Pro?" answer="Yes — email us at medflowai.ke@gmail.com and we'll sort out the difference." />
                 <FAQ question="What payment methods do you accept?" answer="M-Pesa via Paybill 247247. We're working on adding card payments." />
               </div>
