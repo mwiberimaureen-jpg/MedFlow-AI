@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, getSupabaseServerClient } from '@/lib/supabase/server'
-import { sendEmail } from '@/lib/email/send'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,21 +46,20 @@ export async function POST(request: NextRequest) {
       }).eq('id', user.id),
     ])
 
-    await sendEmail(
-      'Mpesa Code',
-      `
-        <p style="font-family:sans-serif;font-size:15px">
-          <strong>M-Pesa Code:</strong>
-          <span style="font-size:20px;font-weight:bold;letter-spacing:2px"> ${code}</span>
-        </p>
-        <table style="font-family:sans-serif;font-size:14px;border-collapse:collapse;margin-top:8px">
-          <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Name</td><td>${fullName || 'N/A'}</td></tr>
-          <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Email</td><td>${email || user.email}</td></tr>
-          <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Plan</td><td>${plan.label}</td></tr>
-          <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Amount</td><td>KES ${plan.amount.toLocaleString()}</td></tr>
-        </table>
-      `,
-    )
+    const webhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL
+    if (webhookUrl) {
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: fullName || 'N/A',
+          email: email || user.email,
+          plan: plan.label,
+          amount: `KES ${plan.amount.toLocaleString()}`,
+          code,
+        }),
+      })
+    }
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
