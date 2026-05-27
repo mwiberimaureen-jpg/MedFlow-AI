@@ -76,7 +76,7 @@ export function AnalyzeButton({ patientId }: AnalyzeButtonProps) {
         <ReviewModal
           userEmail={userEmail}
           userName={userName}
-          context="required"
+          context="unlock"
           onClose={() => {}} // cannot close without submitting
           onSubmitted={handleReviewSubmitted}
         />

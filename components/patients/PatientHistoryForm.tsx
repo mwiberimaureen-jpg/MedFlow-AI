@@ -270,7 +270,7 @@ export function PatientHistoryForm({ patientId, initialData }: PatientHistoryFor
       <ReviewModal
         userEmail={reviewUserEmail}
         userName={reviewUserName}
-        context="required"
+        context="unlock"
         onClose={() => {}} // cannot close without submitting
         onSubmitted={handleReviewSubmitted}
       />
