@@ -16,8 +16,8 @@ type Step = 'plans' | 'instructions' | 'code' | 'submitted'
 type PlanType = 'basic' | 'pro'
 
 const PLANS = {
-  basic: { label: 'Basic', price: 1000, analyses: 30 },
-  pro:   { label: 'Pro',   price: 2000, analyses: 75 },
+  basic: { label: 'Basic', price: 1000, patients: 20 },
+  pro:   { label: 'Pro',   price: 2000, patients: 50 },
 }
 
 export default function PricingPage() {
@@ -125,13 +125,13 @@ export default function PricingPage() {
                     <span className="text-gray-500 dark:text-gray-400 ml-2">/month</span>
                   </div>
                   <ul className="space-y-3 mb-8 flex-1">
-                    <Feature text="30 patient analyses per month" />
-                    <Feature text="Each analysis = Day 1, 2 & 3 for one patient" />
+                    <Feature text="20 new patient files per month" />
+                    <Feature text="Full admission journey — Day 1 to discharge" />
+                    <Feature text="Daily AI round notes & learning sparks" />
+                    <Feature text="Discharge summaries included" />
                     <Feature text="Notes & summaries always accessible" />
                     <Feature text="AI-powered diagnostic suggestions" />
-                    <Feature text="Structured to-do list for patient care" />
                     <Feature text="Secure cloud storage" />
-                    <Feature text="Mobile and desktop access" />
                   </ul>
                   <button
                     onClick={() => handlePlanSelect('basic')}
@@ -155,13 +155,13 @@ export default function PricingPage() {
                     <span className="text-gray-500 dark:text-gray-400 ml-2">/month</span>
                   </div>
                   <ul className="space-y-3 mb-8 flex-1">
-                    <Feature text="75 patient analyses per month" />
-                    <Feature text="Each analysis = Day 1, 2 & 3 for one patient" />
+                    <Feature text="50 new patient files per month" />
+                    <Feature text="Full admission journey — Day 1 to discharge" />
+                    <Feature text="Daily AI round notes & learning sparks" />
+                    <Feature text="Discharge summaries included" />
                     <Feature text="Notes & summaries always accessible" />
                     <Feature text="AI-powered diagnostic suggestions" />
-                    <Feature text="Structured to-do list for patient care" />
                     <Feature text="Secure cloud storage" />
-                    <Feature text="Mobile and desktop access" />
                   </ul>
                   <button
                     onClick={() => handlePlanSelect('pro')}
@@ -175,7 +175,7 @@ export default function PricingPage() {
 
             <div className="mt-8 text-center">
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                New users get 5 free analyses. Leave a review to unlock 5 more.
+                New users get 5 free patient files. Leave a review to unlock 5 more.
               </p>
             </div>
 
@@ -183,8 +183,8 @@ export default function PricingPage() {
             <div className="mt-16">
               <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-8">Frequently Asked Questions</h2>
               <div className="space-y-4 max-w-3xl mx-auto">
-                <FAQ question="What counts as one analysis?" answer="One analysis covers a full admission: Day 1, Day 2, and Day 3 uploads for a single patient. Daily notes and discharge summaries do not count." />
-                <FAQ question="What happens when my analyses run out?" answer="You can still view all your existing patient notes, summaries, and history. You just can't run new analyses until you renew." />
+                <FAQ question="What counts as one patient file?" answer="Opening a new patient on Day 1 uses one patient file from your monthly allowance. After that, every subsequent day's round notes, learning sparks, and the final discharge summary are all included at no extra cost — until the patient is discharged." />
+                <FAQ question="What happens when I reach my patient limit?" answer="You can still view, edit, and access all existing patient notes, summaries, and histories. You just can't open new patient files until you renew your subscription." />
                 <FAQ question="How long does activation take?" answer="Once you submit your M-Pesa confirmation code, we verify the payment and activate your account manually — usually within a few hours." />
                 <FAQ question="Can I upgrade from Basic to Pro?" answer="Yes — email us at medflowai.ke@gmail.com and we'll sort out the difference." />
                 <FAQ question="What payment methods do you accept?" answer="M-Pesa via Paybill 247247. We're working on adding card payments." />

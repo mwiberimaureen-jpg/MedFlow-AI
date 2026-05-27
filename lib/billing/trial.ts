@@ -1,13 +1,18 @@
 /**
  * Billing quota logic.
  *
- * Free tier:   5 analyses → leave a review → 5 more (total 10 free)
- * Basic plan:  KES 1,000/month → 30 analyses per billing period
- * Pro plan:    KES 2,000/month → 75 analyses per billing period
+ * Free tier:   5 new patient files → leave a review → 5 more (total 10 free)
+ * Basic plan:  KES 1,000/month → 20 new patient files per billing period
+ * Pro plan:    KES 2,000/month → 50 new patient files per billing period
  *
- * Only new admission analyses count against the quota.
- * Day notes, summaries, and all stored data remain accessible regardless
- * of subscription status.
+ * One "patient file" = opening a new patient on Day 1. Once opened, the full
+ * admission journey is covered at no extra cost: daily round notes, learning
+ * sparks, and the discharge summary are all included until discharge.
+ * Analysis stops only when the subscription lapses or the monthly patient
+ * limit is reached.
+ *
+ * All stored notes, summaries, and data remain accessible regardless of
+ * subscription status.
  *
  * OWNER_EMAILS bypass all limits entirely.
  */
@@ -16,8 +21,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const FREE_TRIAL_LIMIT = 5
 export const BONUS_TRIAL_LIMIT = 5   // unlocked after leaving a review
-export const BASIC_PLAN_LIMIT = 30
-export const PRO_PLAN_LIMIT = 75
+export const BASIC_PLAN_LIMIT = 20
+export const PRO_PLAN_LIMIT = 50
 
 export type PlanType = 'trial' | 'basic' | 'pro'
 
@@ -41,7 +46,7 @@ function getExemptEmails(): Set<string> {
 }
 
 /**
- * Check whether the user can run another admission analysis.
+ * Check whether the user can open a new patient file.
  *
  * Pass authEmail (from supabase.auth.getUser()) so the exempt check uses
  * the verified auth email rather than a potentially missing users table field.
@@ -88,7 +93,7 @@ export async function getTrialQuota(
       ? FREE_TRIAL_LIMIT + BONUS_TRIAL_LIMIT
       : FREE_TRIAL_LIMIT
 
-  // Count admission analyses — scoped to current billing period for subscribers
+  // Count new patient files opened — scoped to current billing period for subscribers
   let query = supabase
     .from('analyses')
     .select('id, patient_histories!inner(user_id)', { count: 'exact', head: true })

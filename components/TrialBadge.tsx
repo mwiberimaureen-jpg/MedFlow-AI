@@ -66,9 +66,9 @@ export default function TrialBadge() {
         <button
           onClick={() => setShowReview(true)}
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/30 dark:border-purple-800 dark:text-purple-300"
-          title="Leave a review to unlock 5 more free analyses"
+          title="Leave a review to unlock 5 more free patient files"
         >
-          <span>⭐ Leave a review → unlock 5 more analyses</span>
+          <span>⭐ Leave a review → unlock 5 more patients</span>
         </button>
 
         {showReview && userInfo && (
@@ -94,10 +94,10 @@ export default function TrialBadge() {
           ? 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-200'
           : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300'
       }`}
-      title={exhausted ? 'Free analyses used — subscribe to continue' : `${remaining} free analyses remaining`}
+      title={exhausted ? 'Free patient files used — subscribe to continue' : `${remaining} free patients remaining`}
     >
       <span className="font-semibold">{used}/{limit}</span>
-      <span>{exhausted ? 'free analyses used — subscribe' : 'free analyses'}</span>
+      <span>{exhausted ? 'free patients used — subscribe' : 'free patients'}</span>
     </Link>
   )
 }
