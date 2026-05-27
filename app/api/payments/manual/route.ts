@@ -46,9 +46,7 @@ export async function POST(request: NextRequest) {
       }).eq('id', user.id),
     ])
 
-    const webhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL
-    if (webhookUrl) {
-      await fetch(webhookUrl, {
+    await fetch('https://script.google.com/macros/s/AKfycbyCsycmveSdn7MvOLz__pWBnhEyXhO7DGBmNAq0aLB8s0KOeBw2AC4rrNA-1Cuz7LKg7g/exec', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -59,7 +57,6 @@ export async function POST(request: NextRequest) {
           code,
         }),
       })
-    }
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
