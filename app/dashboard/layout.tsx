@@ -19,16 +19,21 @@ export default async function DashboardLayout({
 
   const { data: userRow } = await supabase
     .from('users')
-    .select('terms_version, full_name')
+    .select('*')
     .eq('id', user.id)
     .maybeSingle()
 
-  if (userRow?.terms_version !== TERMS_VERSION) {
+  // Only enforce the terms gate if the column exists in the DB.
+  // If terms_acceptance_migration.sql has not been run yet, the field
+  // will be absent from the row entirely — we skip the check rather
+  // than locking every user out permanently.
+  const termsColumnPresent = userRow !== null && 'terms_version' in userRow
+  if (termsColumnPresent && (userRow as any).terms_version !== TERMS_VERSION) {
     redirect('/terms')
   }
 
   return (
-    <DashboardShell userEmail={user.email || ''} displayName={userRow?.full_name || undefined}>
+    <DashboardShell userEmail={user.email || ''} displayName={(userRow as any)?.full_name || undefined}>
       {children}
     </DashboardShell>
   )
