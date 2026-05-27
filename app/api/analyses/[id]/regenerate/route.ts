@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { analyzePatientHistoryFanOut, analyzeDailyProgress } from '@/lib/openrouter/client'
 import { logAuditEvent } from '@/lib/audit/logger'
+import { getTrialQuota } from '@/lib/billing/trial'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,7 +33,7 @@ export async function POST(
         // Fetch the existing analysis
         const { data: existingAnalysis, error: analysisError } = await supabase
             .from('analyses')
-            .select('id, patient_history_id, user_id, analysis_version, user_feedback')
+            .select('id, patient_history_id, user_id, analysis_version, user_feedback, regeneration_count')
             .eq('id', analysisId)
             .single()
 
@@ -61,6 +62,21 @@ export async function POST(
         let analysisResponse
 
         if (version === 'admission') {
+            // Quota gate: each history re-analysis counts as one slot against the
+            // patient's 15-slot-per-file allowance. This prevents the exploit of
+            // repeatedly editing one file to analyse different patients for free.
+            const quota = await getTrialQuota(supabase, user.id, user.email)
+            if (!quota.allowed) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error: 'Patient file limit reached. Renew your subscription to re-analyse this patient history.',
+                        code: 'QUOTA_EXCEEDED',
+                    },
+                    { status: 402 }
+                )
+            }
+
             // Re-run admission analysis (fan-out: parallel clinical + management agents, then synthesis + QA)
             analysisResponse = await analyzePatientHistoryFanOut(patient.history_text)
         } else if (version.startsWith('day_')) {
@@ -206,7 +222,9 @@ export async function POST(
         // Delete old todo items for this analysis
         await supabase.from('todo_items').delete().eq('analysis_id', analysisId)
 
-        // Update analysis record in-place
+        // Update analysis record in-place.
+        // For admission re-analyses, increment regeneration_count so the quota
+        // counter in getTrialQuota() correctly charges the extra slot.
         const { data: updatedAnalysis, error: updateError } = await supabase
             .from('analyses')
             .update({
@@ -218,6 +236,9 @@ export async function POST(
                 completed_items: 0,
                 summary: analysisResponse.summary,
                 risk_level: analysisResponse.risk_level,
+                ...(version === 'admission'
+                    ? { regeneration_count: (existingAnalysis.regeneration_count ?? 0) + 1 }
+                    : {}),
             })
             .eq('id', analysisId)
             .select()
