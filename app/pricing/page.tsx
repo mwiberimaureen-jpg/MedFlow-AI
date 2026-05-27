@@ -115,7 +115,8 @@ export default function PricingPage() {
 
   const plan = selectedPlan ? PLANS[selectedPlan] : null;
   const hasCredit = (userInfo?.referral_credits ?? 0) > 0;
-  const discountActive = hasCredit || referralStatus === 'valid';
+  // Only the referrer's earned credit gives a discount — entering someone else's code does not
+  const discountActive = hasCredit;
   const effectivePrice = discountActive && plan ? Math.round(plan.price * 0.75) : (plan?.price ?? 0);
 
   return (
@@ -242,7 +243,7 @@ export default function PricingPage() {
                 {!hasCredit && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Referral code <span className="font-normal text-gray-400">(optional — 25% off)</span>
+                      Referral code <span className="font-normal text-gray-400">(optional)</span>
                     </label>
                     <div className="flex gap-2">
                       <input
@@ -259,7 +260,7 @@ export default function PricingPage() {
                         className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg font-mono tracking-widest text-center bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                       />
                       {referralStatus === 'checking' && <span className="text-sm text-gray-500 self-center">Checking…</span>}
-                      {referralStatus === 'valid' && <span className="text-sm text-green-600 dark:text-green-400 font-medium self-center">✓ 25% off applied!</span>}
+                      {referralStatus === 'valid' && <span className="text-sm text-green-600 dark:text-green-400 font-medium self-center">✓ Code accepted</span>}
                       {referralStatus === 'invalid' && <span className="text-sm text-red-500 self-center">Invalid code</span>}
                     </div>
                   </div>
@@ -322,7 +323,7 @@ export default function PricingPage() {
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Enter your M-Pesa code</h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {plan.label} Plan — KES {effectivePrice.toLocaleString()}/month
-                {discountActive && <span className="text-green-600 dark:text-green-400 ml-1">(25% off)</span>}
+                {discountActive && <span className="text-green-600 dark:text-green-400 ml-1">(referral credit applied)</span>}
               </p>
 
               <div>
@@ -423,10 +424,27 @@ function Feature({ text }: { text: string }) {
 }
 
 function FAQ({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
-      <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">{question}</h3>
-      <p className="text-gray-600 dark:text-gray-300 text-sm">{answer}</p>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-6 py-5 text-left gap-4"
+      >
+        <span className="text-base font-semibold text-gray-900 dark:text-white">{question}</span>
+        <svg
+          className={`w-5 h-5 text-gray-400 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open && (
+        <div className="px-6 pb-5 border-t border-gray-100 dark:border-gray-700 pt-4">
+          <p className="text-gray-600 dark:text-gray-300 text-sm">{answer}</p>
+        </div>
+      )}
     </div>
   );
 }

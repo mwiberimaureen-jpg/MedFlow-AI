@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
@@ -19,6 +19,7 @@ interface UserProfile {
   referral_code?: string
   referral_count?: number
   referral_credits?: number
+  avatar_url?: string
 }
 
 interface Subscription {
@@ -49,6 +50,8 @@ export default function SettingsPage() {
   const [autoDelete, setAutoDelete] = useState(true)
   const [savingRetention, setSavingRetention] = useState(false)
   const [codeCopied, setCodeCopied] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetchData()
@@ -183,6 +186,44 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !profile) return
+
+    if (file.size > 2 * 1024 * 1024) {
+      setProfileMessage({ type: 'error', text: 'Image must be smaller than 2 MB.' })
+      return
+    }
+
+    setUploadingAvatar(true)
+    try {
+      const ext = file.name.split('.').pop() ?? 'jpg'
+      const path = `${profile.id}/avatar.${ext}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { upsert: true })
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+
+      await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatar_url: publicUrl }),
+      })
+
+      setProfile(prev => prev ? { ...prev, avatar_url: publicUrl } : null)
+      setProfileMessage({ type: 'success', text: 'Profile photo updated!' })
+    } catch {
+      setProfileMessage({ type: 'error', text: 'Failed to upload photo. Make sure the "avatars" storage bucket exists in Supabase.' })
+    } finally {
+      setUploadingAvatar(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   function formatDate(dateStr?: string) {
     if (!dateStr) return '—'
     return new Date(dateStr).toLocaleDateString('en-GB', {
@@ -246,18 +287,59 @@ export default function SettingsPage() {
             <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">Email cannot be changed</p>
           </div>
 
-          {/* Display Name */}
-          <div>
-            <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Display Name</label>
-            <input
-              id="full_name"
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Dr. Zee"
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-            />
-            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">This is how the app greets you — e.g. &quot;Welcome back, Dr. Zee&quot;</p>
+          {/* Avatar + Display Name */}
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 flex flex-col items-center gap-1">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingAvatar}
+                className="relative group w-16 h-16 rounded-full overflow-hidden focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                aria-label="Change profile photo"
+              >
+                {profile?.avatar_url ? (
+                  <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-300 font-bold text-2xl select-none">
+                    {(fullName || profile?.email || '?').charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  {uploadingAvatar ? (
+                    <svg className="animate-spin w-5 h-5 text-white" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  )}
+                </div>
+              </button>
+              <span className="text-xs text-gray-400 dark:text-gray-500">Photo</span>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarUpload}
+              />
+            </div>
+
+            <div className="flex-1">
+              <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Display Name</label>
+              <input
+                id="full_name"
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Dr. Zee"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              />
+              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">How the app greets you — e.g. &quot;Welcome back, Dr. Zee&quot;</p>
+            </div>
           </div>
 
           {/* Phone Number */}
@@ -423,7 +505,7 @@ export default function SettingsPage() {
       <Card>
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Referral Program</h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
-          Share your code with a colleague. When they subscribe using it, they get 25% off — and you earn a credit for 25% off your next subscription.
+          Share your code with a colleague. When they join MedFlow using your code, you earn a credit worth 25% of their subscription — applied to your next renewal.
         </p>
 
         {profile?.referral_code ? (

@@ -28,12 +28,14 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
     const code = mpesaCode.trim().toUpperCase()
 
-    // Determine effective amount (25% off if referral code or credit applied)
+    // Effective amount: 25% off only when the buyer has an earned referral credit.
+    // Entering someone else's referral code does NOT give the buyer a discount —
+    // it only credits the referrer when they subscribe.
     let effectiveAmount: number = plan.amount
     let referrerId: string | null = null
 
     if (referralCode?.trim()) {
-      // Validate referral code and find referrer
+      // Validate code and record the referrer — no price change for the buyer
       const refCode = referralCode.trim().toUpperCase()
       const { data: referrer } = await admin
         .from('users')
@@ -43,7 +45,6 @@ export async function POST(request: NextRequest) {
         .maybeSingle()
 
       if (referrer) {
-        effectiveAmount = Math.round(plan.amount * 0.75)
         referrerId = referrer.id
       }
     } else if (useCredit) {

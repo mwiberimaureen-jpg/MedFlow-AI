@@ -9,10 +9,11 @@ import { ReviewTrigger } from './ReviewTrigger'
 interface DashboardShellProps {
   userEmail: string
   displayName?: string
+  avatarUrl?: string
   children: React.ReactNode
 }
 
-export default function DashboardShell({ userEmail, displayName, children }: DashboardShellProps) {
+export default function DashboardShell({ userEmail, displayName, avatarUrl, children }: DashboardShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Open sidebar by default on desktop, closed on mobile
@@ -41,6 +42,16 @@ export default function DashboardShell({ userEmail, displayName, children }: Das
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
+          {/* Avatar */}
+          <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border border-gray-200 dark:border-gray-600">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-300 font-bold text-sm select-none">
+                {(displayName || userEmail || '?').charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
           <div>
             <p className="text-sm text-gray-600 dark:text-gray-400">Welcome back,</p>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">{displayName || userEmail}</h2>
