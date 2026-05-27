@@ -110,6 +110,12 @@ Comprehensive Differential Diagnosis:
 - For patients with ASCITES: Consider hepatic, cardiac, renal, and malignant causes
 - For appetite loss: Assess nutritional status in physical exam
 
+RENAL DIFFERENTIALS — URINALYSIS IS MANDATORY:
+- If nephrotic syndrome, nephritic syndrome, AKI (acute kidney injury), CKD, glomerulonephritis, or ANY renal pathology appears in the differentials, urinalysis (urine dipstick + microscopy) MUST be listed in Confirmatory Tests.
+- Urinalysis is the FIRST-LINE test for all renal differentials. Omitting it is a clinical error.
+- Nephrotic syndrome specifically requires: urinalysis (proteinuria 3+), urine protein:creatinine ratio, serum albumin, renal biopsy (if primary cause not identified). ALL must appear in Confirmatory Tests.
+- AKI requires: urinalysis (casts, haematuria, proteinuria), urine sodium, urine creatinine, renal ultrasound.
+
 SIRS vs SEPSIS — ABSOLUTE RULE (ZERO TOLERANCE):
 - THE WORD "SEPSIS" OR "SEPTIC" IS BANNED FROM ALL OUTPUT unless ALL of the following are true:
   1. Patient has ≥2 SIRS criteria (Temp >38°C or <36°C, HR >90, RR >20, WBC >12 or <4)

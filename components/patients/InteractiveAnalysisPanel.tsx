@@ -4,7 +4,6 @@ import { useState, useCallback, useMemo } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { parseAnalysisText, mergeGapsContent } from '@/lib/utils/parse-analysis'
-import { getTriageFromRiskLevel, getTriageBadgeVariant, getTriageLabel } from '@/lib/utils/triage'
 
 interface TodoItemData {
     id: string
@@ -192,49 +191,33 @@ export function InteractiveAnalysisPanel({ analysis, onRegenerate }: Interactive
         }
     }, [analysis.id])
 
-    const triage = getTriageFromRiskLevel(analysis.risk_level)
     const allItemsSorted = [...todoItems].sort((a, b) => a.order_index - b.order_index)
     const totalItems = todoItems.length
 
     return (
         <div className="space-y-4">
-            {/* Report header */}
-            <Card header={{
-                title: 'Clinical Report',
-                subtitle: `Generated ${new Date(analysis.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
-            }}>
-                <div className="flex items-center gap-3 mb-2">
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Triage:</span>
-                    {triage ? (
-                        <Badge variant={getTriageBadgeVariant(triage)}>
-                            {getTriageLabel(triage)}
-                        </Badge>
-                    ) : (
-                        <Badge variant="default">Unassessed</Badge>
-                    )}
-                </div>
+            {/* Regenerate control */}
+            <div className="flex items-center gap-2">
+                <button
+                    onClick={handleRegenerate}
+                    disabled={regenerating}
+                    className="text-xs px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                >
+                    {regenerating ? '↻ Regenerating...' : '↻ Regenerate Analysis'}
+                </button>
                 {analysis.model_used && (
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                        Model: {analysis.model_used}
+                    <span className="text-xs text-gray-400 dark:text-gray-500">
+                        {analysis.model_used}
                         {analysis.processing_time_ms && ` · ${(analysis.processing_time_ms / 1000).toFixed(1)}s`}
-                    </div>
+                    </span>
                 )}
-                <div className="mt-2 flex items-center gap-2">
-                    <button
-                        onClick={handleRegenerate}
-                        disabled={regenerating}
-                        className="text-xs px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
-                    >
-                        {regenerating ? '↻ Regenerating...' : '↻ Regenerate Analysis'}
-                    </button>
-                    {regenError && (
-                        <span className="text-xs text-red-500 dark:text-red-400">{regenError}</span>
-                    )}
-                </div>
-            </Card>
+                {regenError && (
+                    <span className="text-xs text-red-500 dark:text-red-400">{regenError}</span>
+                )}
+            </div>
 
-            {/* Read-only analysis sections */}
-            {sections.map((section) => {
+            {/* Read-only analysis sections — skip Clinical Summary (shown at top of timeline) */}
+            {sections.filter(s => !s.title.toLowerCase().includes('clinical summary')).map((section) => {
                 const displayTitle = getDisplayTitle(section.title)
                 const isDefaultOpen = DEFAULT_EXPANDED_SECTIONS.includes(section.title.toLowerCase())
 
