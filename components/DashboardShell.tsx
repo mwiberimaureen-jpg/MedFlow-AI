@@ -29,9 +29,13 @@ export default function DashboardShell({ userEmail, displayName, children }: Das
   // Fetch avatar separately so a missing column doesn't break the layout
   useEffect(() => {
     const supabase = createClient()
-    supabase.from('users').select('avatar_url').maybeSingle().then(({ data }) => {
-      if (data?.avatar_url) setAvatarUrl(data.avatar_url)
-    }).catch(() => {})
+    async function load() {
+      try {
+        const { data } = await supabase.from('users').select('avatar_url').maybeSingle()
+        if (data?.avatar_url) setAvatarUrl(data.avatar_url)
+      } catch { /* ignore — avatar is cosmetic */ }
+    }
+    load()
   }, [])
 
   return (
