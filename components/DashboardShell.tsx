@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import Sidebar from './Sidebar'
 import ThemeToggle from './ThemeToggle'
 import TrialBadge from './TrialBadge'
@@ -9,12 +10,12 @@ import { ReviewTrigger } from './ReviewTrigger'
 interface DashboardShellProps {
   userEmail: string
   displayName?: string
-  avatarUrl?: string
   children: React.ReactNode
 }
 
-export default function DashboardShell({ userEmail, displayName, avatarUrl, children }: DashboardShellProps) {
+export default function DashboardShell({ userEmail, displayName, children }: DashboardShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
 
   // Open sidebar by default on desktop, closed on mobile
   useEffect(() => {
@@ -23,6 +24,14 @@ export default function DashboardShell({ userEmail, displayName, avatarUrl, chil
     const handler = (e: MediaQueryListEvent) => setSidebarOpen(e.matches)
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
+  }, [])
+
+  // Fetch avatar separately so a missing column doesn't break the layout
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.from('users').select('avatar_url').maybeSingle().then(({ data }) => {
+      if (data?.avatar_url) setAvatarUrl(data.avatar_url)
+    }).catch(() => {})
   }, [])
 
   return (
