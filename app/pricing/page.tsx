@@ -9,6 +9,7 @@ interface UserInfo {
   email: string;
   full_name?: string;
   subscription_status?: string;
+  referral_credits?: number;
 }
 
 type ReviewMode = 'none' | 'mandatory' | 'optional'
@@ -29,6 +30,8 @@ export default function PricingPage() {
   const [mpesaCode, setMpesaCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [referralCode, setReferralCode] = useState('');
+  const [referralStatus, setReferralStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
 
   useEffect(() => {
     async function loadUser() {
@@ -37,7 +40,7 @@ export default function PricingPage() {
       if (!user) return;
 
       const [profileRes, subCountRes] = await Promise.all([
-        supabase.from('users').select('id, email, full_name, subscription_status').eq('id', user.id).single(),
+        supabase.from('users').select('id, email, full_name, subscription_status, referral_credits').eq('id', user.id).single(),
         supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('user_id', user.id).neq('status', 'pending'),
       ]);
 
@@ -70,6 +73,18 @@ export default function PricingPage() {
     setStep('instructions');
   }
 
+  async function validateReferralCode(code: string) {
+    if (code.length !== 4) { setReferralStatus('idle'); return; }
+    setReferralStatus('checking');
+    try {
+      const res = await fetch(`/api/referral/validate?code=${code}`);
+      const data = await res.json();
+      setReferralStatus(data.valid ? 'valid' : 'invalid');
+    } catch {
+      setReferralStatus('idle');
+    }
+  }
+
   async function handleSubmitCode() {
     if (!mpesaCode.trim()) { setError('Please enter your M-Pesa confirmation code.'); return; }
     if (!selectedPlan) return;
@@ -84,6 +99,8 @@ export default function PricingPage() {
           email: userInfo?.email,
           fullName: userInfo?.full_name,
           planType: selectedPlan,
+          referralCode: referralStatus === 'valid' ? referralCode : undefined,
+          useCredit: (userInfo?.referral_credits ?? 0) > 0 && referralStatus !== 'valid',
         }),
       });
       const data = await res.json();
@@ -97,6 +114,9 @@ export default function PricingPage() {
   }
 
   const plan = selectedPlan ? PLANS[selectedPlan] : null;
+  const hasCredit = (userInfo?.referral_credits ?? 0) > 0;
+  const discountActive = hasCredit || referralStatus === 'valid';
+  const effectivePrice = discountActive && plan ? Math.round(plan.price * 0.75) : (plan?.price ?? 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 py-12 px-4 sm:px-6 lg:px-8">
@@ -199,9 +219,52 @@ export default function PricingPage() {
           <div className="max-w-md mx-auto">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border-2 border-indigo-500">
               <div className="bg-indigo-500 text-white text-center py-2 px-4 text-sm font-semibold">
-                {plan.label} Plan — KES {plan.price.toLocaleString()}/month
+                {plan.label} Plan —{' '}
+                {discountActive ? (
+                  <>
+                    <span className="line-through opacity-70">KES {plan.price.toLocaleString()}</span>{' '}
+                    KES {effectivePrice.toLocaleString()}/month
+                  </>
+                ) : (
+                  <>KES {plan.price.toLocaleString()}/month</>
+                )}
               </div>
               <div className="p-8 space-y-6">
+                {/* Referral credit banner */}
+                {hasCredit && (
+                  <div className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg px-4 py-3 text-sm text-green-700 dark:text-green-400">
+                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    Referral credit applied — 25% off this month
+                  </div>
+                )}
+
+                {/* Referral code input (only if no credit) */}
+                {!hasCredit && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Referral code <span className="font-normal text-gray-400">(optional — 25% off)</span>
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={referralCode}
+                        onChange={(e) => {
+                          const v = e.target.value.replace(/\D/g, '').slice(0, 4)
+                          setReferralCode(v)
+                          if (v.length === 4) validateReferralCode(v)
+                          else setReferralStatus('idle')
+                        }}
+                        placeholder="4-digit code"
+                        maxLength={4}
+                        className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg font-mono tracking-widest text-center bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      />
+                      {referralStatus === 'checking' && <span className="text-sm text-gray-500 self-center">Checking…</span>}
+                      {referralStatus === 'valid' && <span className="text-sm text-green-600 dark:text-green-400 font-medium self-center">✓ 25% off applied!</span>}
+                      {referralStatus === 'invalid' && <span className="text-sm text-red-500 self-center">Invalid code</span>}
+                    </div>
+                  </div>
+                )}
+
                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-5 space-y-4">
                   <p className="text-sm font-semibold text-green-800 dark:text-green-300 uppercase tracking-wide">Pay via M-Pesa</p>
                   <div className="grid grid-cols-2 gap-3 text-sm">
@@ -215,14 +278,19 @@ export default function PricingPage() {
                     </div>
                     <div>
                       <p className="text-gray-500 dark:text-gray-400">Amount</p>
-                      <p className="text-xl font-bold text-gray-900 dark:text-white">KES {plan.price.toLocaleString()}</p>
+                      <div>
+                        {discountActive && (
+                          <p className="text-sm line-through text-gray-400">KES {plan.price.toLocaleString()}</p>
+                        )}
+                        <p className="text-xl font-bold text-gray-900 dark:text-white">KES {effectivePrice.toLocaleString()}</p>
+                      </div>
                     </div>
                   </div>
                   <ol className="text-xs text-gray-600 dark:text-gray-400 space-y-1 list-decimal list-inside pt-1">
                     <li>Go to M-Pesa → Lipa na M-Pesa → Pay Bill</li>
                     <li>Enter Business no. <strong>247247</strong></li>
                     <li>Enter Account no. <strong>0764987896</strong></li>
-                    <li>Enter Amount <strong>{plan.price.toLocaleString()}</strong> and your PIN</li>
+                    <li>Enter Amount <strong>{effectivePrice.toLocaleString()}</strong> and your PIN</li>
                     <li>Copy the confirmation code from the SMS you receive</li>
                   </ol>
                 </div>
@@ -253,7 +321,8 @@ export default function PricingPage() {
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 space-y-4">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Enter your M-Pesa code</h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {plan.label} Plan — KES {plan.price.toLocaleString()}/month
+                {plan.label} Plan — KES {effectivePrice.toLocaleString()}/month
+                {discountActive && <span className="text-green-600 dark:text-green-400 ml-1">(25% off)</span>}
               </p>
 
               <div>

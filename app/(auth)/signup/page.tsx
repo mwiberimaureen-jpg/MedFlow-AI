@@ -9,6 +9,7 @@ export default function SignupPage() {
   const [displayName, setDisplayName] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [referralCode, setReferralCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -29,12 +30,16 @@ export default function SignupPage() {
 
     setLoading(true)
     try {
+      const meta: Record<string, string> = {}
+      if (displayName.trim()) meta.display_name = displayName.trim()
+      if (referralCode.trim()) meta.referral_code_used = referralCode.trim().toUpperCase()
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: displayName.trim() ? { display_name: displayName.trim() } : undefined,
+          data: Object.keys(meta).length > 0 ? meta : undefined,
         },
       })
       if (error) throw error
@@ -180,6 +185,22 @@ export default function SignupPage() {
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="••••••••"
           />
+        </div>
+
+        <div>
+          <label htmlFor="referral_code" className="block text-sm font-medium text-gray-700 mb-2">
+            Referral Code <span className="font-normal text-gray-400">(optional)</span>
+          </label>
+          <input
+            id="referral_code"
+            type="text"
+            value={referralCode}
+            onChange={(e) => setReferralCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono tracking-widest"
+            placeholder="e.g. 4729"
+            maxLength={4}
+          />
+          <p className="text-xs text-gray-500 mt-1">Get 25% off your first subscription when someone referred you</p>
         </div>
 
         <button

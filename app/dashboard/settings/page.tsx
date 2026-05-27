@@ -16,6 +16,9 @@ interface UserProfile {
   subscription_expires_at?: string
   created_at?: string
   auto_delete_histories?: boolean
+  referral_code?: string
+  referral_count?: number
+  referral_credits?: number
 }
 
 interface Subscription {
@@ -45,6 +48,7 @@ export default function SettingsPage() {
   const [phoneNumber, setPhoneNumber] = useState('')
   const [autoDelete, setAutoDelete] = useState(true)
   const [savingRetention, setSavingRetention] = useState(false)
+  const [codeCopied, setCodeCopied] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -72,6 +76,18 @@ export default function SettingsPage() {
         setFullName(profileData.full_name || '')
         setPhoneNumber(profileData.phone_number || '')
         setAutoDelete(profileData.auto_delete_histories !== false)
+
+        // Generate referral code for existing users who don't have one yet
+        if (!profileData.referral_code) {
+          fetch('/api/referral/ensure', { method: 'POST' })
+            .then(r => r.json())
+            .then(d => {
+              if (d.referral_code) {
+                setProfile(prev => prev ? { ...prev, referral_code: d.referral_code } : null)
+              }
+            })
+            .catch(() => {})
+        }
       }
 
       // Fetch active subscription
@@ -403,6 +419,56 @@ export default function SettingsPage() {
           </div>
         </div>
       </Card>
+      {/* Referral Program */}
+      <Card>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Referral Program</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+          Share your code with a colleague. When they subscribe using it, they get 25% off — and you earn a credit for 25% off your next subscription.
+        </p>
+
+        {profile?.referral_code ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-lg px-4 py-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Your referral code</p>
+                <p className="text-3xl font-bold font-mono tracking-widest text-gray-900 dark:text-white">
+                  {profile.referral_code}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(profile!.referral_code!)
+                  setCodeCopied(true)
+                  setTimeout(() => setCodeCopied(false), 2000)
+                }}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                {codeCopied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+
+            <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+              {(profile.referral_count ?? 0) > 0 ? (
+                <p>
+                  You&apos;ve referred <strong>{profile.referral_count}</strong>{' '}
+                  {profile.referral_count === 1 ? 'user' : 'users'}.
+                  {(profile.referral_credits ?? 0) > 0 && (
+                    <span className="text-green-600 dark:text-green-400">
+                      {' '}You have <strong>{profile.referral_credits}</strong> referral{' '}
+                      {profile.referral_credits === 1 ? 'credit' : 'credits'} — 25% off your next subscription.
+                    </span>
+                  )}
+                </p>
+              ) : (
+                <p className="text-gray-400 dark:text-gray-500">No referrals yet. Share your code to get started.</p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400 dark:text-gray-500">Generating your referral code…</p>
+        )}
+      </Card>
+
       {/* Support */}
       <Card>
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Contact Support</h2>
