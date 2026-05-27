@@ -317,11 +317,12 @@ export default function PricingPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Payment submitted!</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Subscription activated!</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Your confirmation code <strong className="font-mono">{mpesaCode}</strong> has been received.
-                We&apos;ll verify and activate your <strong>{plan?.label}</strong> subscription within a few hours.
-                {userInfo?.email && <> You&apos;ll be notified at <strong>{userInfo.email}</strong>.</>}
+                Your <strong>{plan?.label}</strong> subscription is now active. You have full access to MedFlow AI.
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-500">
+                M-Pesa code <strong className="font-mono">{mpesaCode}</strong> received.
               </p>
             </div>
           </div>
