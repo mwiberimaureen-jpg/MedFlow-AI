@@ -32,25 +32,20 @@ export async function POST(request: NextRequest) {
     const acceptedAt = new Date().toISOString()
     const admin = getSupabaseServerClient()
 
-    // Try update first; fall back to upsert so a missing row is never the blocker.
     const { error: updateError } = await admin
       .from('users')
-      .upsert({
-        id: user.id,
+      .update({
         terms_accepted_at: acceptedAt,
         terms_version: TERMS_VERSION,
-      }, { onConflict: 'id' })
+      })
+      .eq('id', user.id)
 
     if (updateError) {
-      // If the column doesn't exist yet (migration not run), log it but don't
-      // hard-fail — the layout already handles this gracefully.
       console.error('Error recording terms acceptance:', updateError)
-      if (!updateError.message?.includes('column') && !updateError.message?.includes('does not exist')) {
-        return NextResponse.json(
-          { error: 'Failed to record acceptance' },
-          { status: 500 }
-        )
-      }
+      return NextResponse.json(
+        { error: `Database error: ${updateError.message}` },
+        { status: 500 }
+      )
     }
 
     logAuditEvent({
