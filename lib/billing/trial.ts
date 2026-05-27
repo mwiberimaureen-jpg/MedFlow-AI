@@ -5,9 +5,10 @@
  * Basic plan:  KES 1,000/month → 20 new patient files per billing period
  * Pro plan:    KES 2,000/month → 50 new patient files per billing period
  *
- * One "patient file" = opening a new patient on Day 1. Once opened, the full
- * admission journey is covered at no extra cost: daily round notes, learning
- * sparks, and the discharge summary are all included until discharge.
+ * One "patient file" = opening a new patient on Day 1. Daily round notes,
+ * learning sparks, and the discharge summary are all included up to Day 15 of
+ * admission at no extra cost. If a patient remains admitted beyond Day 15,
+ * continuing their analysis uses one additional file from the monthly allowance.
  * Analysis stops only when the subscription lapses or the monthly patient
  * limit is reached.
  *

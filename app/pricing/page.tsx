@@ -183,8 +183,8 @@ export default function PricingPage() {
             <div className="mt-16">
               <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-8">Frequently Asked Questions</h2>
               <div className="space-y-4 max-w-3xl mx-auto">
-                <FAQ question="What counts as one patient file?" answer="Opening a new patient on Day 1 uses one patient file from your monthly allowance. After that, every subsequent day's round notes, learning sparks, and the final discharge summary are all included at no extra cost — until the patient is discharged." />
-                <FAQ question="What happens when I reach my patient limit?" answer="You can still view, edit, and access all existing patient notes, summaries, and histories. You just can't open new patient files until you renew your subscription." />
+                <FAQ question="What counts as one patient file?" answer="Opening a new patient on Day 1 uses one patient file from your monthly allowance. Daily round notes, learning sparks, and the discharge summary are all included at no extra cost up to Day 15 of admission. If a patient remains admitted beyond Day 15, continuing their analysis uses one additional file from your subscription." />
+                <FAQ question="What happens when I reach my patient limit?" answer="You can still view, edit, and access all existing patient notes, summaries, and histories. You just can't open new patient files (or continue analysis past Day 15) until you renew your subscription." />
                 <FAQ question="How long does activation take?" answer="Once you submit your M-Pesa confirmation code, we verify the payment and activate your account manually — usually within a few hours." />
                 <FAQ question="Can I upgrade from Basic to Pro?" answer="Yes — email us at medflowai.ke@gmail.com and we'll sort out the difference." />
                 <FAQ question="What payment methods do you accept?" answer="M-Pesa via Paybill 247247. We're working on adding card payments." />
