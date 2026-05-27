@@ -1,5 +1,5 @@
 import DashboardShell from '@/components/DashboardShell'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getSupabaseServerClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { TERMS_VERSION } from '@/lib/legal/terms'
 
@@ -8,6 +8,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
+  // User identity check — must use the user's own client so the JWT is verified
   const supabase = await createClient()
   const {
     data: { user },
@@ -17,16 +18,17 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
-  const { data: userRow } = await supabase
+  // Row fetch uses the admin client so a stale/expired user JWT never causes
+  // RLS to silently return null and wrongly redirect to /terms.
+  const admin = getSupabaseServerClient()
+  const { data: userRow } = await admin
     .from('users')
     .select('*')
     .eq('id', user.id)
     .maybeSingle()
 
-  // Only enforce the terms gate if the column exists in the DB.
-  // If terms_acceptance_migration.sql has not been run yet, the field
-  // will be absent from the row entirely — we skip the check rather
-  // than locking every user out permanently.
+  // Only enforce the terms gate when the column actually exists in the DB
+  // (guard against a not-yet-run migration locking everyone out).
   const termsColumnPresent = userRow !== null && 'terms_version' in userRow
   if (termsColumnPresent && (userRow as any).terms_version !== TERMS_VERSION) {
     redirect('/terms')

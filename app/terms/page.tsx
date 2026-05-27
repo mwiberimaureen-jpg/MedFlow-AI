@@ -37,7 +37,9 @@ function TermsContent() {
         const data = await res.json().catch(() => ({}))
         throw new Error(data?.error || 'Failed to record acceptance')
       }
-      router.replace(next)
+      // Hard navigate — bypasses Next.js router cache so the layout
+      // re-renders fresh from the server with the updated terms_version.
+      window.location.href = next
     } catch (err: any) {
       setError(err?.message || 'Failed to record acceptance')
       setLoading(false)
