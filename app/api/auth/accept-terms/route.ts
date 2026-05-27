@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getSupabaseServerClient } from '@/lib/supabase/server'
 import { TERMS_VERSION } from '@/lib/legal/terms'
 import { logAuditEvent } from '@/lib/audit/logger'
 
@@ -30,8 +30,9 @@ export async function POST(request: NextRequest) {
     }
 
     const acceptedAt = new Date().toISOString()
+    const admin = getSupabaseServerClient()
 
-    const { error: updateError } = await supabase
+    const { error: updateError } = await admin
       .from('users')
       .update({
         terms_accepted_at: acceptedAt,
