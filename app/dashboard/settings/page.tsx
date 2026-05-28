@@ -461,7 +461,7 @@ export default function SettingsPage() {
                 {subscription ? 'Monthly Subscription' : 'No active plan'}
               </p>
             </div>
-            {getStatusBadge(profile?.subscription_status)}
+            {getStatusBadge(subscription ? subscription.status : 'inactive')}
           </div>
 
           {subscription && (
