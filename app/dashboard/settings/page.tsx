@@ -623,55 +623,9 @@ export default function SettingsPage() {
       {/* Leave a Review */}
       <LeaveReviewCard email={profile?.email || ''} fullName={fullName} />
 
-      <GeneratePatientIdsCard />
     </div>
   )
 }
-
-function GeneratePatientIdsCard() {
-  const [running, setRunning] = useState(false)
-  const [result, setResult] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
-
-  async function handleGenerate() {
-    setRunning(true)
-    setResult(null)
-    try {
-      const res = await fetch('/api/admin/generate-patient-ids', { method: 'POST' })
-      const data = await res.json()
-      if (!res.ok) {
-        setResult({ message: data.error || 'Failed to generate IDs.', type: 'error' })
-      } else {
-        setResult({ message: data.message, type: 'success' })
-      }
-    } catch {
-      setResult({ message: 'Network error. Please try again.', type: 'error' })
-    } finally {
-      setRunning(false)
-    }
-  }
-
-  return (
-    <Card>
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Generate Patient IDs</h2>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-        Assigns a unique 10-character MedFlow ID (e.g. MF3K9P2M7X) to any existing patient that doesn&apos;t have one. New patients get IDs automatically.
-      </p>
-      {result && (
-        <div className={`mb-4 px-4 py-3 rounded-lg text-sm ${
-          result.type === 'success'
-            ? 'bg-green-50 border border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
-            : 'bg-red-50 border border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
-        }`}>
-          {result.message}
-        </div>
-      )}
-      <Button variant="secondary" onClick={handleGenerate} loading={running} disabled={running}>
-        {running ? 'Generating IDs…' : 'Generate Patient IDs'}
-      </Button>
-    </Card>
-  )
-}
-
 
 function LeaveReviewCard({ email, fullName }: { email: string; fullName: string }) {
   const [showModal, setShowModal] = useState(false)
