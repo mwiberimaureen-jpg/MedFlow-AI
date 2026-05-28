@@ -25,10 +25,12 @@ export default async function EditPatientPage({
 
   if (error || !patient) notFound()
 
-  // Only drafts are editable
-  if (patient.status !== 'draft') {
+  // Lock editing while analysis is running
+  if (patient.status === 'analyzing') {
     redirect(`/dashboard/patients/${id}`)
   }
+
+  const isCompleted = patient.status === 'completed'
 
   const initialData = {
     patient_name: decryptField(patient.patient_name),
@@ -50,13 +52,17 @@ export default async function EditPatientPage({
         >
           ← Back to Patient
         </Link>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Edit Draft</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          {isCompleted ? 'Edit History' : 'Edit Draft'}
+        </h1>
         <p className="text-gray-600 dark:text-gray-400 mt-2">
-          Update the patient history, then save as draft or submit for analysis.
+          {isCompleted
+            ? 'Update the patient history. The existing analysis will be kept — regenerate the round note from the Rounds page if needed.'
+            : 'Update the patient history, then save as draft or submit for analysis.'}
         </p>
       </div>
 
-      <PatientHistoryForm patientId={id} initialData={initialData} />
+      <PatientHistoryForm patientId={id} initialData={initialData} isCompleted={isCompleted} />
     </div>
   )
 }

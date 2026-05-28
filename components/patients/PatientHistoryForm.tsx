@@ -37,9 +37,11 @@ interface PatientHistoryFormProps {
   /** When provided the form PATCHes this patient instead of POSTing a new one */
   patientId?: string
   initialData?: InitialData
+  /** When true (completed patient), shows only Save Changes — no re-analysis */
+  isCompleted?: boolean
 }
 
-export function PatientHistoryForm({ patientId, initialData }: PatientHistoryFormProps = {}) {
+export function PatientHistoryForm({ patientId, initialData, isCompleted }: PatientHistoryFormProps = {}) {
   const router = useRouter()
   const isEditing = !!patientId
   const [loading, setLoading] = useState(false)
@@ -256,6 +258,36 @@ export function PatientHistoryForm({ patientId, initialData }: PatientHistoryFor
   const handleSaveDraft = () => handleSubmit('draft')
   const handleSubmitForm = () => handleSubmit('submitted')
 
+  // Save-only path for completed patients: PATCH fields without touching status or analysis
+  const handleSaveChanges = async () => {
+    setError(null)
+    if (!formData.patient_name.trim()) { setError('Patient name is required'); return }
+    if (!formData.history_text.trim()) { setError('Patient history is required'); return }
+    setLoading(true)
+    try {
+      const rotation = (showCustomRotation ? customRotation.trim() : formData.rotation) || null
+      const res = await fetch(`/api/patients/${patientId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patient_name: formData.patient_name.trim(),
+          patient_age: formData.patient_age ? parseInt(formData.patient_age) : undefined,
+          patient_gender: formData.patient_gender || undefined,
+          patient_identifier: formData.patient_identifier.trim() || undefined,
+          history_text: formData.history_text.trim(),
+          metadata: { rotation },
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to save')
+      router.push(`/dashboard/patients/${patientId}`)
+    } catch (err: any) {
+      setError(err.message || 'An error occurred while saving')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function handleReviewSubmitted() {
     setShowReview(false)
     if (!pendingPatientId) return
@@ -421,21 +453,34 @@ export function PatientHistoryForm({ patientId, initialData }: PatientHistoryFor
         )}
 
         <div className="flex gap-4">
-          <Button
-            variant="secondary"
-            onClick={handleSaveDraft}
-            disabled={loading || !formData.patient_name || !formData.history_text}
-          >
-            Save Draft
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleSubmitForm}
-            loading={loading}
-            disabled={loading}
-          >
-            {loading ? 'Saving...' : isEditing ? 'Save & Analyze' : 'Submit & Analyze'}
-          </Button>
+          {isCompleted ? (
+            <Button
+              variant="primary"
+              onClick={handleSaveChanges}
+              loading={loading}
+              disabled={loading || !formData.patient_name || !formData.history_text}
+            >
+              {loading ? 'Saving...' : 'Save Changes'}
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="secondary"
+                onClick={handleSaveDraft}
+                disabled={loading || !formData.patient_name || !formData.history_text}
+              >
+                Save Draft
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleSubmitForm}
+                loading={loading}
+                disabled={loading}
+              >
+                {loading ? 'Saving...' : isEditing ? 'Save & Analyze' : 'Submit & Analyze'}
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </Card>

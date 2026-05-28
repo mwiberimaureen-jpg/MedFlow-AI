@@ -223,8 +223,9 @@ export async function PATCH(
         return NextResponse.json({ error: 'Patient history not found' }, { status: 404 })
       }
 
-      if (existing.status !== 'draft') {
-        return NextResponse.json({ error: 'Only draft histories can be edited' }, { status: 400 })
+      // Allow editing draft and completed patients; analyzing/error states are locked
+      if (existing.status === 'analyzing') {
+        return NextResponse.json({ error: 'Cannot edit a history while analysis is in progress' }, { status: 400 })
       }
 
       const updates: Record<string, any> = { updated_at: new Date().toISOString() }
