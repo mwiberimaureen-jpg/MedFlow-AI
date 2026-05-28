@@ -74,23 +74,31 @@ Avatar is stored in Supabase Storage bucket `avatars` (public) and saved to `use
 
 ---
 
-## 4. Clinical Summary — Transcript, Not Interpretation
+## 4. Clinical Summary — Faithful Transcript of the History
 
-The AI clinical summary is a **factual transcript** of what is documented in the history. It does not interpret.
+The AI clinical summary reports **everything the user documented in the history, and nothing else**.
+
+The single rule: **if the user wrote it, include it. If the user did not write it, omit it.**
+
+This means:
+- If the user included test results and values → include them in the summary
+- If the user stated a diagnosis or impression → include it as written
+- If the user did not mention a test result → do not add it
+- If the user did not state a diagnosis → do not generate one
 
 ### Required content (in order)
 1. Name, age, sex, parity (if OB/GYN), Day N of admission
 2. Chief complaint and relevant background — exactly as documented
 3. Examination findings as documented (appearance, vitals, key exam findings)
-4. Investigations **sent only** — do NOT include result values or interpret them
-5. Treatments/procedures already given — every drug with dose/route/frequency, every procedure
-6. Any pending plans explicitly stated in the history
+4. Investigations mentioned in the history — include results and values if the user documented them
+5. Any diagnoses or impressions the user stated — include them as written
+6. Treatments/procedures already given — every drug with dose/route/frequency, every procedure
+7. Any pending plans explicitly stated in the history
 
 ### Absolute prohibitions
-- Never add impressions, diagnoses, differentials, or management recommendations
-- Never include test result values in the summary
-- Never interpret findings
-- Only report what is explicitly written in the history
+- Never add anything not written in the history
+- Never generate AI diagnoses, inferred results, or interpretations beyond what the user stated
+- Never omit something the user explicitly wrote
 
 ### Length
 One paragraph for most cases. Two only if the case is genuinely complex.
