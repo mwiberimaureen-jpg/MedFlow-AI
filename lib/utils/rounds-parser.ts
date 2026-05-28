@@ -209,7 +209,7 @@ export function extractTestsFromHistory(historyText: string): string {
     const match = historyText.match(pattern)
     if (match?.[1]) {
       const text = match[1].trim()
-      if (text.length > 10) return text.split('\n').slice(0, 8).join('\n').trim()
+      if (text.length > 10) return text.trim()
     }
   }
 
@@ -254,7 +254,7 @@ export function extractManagementFromHistory(historyText: string): string {
     const match = historyText.match(pattern)
     if (match?.[1]) {
       const text = match[1].trim()
-      if (text.length > 5) return text.split('\n').slice(0, 8).join('\n').trim()
+      if (text.length > 5) return text.trim()
     }
   }
 
@@ -333,7 +333,8 @@ export function extractPostAdmissionSymptoms(allAnalyses: Array<{
 }
 
 /**
- * Extract the full HPI narrative (beyond just the chief complaint line).
+ * Extract the full HPI narrative — ALL documented details, no truncation.
+ * Every episode count, duration, and associated feature must be preserved.
  */
 export function extractHpiDetails(historyText: string): string {
   const patterns = [
@@ -343,20 +344,13 @@ export function extractHpiDetails(historyText: string): string {
     const match = historyText.match(pattern)
     if (match?.[1]) {
       const text = match[1].trim()
-      if (text.length > 20) {
-        const sentences = text.split(/\.(?:\s|$)/).filter(s => s.trim().length > 5)
-        const result = sentences.slice(0, 5).join('. ').trim()
-        return result ? result + '.' : text.slice(0, 500)
-      }
+      if (text.length > 20) return text
     }
   }
-  // Fallback: first few sentences of history (skip the CC line)
+  // Fallback: everything after the chief complaint line up to the next major section
   const lines = historyText.split('\n').filter(l => l.trim().length > 15)
   const startIdx = lines.length > 1 ? 1 : 0
-  const narrative = lines.slice(startIdx, startIdx + 6).join(' ')
-  const sentences = narrative.split(/\.(?:\s|$)/).filter(s => s.trim().length > 10)
-  const result = sentences.slice(0, 4).join('. ').trim()
-  return result ? result + '.' : ''
+  return lines.slice(startIdx, startIdx + 20).join('\n').trim()
 }
 
 /**
@@ -370,7 +364,8 @@ export function extractPMHFromHistory(historyText: string): string {
     const match = historyText.match(pattern)
     const text = match?.[1]?.trim() ?? ''
     if (text.length > 5) {
-      return text.split('\n').map(l => l.trim()).filter(l => l.length > 3).slice(0, 6).join('\n')
+      // Return full section — no truncation
+      return text.split('\n').map(l => l.trim()).filter(l => l.length > 3).join('\n')
     }
   }
   const conditions = extractKnownConditions(historyText)
@@ -387,7 +382,7 @@ export function extractVitalsFromHistory(historyText: string): string {
   if (sectionMatch?.[1]) {
     const text = sectionMatch[1].trim()
     if (text.length > 5) {
-      return text.split('\n').map(l => l.trim()).filter(l => l.length > 2).slice(0, 6).join('  ')
+      return text.split('\n').map(l => l.trim()).filter(l => l.length > 2).join('  ')
     }
   }
   // Inline extraction

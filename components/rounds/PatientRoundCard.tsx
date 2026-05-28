@@ -112,23 +112,6 @@ function extractAdjustedPlan(rawText: string): string {
   return parts.join('\n\n')
 }
 
-/**
- * The AI summary always starts with a demographics sentence
- * ("[Name], [age]-year-old [sex], Day N of admission.").
- * We show demographics from structured fields separately, so strip that
- * first sentence to avoid duplication or "unknown patient" text.
- */
-function stripDemographicsSentence(summary: string): string {
-  if (!summary) return ''
-  // Find first period followed by whitespace + capital letter (end of first sentence)
-  const firstBreak = summary.search(/\.\s+[A-Z]/)
-  // Only strip if the break is within the first 250 chars (i.e. it's a demographics sentence, not a long HPI sentence)
-  if (firstBreak > 0 && firstBreak < 250) {
-    return summary.slice(firstBreak + 1).trim()
-  }
-  return summary
-}
-
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function PatientRoundCard({
@@ -166,22 +149,18 @@ export function PatientRoundCard({
   if (weight) demoParts.push(`Wt: ${weight}`)
   const demographicsLine = `${demoParts.join(', ')} — Day ${dayOfAdmission} of Admission`
 
-  // ── Clinical summary from admission analysis ───────────────────────────────
-  // The AI summary is a transcript of EVERYTHING in the history: CC, HPI details,
-  // convulsions, procedures done, tests sent, management plan — all captured.
-  // We strip its first sentence (demographics) since we show that separately.
-  const admissionAnalysis = allAnalyses.find(a => a.analysis_version === 'admission')
-  const admissionSummary = admissionAnalysis?.summary || latestAnalysis?.summary || ''
-  const clinicalSummaryBody = stripDemographicsSentence(admissionSummary)
-
-  // Fallback: when no analysis exists yet, build from history_text directly
+  // ── Clinical body from history_text ───────────────────────────────────────
+  // history_text is the doctor's original entry — it is the only source that
+  // is guaranteed to contain everything: convulsion count, episode durations,
+  // tracheal movement, fecal incontinence, procedures, tests sent, plan.
+  // AI summaries stored in the DB may be compressed versions that drop details.
   const cc = extractChiefComplaintWithDuration(history_text)
   const hpi = extractHpiDetails(history_text)
   const pmh = extractPMHFromHistory(history_text)
   const vitals = extractVitalsFromHistory(history_text)
   const investigations = extractTestsFromHistory(history_text)
   const currentPlan = extractManagementFromHistory(history_text)
-  const hasHistoryFallback = !!(cc || hpi || vitals || investigations || currentPlan)
+  const hasHistoryContent = !!(cc || hpi || vitals || investigations || currentPlan)
 
   // ── Most recent day note (current status update) ───────────────────────────
   const latestDayNote = allAnalyses
@@ -230,18 +209,13 @@ export function PatientRoundCard({
 
       <div className="px-4 py-3 space-y-3 text-sm">
 
-        {/* ── Clinical summary (admission) ── */}
-        {clinicalSummaryBody ? (
-          <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
-            {clinicalSummaryBody}
-          </p>
-        ) : hasHistoryFallback ? (
-          // No analysis yet — extract directly from history_text
-          <div className="space-y-1.5">
+        {/* ── Clinical body from history_text (always shown) ── */}
+        {hasHistoryContent ? (
+          <div className="space-y-1.5 text-sm">
             {cc && (
               <div className="flex gap-2">
                 <span className="font-semibold text-gray-500 dark:text-gray-400 shrink-0 w-28">CC:</span>
-                <span className="text-gray-800 dark:text-gray-200">{cc}</span>
+                <span className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{cc}</span>
               </div>
             )}
             {hpi && (
@@ -259,7 +233,7 @@ export function PatientRoundCard({
             {vitals && (
               <div className="flex gap-2">
                 <span className="font-semibold text-gray-500 dark:text-gray-400 shrink-0 w-28">Vitals:</span>
-                <span className="text-gray-800 dark:text-gray-200">{vitals}</span>
+                <span className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{vitals}</span>
               </div>
             )}
             {investigations && (
@@ -276,8 +250,8 @@ export function PatientRoundCard({
             )}
           </div>
         ) : (
-          <p className="text-gray-400 dark:text-gray-500 italic">
-            No analysis yet — submit the admission history to generate the round note.
+          <p className="text-gray-400 dark:text-gray-500 italic text-sm">
+            No history documented yet.
           </p>
         )}
 
