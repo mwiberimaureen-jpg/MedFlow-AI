@@ -57,23 +57,32 @@ export async function POST(
       )
     }
 
-    // Check if admission analysis already exists (allow day analyses for the same patient)
+    // force=true means re-analysis after a history edit — delete old admission analysis first
+    const body = await request.json().catch(() => ({}))
+    const force = body?.force === true
+
+    // Check if admission analysis already exists
     const { data: existingAdmissionAnalysis } = await supabase
       .from('analyses')
       .select('id')
       .eq('patient_history_id', id)
       .eq('analysis_version', 'admission')
-      .single()
+      .maybeSingle()
 
     if (existingAdmissionAnalysis) {
-      return NextResponse.json(
-        { error: 'Admission analysis already exists for this patient' },
-        { status: 400 }
-      )
+      if (!force) {
+        return NextResponse.json(
+          { error: 'Admission analysis already exists for this patient' },
+          { status: 400 }
+        )
+      }
+      // Delete old todo items and admission analysis so we can replace them
+      await supabase.from('todo_items').delete().eq('analysis_id', existingAdmissionAnalysis.id)
+      await supabase.from('analyses').delete().eq('id', existingAdmissionAnalysis.id)
     }
 
-    // Trial quota gate: 5 free admission analyses per account
-    const quota = await getTrialQuota(supabase, user.id, user.email)
+    // Trial quota gate — skip for re-analysis (patient was already counted)
+    const quota = force ? { allowed: true, reviewRequired: false } : await getTrialQuota(supabase, user.id, user.email)
 
     // Review gate: must submit review before accessing analyses 4 and 5
     if (quota.reviewRequired) {

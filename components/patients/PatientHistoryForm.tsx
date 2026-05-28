@@ -258,28 +258,60 @@ export function PatientHistoryForm({ patientId, initialData, isCompleted }: Pati
   const handleSaveDraft = () => handleSubmit('draft')
   const handleSubmitForm = () => handleSubmit('submitted')
 
-  // Save-only path for completed patients: PATCH fields without touching status or analysis
+  // Shared save helper for completed patients — PATCHes fields without touching status
+  const saveCompletedPatient = async () => {
+    const rotation = (showCustomRotation ? customRotation.trim() : formData.rotation) || null
+    const res = await fetch(`/api/patients/${patientId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patient_name: formData.patient_name.trim(),
+        patient_age: formData.patient_age ? parseInt(formData.patient_age) : undefined,
+        patient_gender: formData.patient_gender || undefined,
+        patient_identifier: formData.patient_identifier.trim() || undefined,
+        history_text: formData.history_text.trim(),
+        metadata: { rotation },
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Failed to save')
+  }
+
+  // Save changes only — keep existing analysis as-is
   const handleSaveChanges = async () => {
     setError(null)
     if (!formData.patient_name.trim()) { setError('Patient name is required'); return }
     if (!formData.history_text.trim()) { setError('Patient history is required'); return }
     setLoading(true)
     try {
-      const rotation = (showCustomRotation ? customRotation.trim() : formData.rotation) || null
-      const res = await fetch(`/api/patients/${patientId}`, {
-        method: 'PATCH',
+      await saveCompletedPatient()
+      router.push(`/dashboard/patients/${patientId}`)
+    } catch (err: any) {
+      setError(err.message || 'An error occurred while saving')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Save changes then re-run the full analysis so summary, impressions,
+  // management plan, and round note all reflect the updated history
+  const handleReanalyze = async () => {
+    setError(null)
+    if (!formData.patient_name.trim()) { setError('Patient name is required'); return }
+    if (!formData.history_text.trim()) { setError('Patient history is required'); return }
+    setLoading(true)
+    try {
+      await saveCompletedPatient()
+      // force=true replaces the existing admission analysis
+      const res = await fetch(`/api/patients/${patientId}/analyze`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          patient_name: formData.patient_name.trim(),
-          patient_age: formData.patient_age ? parseInt(formData.patient_age) : undefined,
-          patient_gender: formData.patient_gender || undefined,
-          patient_identifier: formData.patient_identifier.trim() || undefined,
-          history_text: formData.history_text.trim(),
-          metadata: { rotation },
-        }),
+        body: JSON.stringify({ force: true }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to save')
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to start re-analysis')
+      }
       router.push(`/dashboard/patients/${patientId}`)
     } catch (err: any) {
       setError(err.message || 'An error occurred while saving')
@@ -454,14 +486,23 @@ export function PatientHistoryForm({ patientId, initialData, isCompleted }: Pati
 
         <div className="flex gap-4">
           {isCompleted ? (
-            <Button
-              variant="primary"
-              onClick={handleSaveChanges}
-              loading={loading}
-              disabled={loading || !formData.patient_name || !formData.history_text}
-            >
-              {loading ? 'Saving...' : 'Save Changes'}
-            </Button>
+            <>
+              <Button
+                variant="secondary"
+                onClick={handleSaveChanges}
+                disabled={loading || !formData.patient_name || !formData.history_text}
+              >
+                Save Changes
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleReanalyze}
+                loading={loading}
+                disabled={loading || !formData.patient_name || !formData.history_text}
+              >
+                {loading ? 'Saving...' : 'Save & Reanalyze'}
+              </Button>
+            </>
           ) : (
             <>
               <Button
