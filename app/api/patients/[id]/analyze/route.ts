@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { analyzePatientHistoryFanOut } from '@/lib/openrouter/client'
+import { analyzePatientHistoryFanOut, generateWardRoundNote } from '@/lib/openrouter/client'
 import { logAuditEvent } from '@/lib/audit/logger'
 import { decryptField } from '@/lib/crypto/field-encryption'
 import { getTrialQuota } from '@/lib/billing/trial'
@@ -259,6 +259,18 @@ export async function POST(
       if (todoError) {
         console.error('Error creating todo items:', todoError)
         // Analysis is already created, so we'll continue
+      }
+
+      // Auto-generate ward round note and cache it on the analysis
+      try {
+        const roundNote = await generateWardRoundNote(patient.history_text)
+        await supabase
+          .from('analyses')
+          .update({ user_feedback: roundNote })
+          .eq('id', analysis.id)
+      } catch (roundErr) {
+        // Non-fatal — user can still generate manually from the rounds page
+        console.error('Round note auto-generation failed:', roundErr)
       }
 
       // Update patient status to completed
