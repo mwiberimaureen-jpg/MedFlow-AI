@@ -82,7 +82,7 @@ export async function POST(
     }
 
     // Trial quota gate — skip for re-analysis (patient was already counted)
-    const quota = force ? { allowed: true, reviewRequired: false, remaining: 0 } : await getTrialQuota(supabase, user.id, user.email)
+    const quota = force ? { allowed: true, reviewRequired: false, remaining: 0, used: 0, limit: 0 } : await getTrialQuota(supabase, user.id, user.email)
 
     // Review gate: must submit review before accessing analyses 4 and 5
     if (quota.reviewRequired) {
