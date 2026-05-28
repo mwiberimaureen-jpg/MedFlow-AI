@@ -80,8 +80,8 @@ function extractDifferentials(rawText: string): string {
     return match[1].trim()
       .replace(/\*\*([^*]+)\*\*/g, '$1')
       .split('\n')
-      .map(l => l.replace(/^[-•]\s*/, '').trim())
-      .filter(l => l.length > 3)
+      .map((l: string) => l.replace(/^[-•]\s*/, '').trim())
+      .filter((l: string) => l.length > 3)
       .slice(0, 5)
       .join('\n')
   }
@@ -112,16 +112,21 @@ function extractAdjustedPlan(rawText: string): string {
   return parts.join('\n\n')
 }
 
-// ── Row helper for the round note ────────────────────────────────────────────
-
-function NoteRow({ label, value }: { label: string; value: string }) {
-  if (!value.trim()) return null
-  return (
-    <div className="flex gap-2 text-sm">
-      <span className="font-semibold text-gray-500 dark:text-gray-400 shrink-0 min-w-[120px]">{label}:</span>
-      <span className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">{value}</span>
-    </div>
-  )
+/**
+ * The AI summary always starts with a demographics sentence
+ * ("[Name], [age]-year-old [sex], Day N of admission.").
+ * We show demographics from structured fields separately, so strip that
+ * first sentence to avoid duplication or "unknown patient" text.
+ */
+function stripDemographicsSentence(summary: string): string {
+  if (!summary) return ''
+  // Find first period followed by whitespace + capital letter (end of first sentence)
+  const firstBreak = summary.search(/\.\s+[A-Z]/)
+  // Only strip if the break is within the first 250 chars (i.e. it's a demographics sentence, not a long HPI sentence)
+  if (firstBreak > 0 && firstBreak < 250) {
+    return summary.slice(firstBreak + 1).trim()
+  }
+  return summary
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -150,7 +155,6 @@ export function PatientRoundCard({
     rotation?.toLowerCase().includes('pediatric')
   const weight = isPeds ? extractWeightFromHistory(history_text) : null
 
-  // Demographics line
   const demoParts: string[] = [displayName]
   if (displayAge) demoParts.push(`${displayAge}y`)
   if (patient_gender) {
@@ -160,27 +164,38 @@ export function PatientRoundCard({
   else if (obgyn.gestationalAge) demoParts.push(obgyn.gestationalAge)
   if (obgyn.obstetricFormula) demoParts.push(obgyn.obstetricFormula)
   if (weight) demoParts.push(`Wt: ${weight}`)
-
   const demographicsLine = `${demoParts.join(', ')} — Day ${dayOfAdmission} of Admission`
 
-  // ── Round note body ────────────────────────────────────────────────────────
-  // Prefer the most recent day note (doctor-formatted, already correct).
-  // Fall back to structured extraction from history_text for admission-only patients.
-  const latestDayNote = allAnalyses
-    .filter(a => a.analysis_version?.startsWith('day_') && a.user_feedback?.trim())
-    .sort((a, b) => {
-      const da = parseInt(a.analysis_version?.replace('day_', '') || '0', 10)
-      const db = parseInt(b.analysis_version?.replace('day_', '') || '0', 10)
-      return db - da
-    })[0]?.user_feedback?.trim() || ''
+  // ── Clinical summary from admission analysis ───────────────────────────────
+  // The AI summary is a transcript of EVERYTHING in the history: CC, HPI details,
+  // convulsions, procedures done, tests sent, management plan — all captured.
+  // We strip its first sentence (demographics) since we show that separately.
+  const admissionAnalysis = allAnalyses.find(a => a.analysis_version === 'admission')
+  const admissionSummary = admissionAnalysis?.summary || latestAnalysis?.summary || ''
+  const clinicalSummaryBody = stripDemographicsSentence(admissionSummary)
 
-  // Structured fields extracted directly from history_text (never from AI summary)
+  // Fallback: when no analysis exists yet, build from history_text directly
   const cc = extractChiefComplaintWithDuration(history_text)
   const hpi = extractHpiDetails(history_text)
   const pmh = extractPMHFromHistory(history_text)
   const vitals = extractVitalsFromHistory(history_text)
   const investigations = extractTestsFromHistory(history_text)
   const currentPlan = extractManagementFromHistory(history_text)
+  const hasHistoryFallback = !!(cc || hpi || vitals || investigations || currentPlan)
+
+  // ── Most recent day note (current status update) ───────────────────────────
+  const latestDayNote = allAnalyses
+    .filter(a => a.analysis_version?.startsWith('day_') && a.user_feedback?.trim())
+    .sort((a, b) => {
+      const da = parseInt(a.analysis_version?.replace('day_', '') || '0', 10)
+      const db = parseInt(b.analysis_version?.replace('day_', '') || '0', 10)
+      return db - da
+    })[0]
+
+  const latestDayNoteText = latestDayNote?.user_feedback?.trim() || ''
+  const latestDayLabel = latestDayNote?.analysis_version?.startsWith('day_')
+    ? `Day ${latestDayNote.analysis_version.replace('day_', '')} Update`
+    : 'Current Status'
 
   // ── AI Assessment ─────────────────────────────────────────────────────────
   const impression = latestAnalysis ? extractImpression(latestAnalysis.raw_analysis_text) : ''
@@ -213,28 +228,68 @@ export function PatientRoundCard({
         </div>
       </div>
 
-      <div className="px-4 py-3 space-y-3">
+      <div className="px-4 py-3 space-y-3 text-sm">
 
-        {/* ── Round note body ── */}
-        {latestDayNote ? (
-          // Day note submitted by doctor — show as-is, already in correct ward round format
-          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
-            {latestDayNote}
+        {/* ── Clinical summary (admission) ── */}
+        {clinicalSummaryBody ? (
+          <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
+            {clinicalSummaryBody}
           </p>
-        ) : (
-          // Admission only — build structured note directly from history_text
+        ) : hasHistoryFallback ? (
+          // No analysis yet — extract directly from history_text
           <div className="space-y-1.5">
-            <NoteRow label="Chief Complaint" value={cc} />
-            <NoteRow label="History" value={hpi} />
-            <NoteRow label="PMH / PSH" value={pmh || 'Nil significant'} />
-            <NoteRow label="Vital Signs" value={vitals} />
-            <NoteRow label="Investigations" value={investigations} />
-            <NoteRow label="Current Plan" value={currentPlan} />
-            {!cc && !hpi && !vitals && !investigations && !currentPlan && (
-              <p className="text-sm text-gray-400 dark:text-gray-500 italic">
-                No history documented yet.
-              </p>
+            {cc && (
+              <div className="flex gap-2">
+                <span className="font-semibold text-gray-500 dark:text-gray-400 shrink-0 w-28">CC:</span>
+                <span className="text-gray-800 dark:text-gray-200">{cc}</span>
+              </div>
             )}
+            {hpi && (
+              <div className="flex gap-2">
+                <span className="font-semibold text-gray-500 dark:text-gray-400 shrink-0 w-28">History:</span>
+                <span className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{hpi}</span>
+              </div>
+            )}
+            {pmh && (
+              <div className="flex gap-2">
+                <span className="font-semibold text-gray-500 dark:text-gray-400 shrink-0 w-28">PMH / PSH:</span>
+                <span className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{pmh}</span>
+              </div>
+            )}
+            {vitals && (
+              <div className="flex gap-2">
+                <span className="font-semibold text-gray-500 dark:text-gray-400 shrink-0 w-28">Vitals:</span>
+                <span className="text-gray-800 dark:text-gray-200">{vitals}</span>
+              </div>
+            )}
+            {investigations && (
+              <div className="flex gap-2">
+                <span className="font-semibold text-gray-500 dark:text-gray-400 shrink-0 w-28">Investigations:</span>
+                <span className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{investigations}</span>
+              </div>
+            )}
+            {currentPlan && (
+              <div className="flex gap-2">
+                <span className="font-semibold text-gray-500 dark:text-gray-400 shrink-0 w-28">Plan:</span>
+                <span className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{currentPlan}</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-gray-400 dark:text-gray-500 italic">
+            No analysis yet — submit the admission history to generate the round note.
+          </p>
+        )}
+
+        {/* ── Current day update (day note) ── */}
+        {latestDayNoteText && (
+          <div className="border-t border-gray-100 dark:border-gray-700 pt-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400 mb-1.5">
+              {latestDayLabel}
+            </p>
+            <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
+              {latestDayNoteText}
+            </p>
           </div>
         )}
 
@@ -245,30 +300,24 @@ export function PatientRoundCard({
               AI Assessment
             </p>
             {impression && (
-              <div className="text-sm">
+              <div>
                 <p className="font-semibold text-gray-700 dark:text-gray-300 mb-0.5">Impression</p>
                 <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{impression}</p>
               </div>
             )}
             {differentials && (
-              <div className="text-sm">
+              <div>
                 <p className="font-semibold text-gray-700 dark:text-gray-300 mb-0.5">Differentials</p>
                 <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{differentials}</p>
               </div>
             )}
             {adjustedPlan && (
-              <div className="text-sm">
+              <div>
                 <p className="font-semibold text-gray-700 dark:text-gray-300 mb-0.5">Adjusted Plan</p>
                 <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{adjustedPlan}</p>
               </div>
             )}
           </div>
-        )}
-
-        {!latestAnalysis && (
-          <p className="text-xs text-gray-400 dark:text-gray-500 italic border-t border-gray-100 dark:border-gray-700 pt-2">
-            No analysis yet — submit the admission history to generate an AI assessment.
-          </p>
         )}
       </div>
     </div>
