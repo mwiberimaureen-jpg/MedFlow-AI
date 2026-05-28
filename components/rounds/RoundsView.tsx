@@ -134,13 +134,14 @@ export function RoundsView({ patients }: RoundsViewProps) {
 
       {/* Patient cards */}
       <div className="space-y-4">
-        {rotationPatients.map(({ patient, latestAnalysis, allAnalyses, analysisCount }) => (
+        {rotationPatients.map(({ patient, latestAnalysis, allAnalyses, analysisCount, rotation }) => (
           <PatientRoundCard
             key={patient.id}
             patient={patient}
             latestAnalysis={latestAnalysis}
             allAnalyses={allAnalyses}
             analysisCount={analysisCount}
+            rotation={rotation}
           />
         ))}
       </div>

@@ -333,6 +333,89 @@ export function extractPostAdmissionSymptoms(allAnalyses: Array<{
 }
 
 /**
+ * Extract the full HPI narrative (beyond just the chief complaint line).
+ */
+export function extractHpiDetails(historyText: string): string {
+  const patterns = [
+    /(?:history\s+of\s+present(?:ing)?\s+illness|hpi|presenting\s+history|clinical\s+history)[:\s]+([\s\S]+?)(?=\n\s*(?:past\s+med|review\s+of\s+sys|ros|social\s+hist|family\s+hist|medications|allergies|physical\s+exam|on\s+examination|vital\s+signs?|$))/i,
+  ]
+  for (const pattern of patterns) {
+    const match = historyText.match(pattern)
+    if (match?.[1]) {
+      const text = match[1].trim()
+      if (text.length > 20) {
+        const sentences = text.split(/\.(?:\s|$)/).filter(s => s.trim().length > 5)
+        const result = sentences.slice(0, 5).join('. ').trim()
+        return result ? result + '.' : text.slice(0, 500)
+      }
+    }
+  }
+  // Fallback: first few sentences of history (skip the CC line)
+  const lines = historyText.split('\n').filter(l => l.trim().length > 15)
+  const startIdx = lines.length > 1 ? 1 : 0
+  const narrative = lines.slice(startIdx, startIdx + 6).join(' ')
+  const sentences = narrative.split(/\.(?:\s|$)/).filter(s => s.trim().length > 10)
+  const result = sentences.slice(0, 4).join('. ').trim()
+  return result ? result + '.' : ''
+}
+
+/**
+ * Extract past medical/surgical history and chronic illness management.
+ */
+export function extractPMHFromHistory(historyText: string): string {
+  const sectionPatterns = [
+    /(?:past\s+(?:medical|surgical|med(?:ical)?\/surgical)\s+history|pmh|psh|pmhx|background\s+(?:medical\s+)?history)[:\s]+([\s\S]+?)(?=\n\s*(?:social\s*history|family\s*history|medications|allergies|review\s*of\s*systems|ros|physical\s*exam|on\s*examination|investigation|current\s*management|management|plan|$))/i,
+  ]
+  for (const pattern of sectionPatterns) {
+    const match = historyText.match(pattern)
+    const text = match?.[1]?.trim() ?? ''
+    if (text.length > 5) {
+      return text.split('\n').map(l => l.trim()).filter(l => l.length > 3).slice(0, 6).join('\n')
+    }
+  }
+  const conditions = extractKnownConditions(historyText)
+  return conditions.length > 0 ? conditions.join(', ') : ''
+}
+
+/**
+ * Extract vital signs from history text.
+ */
+export function extractVitalsFromHistory(historyText: string): string {
+  const sectionMatch = historyText.match(
+    /(?:vital\s*signs?|vitals?)[:\s]+([\s\S]+?)(?=\n\s*(?:physical\s*exam|on\s*examination|investigation|management|impression|review|ros|$))/i
+  )
+  if (sectionMatch?.[1]) {
+    const text = sectionMatch[1].trim()
+    if (text.length > 5) {
+      return text.split('\n').map(l => l.trim()).filter(l => l.length > 2).slice(0, 6).join('  ')
+    }
+  }
+  // Inline extraction
+  const vitals: string[] = []
+  const bp = historyText.match(/\b(?:bp|blood\s*pressure)[:\s]*(\d+\/\d+)/i)
+  const hr = historyText.match(/\b(?:hr|heart\s*rate|pulse)[:\s]*(\d+)/i)
+  const temp = historyText.match(/\b(?:temp(?:erature)?)[:\s]*(\d+\.?\d*)\s*°?[cCfF]?/i)
+  const rr = historyText.match(/\b(?:rr|resp(?:iratory)?\s*rate)[:\s]*(\d+)/i)
+  const spo2 = historyText.match(/\b(?:spo2|o2\s*sat(?:uration)?)[:\s]*(\d+)%?/i)
+  const rbs = historyText.match(/\b(?:rbs|random\s*blood\s*sugar)[:\s]*(\d+\.?\d*)/i)
+  if (bp) vitals.push(`BP ${bp[1]}`)
+  if (hr) vitals.push(`HR ${hr[1]}bpm`)
+  if (temp) vitals.push(`Temp ${temp[1]}°C`)
+  if (rr) vitals.push(`RR ${rr[1]}`)
+  if (spo2) vitals.push(`SpO2 ${spo2[1]}%`)
+  if (rbs) vitals.push(`RBS ${rbs[1]}`)
+  return vitals.join('  ')
+}
+
+/**
+ * Extract weight from history (for paediatric patients).
+ */
+export function extractWeightFromHistory(historyText: string): string | null {
+  const match = historyText.match(/(?:weight|wt)[:\s]*(\d+\.?\d*)\s*kg/i)
+  return match ? `${match[1]}kg` : null
+}
+
+/**
  * Extract physical examination findings from history text.
  */
 export function extractPhysicalExamFromHistory(historyText: string): string {
