@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { PatientRoundCard } from './PatientRoundCard'
+import { PatientDayNotes } from './PatientDayNotes'
 import { PrintButton } from './PrintButton'
 
 interface Patient {
@@ -50,6 +51,7 @@ const FOLDER_COLORS = [
 
 export function RoundsView({ patients }: RoundsViewProps) {
   const [openRotation, setOpenRotation] = useState<string | null>(null)
+  const [openPatientId, setOpenPatientId] = useState<string | null>(null)
 
   // Group patients by rotation
   const groups = patients.reduce<Record<string, PatientEntry[]>>((acc, entry) => {
@@ -62,12 +64,9 @@ export function RoundsView({ patients }: RoundsViewProps) {
   const rotations = Object.keys(groups)
     .filter(k => k !== '__unassigned__')
     .sort()
-
   if (groups['__unassigned__']?.length) rotations.push('__unassigned__')
 
-  const openLabel = openRotation === '__unassigned__' ? 'Unassigned' : openRotation
-
-  // ── FOLDER GRID ───────────────────────────────────────────────────────────
+  // ── LEVEL 1: Rotation folder grid ────────────────────────────────────────
   if (openRotation === null) {
     if (rotations.length === 0) {
       return (
@@ -108,17 +107,17 @@ export function RoundsView({ patients }: RoundsViewProps) {
     )
   }
 
-  // ── INSIDE A ROTATION ─────────────────────────────────────────────────────
+  const rotationLabel = openRotation === '__unassigned__' ? 'Unassigned' : openRotation
   const rotationPatients = groups[openRotation] || []
 
-  return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+  // ── LEVEL 2: Patient list within a rotation ───────────────────────────────
+  if (openPatientId === null) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-sm">
           <button
             onClick={() => setOpenRotation(null)}
-            className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+            className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -126,25 +125,57 @@ export function RoundsView({ patients }: RoundsViewProps) {
             Rotations
           </button>
           <span className="text-gray-300 dark:text-gray-600">/</span>
-          <h2 className="text-sm font-bold text-gray-900 dark:text-white">{openLabel}</h2>
-          <span className="text-xs text-gray-400 dark:text-gray-500">({rotationPatients.length} {rotationPatients.length === 1 ? 'patient' : 'patients'})</span>
+          <span className="font-bold text-gray-900 dark:text-white">{rotationLabel}</span>
+          <span className="text-xs text-gray-400 dark:text-gray-500">
+            ({rotationPatients.length} {rotationPatients.length === 1 ? 'patient' : 'patients'})
+          </span>
+        </div>
+
+        <div className="space-y-2">
+          {rotationPatients.map(({ patient, latestAnalysis, allAnalyses }) => (
+            <PatientRoundCard
+              key={patient.id}
+              patient={patient}
+              latestAnalysis={latestAnalysis}
+              allAnalyses={allAnalyses}
+              onClick={() => setOpenPatientId(patient.id)}
+            />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // ── LEVEL 3: Day notes for a specific patient ─────────────────────────────
+  const patientEntry = rotationPatients.find(e => e.patient.id === openPatientId)
+  if (!patientEntry) return null
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm min-w-0">
+          <button
+            onClick={() => setOpenPatientId(null)}
+            className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors flex-shrink-0"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            {rotationLabel}
+          </button>
+          <span className="text-gray-300 dark:text-gray-600">/</span>
+          <span className="font-bold text-gray-900 dark:text-white truncate">
+            {patientEntry.patient.patient_name}
+          </span>
         </div>
         <PrintButton />
       </div>
 
-      {/* Patient cards */}
-      <div className="space-y-4">
-        {rotationPatients.map(({ patient, latestAnalysis, allAnalyses, analysisCount, rotation }) => (
-          <PatientRoundCard
-            key={patient.id}
-            patient={patient}
-            latestAnalysis={latestAnalysis}
-            allAnalyses={allAnalyses}
-            analysisCount={analysisCount}
-            rotation={rotation}
-          />
-        ))}
-      </div>
+      <PatientDayNotes
+        patient={patientEntry.patient}
+        latestAnalysis={patientEntry.latestAnalysis}
+        allAnalyses={patientEntry.allAnalyses}
+      />
     </div>
   )
 }

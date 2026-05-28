@@ -36,3 +36,29 @@ export async function POST(
 
   return NextResponse.json({ note })
 }
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const body = await request.json().catch(() => null)
+  const { analysis_version, note } = body || {}
+  if (!analysis_version || typeof note !== 'string') {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+  }
+
+  await supabase
+    .from('analyses')
+    .update({ user_feedback: note })
+    .eq('patient_history_id', id)
+    .eq('analysis_version', analysis_version)
+    .eq('user_id', user.id)
+
+  return NextResponse.json({ success: true })
+}
