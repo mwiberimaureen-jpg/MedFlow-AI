@@ -186,23 +186,42 @@ export default function SettingsPage() {
     }
   }
 
+  function compressImage(file: File, maxPx = 400, quality = 0.85): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        const scale = Math.min(1, maxPx / Math.max(img.width, img.height))
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.round(img.width * scale)
+        canvas.height = Math.round(img.height * scale)
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Canvas toBlob failed')), 'image/jpeg', quality)
+      }
+      img.onerror = reject
+      img.src = url
+    })
+  }
+
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file || !profile) return
 
-    if (file.size > 2 * 1024 * 1024) {
-      setProfileMessage({ type: 'error', text: 'Image must be smaller than 2 MB.' })
+    if (file.size > 20 * 1024 * 1024) {
+      setProfileMessage({ type: 'error', text: 'Image must be smaller than 20 MB.' })
       return
     }
 
     setUploadingAvatar(true)
     try {
-      const ext = file.name.split('.').pop() ?? 'jpg'
-      const path = `${profile.id}/avatar.${ext}`
+      const compressed = await compressImage(file)
+      const path = `${profile.id}/avatar.jpg`
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(path, file, { upsert: true })
+        .upload(path, compressed, { upsert: true, contentType: 'image/jpeg' })
 
       if (uploadError) throw uploadError
 
