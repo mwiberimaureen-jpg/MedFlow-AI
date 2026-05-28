@@ -623,10 +623,7 @@ export default function SettingsPage() {
       {/* Leave a Review */}
       <LeaveReviewCard email={profile?.email || ''} fullName={fullName} />
 
-      {/* Reformat existing summaries to new short factual format */}
       <GeneratePatientIdsCard />
-      <ReformatSummariesCard />
-      <ReformatRoundNotesCard />
     </div>
   )
 }
@@ -675,49 +672,6 @@ function GeneratePatientIdsCard() {
   )
 }
 
-function ReformatRoundNotesCard() {
-  const [running, setRunning] = useState(false)
-  const [result, setResult] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
-
-  async function handleReformat() {
-    setRunning(true)
-    setResult(null)
-    try {
-      const res = await fetch('/api/admin/reformat-round-notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
-      const data = await res.json()
-      if (!res.ok) {
-        setResult({ message: data.error || 'Failed to reformat round notes.', type: 'error' })
-      } else {
-        setResult({ message: data.message, type: 'success' })
-      }
-    } catch {
-      setResult({ message: 'Network error. Please try again.', type: 'error' })
-    } finally {
-      setRunning(false)
-    }
-  }
-
-  return (
-    <Card>
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Reformat Existing Round Notes</h2>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-        Updates all submitted round notes to include the short factual clinical summary at the top and the AI recommended plan in the PLAN section.
-      </p>
-      {result && (
-        <div className={`mb-4 px-4 py-3 rounded-lg text-sm ${
-          result.type === 'success'
-            ? 'bg-green-50 border border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
-            : 'bg-red-50 border border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
-        }`}>
-          {result.message}
-        </div>
-      )}
-      <Button variant="secondary" onClick={handleReformat} loading={running} disabled={running}>
-        {running ? 'Reformatting round notes…' : 'Reformat All Round Notes'}
-      </Button>
-    </Card>
-  )
-}
 
 function LeaveReviewCard({ email, fullName }: { email: string; fullName: string }) {
   const [showModal, setShowModal] = useState(false)
@@ -759,46 +713,3 @@ function LeaveReviewCard({ email, fullName }: { email: string; fullName: string 
   )
 }
 
-function ReformatSummariesCard() {
-  const [running, setRunning] = useState(false)
-  const [result, setResult] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
-
-  async function handleReformat() {
-    setRunning(true)
-    setResult(null)
-    try {
-      const res = await fetch('/api/admin/reformat-summaries', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
-      const data = await res.json()
-      if (!res.ok) {
-        setResult({ message: data.error || 'Failed to reformat summaries.', type: 'error' })
-      } else {
-        setResult({ message: data.message, type: 'success' })
-      }
-    } catch {
-      setResult({ message: 'Network error. Please try again.', type: 'error' })
-    } finally {
-      setRunning(false)
-    }
-  }
-
-  return (
-    <Card>
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Reformat Existing Summaries</h2>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-        Rewrites all your stored clinical summaries to the new short factual format — facts only, no impressions or management plans. This cannot be undone.
-      </p>
-      {result && (
-        <div className={`mb-4 px-4 py-3 rounded-lg text-sm ${
-          result.type === 'success'
-            ? 'bg-green-50 border border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
-            : 'bg-red-50 border border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
-        }`}>
-          {result.message}
-        </div>
-      )}
-      <Button variant="secondary" onClick={handleReformat} loading={running} disabled={running}>
-        {running ? 'Reformatting summaries…' : 'Reformat All Summaries'}
-      </Button>
-    </Card>
-  )
-}
