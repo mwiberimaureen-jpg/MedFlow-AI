@@ -332,6 +332,62 @@ export function extractPostAdmissionSymptoms(allAnalyses: Array<{
   return summary ? summary + '.' : ''
 }
 
+/**
+ * Extract physical examination findings from history text.
+ */
+export function extractPhysicalExamFromHistory(historyText: string): string {
+  const patterns = [
+    /(?:physical\s+exam(?:ination)?|on\s+examination|examination\s+findings?|clinical\s+findings?)[:\s]+([\s\S]+?)(?=\n\s*(?:investigation|lab(?:oratory)?|results?|impression|diagnosis|management|plan|assessment|$))/i,
+    /(?:general\s+(?:appearance|condition|exam))[:\s]+([\s\S]+?)(?=\n\s*(?:investigation|lab|impression|management|plan|$))/i,
+  ]
+  for (const pattern of patterns) {
+    const match = historyText.match(pattern)
+    if (match?.[1]) {
+      const lines = match[1].trim().split('\n').map(l => l.trim()).filter(l => l.length > 3)
+      return lines.slice(0, 5).join(' | ').replace(/\s{2,}/g, ' ').trim()
+    }
+  }
+  return ''
+}
+
+/**
+ * Extract patient name from free-text history as a fallback when the DB field is empty.
+ */
+export function extractPatientNameFromHistory(historyText: string): string {
+  const patterns = [
+    /(?:patient(?:'s)?\s*(?:name)?|name)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/,
+    /^([A-Z][a-z]{1,20}(?:\s+[A-Z][a-z]{1,20})?)\s+is\s+(?:a\s+)?\d+/m,
+    /([A-Z][a-z]{1,20}(?:\s+[A-Z][a-z]{1,20})?),?\s+(?:a\s+)?\d+[-\s]year/,
+  ]
+  for (const pattern of patterns) {
+    const match = historyText.match(pattern)
+    if (match?.[1]) {
+      const name = match[1].trim()
+      if (name.length > 1 && name.length < 40) return name
+    }
+  }
+  return ''
+}
+
+/**
+ * Extract patient age from free-text history as a fallback when the DB field is empty.
+ */
+export function extractPatientAgeFromHistory(historyText: string): number | null {
+  const patterns = [
+    /(\d+)[- ]year[- ]old/i,
+    /age[:\s]+(\d+)/i,
+    /(\d+)\s*(?:years?|yrs?)\s*(?:old|of\s+age)/i,
+  ]
+  for (const pattern of patterns) {
+    const match = historyText.match(pattern)
+    if (match?.[1]) {
+      const age = parseInt(match[1], 10)
+      if (age >= 0 && age <= 120) return age
+    }
+  }
+  return null
+}
+
 export function buildCourseSummary(analyses: Array<{
   analysis_version: string | null
   summary: string
@@ -391,6 +447,16 @@ export function extractSectionFromAnalysis(rawAnalysisText: string, sectionKey: 
       ).join('\n')
     }
 
+    if (sectionKey === 'confirmatory_tests') {
+      const tests = parsed.confirmatory_tests || parsed.follow_up_tests || parsed.recommended_tests || []
+      if (Array.isArray(tests) && tests.length > 0) {
+        return tests.map((t: any) => {
+          if (typeof t === 'string') return t
+          return [t.test, t.name, t.test_name].find(Boolean) || ''
+        }).filter(Boolean).join('\n')
+      }
+    }
+
     return ''
   } catch {
     // Not JSON — parse as markdown
@@ -404,6 +470,7 @@ export function extractSectionFromAnalysis(rawAnalysisText: string, sectionKey: 
     summary: /^##\s*Clinical\s+Summary/im,
     complications: /^##\s*(?:Possible\s+)?Complications/im,
     differential: /^##\s*Differential\s+Diagnos/im,
+    confirmatory_tests: /^##\s*Confirmatory\s+Tests?/im,
   }
 
   const headerPattern = sectionHeaders[sectionKey]

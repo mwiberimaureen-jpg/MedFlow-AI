@@ -10,10 +10,29 @@
 
 # next.js
 /.next/
+**/.next/
 /out/
 
 # production
 /build
+
+# nested sub-projects (not part of the main app)
+/medical-workflow-app/
+/onboarding-app/
+
+# temp / generated files
+/.tmp/
+.tmp/
+
+# python cache
+**/__pycache__/
+*.pyc
+
+# editor
+.vscode/
+
+# claude internal
+.claude/
 
 # misc
 .DS_Store
