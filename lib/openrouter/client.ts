@@ -362,15 +362,15 @@ Blood transfusion stat.
 
 RULES:
 1. Use the EXACT section headings: demographics line, Chief complaint, [optional: Past medical history, Family history, Surgical history], Examination at admission, Management at admission, PLAN.
-2. Include EVERY clinically significant number: episode counts, durations, volumes (e.g. "soaking 3 pads"), exact vitals (HR, BP, SpO2, Temp, RR), drug names with doses and routes.
-3. Include ALL associated features explicitly documented in the history — e.g. tracheal deviation, fecal/urinary incontinence, photophobia, neck stiffness, post-ictal state, tongue biting, cyanosis, LOC. If documented, it must appear.
+2. Chief complaint is a SYNTHESIZED SUMMARY — not a transcript. Include only the clinically relevant HPI details that drive the impression: onset, duration, frequency, severity, key associated features (e.g. tracheal deviation, fecal incontinence, convulsion count/duration, LOC). Leave out redundant negatives and narrative filler.
+3. Retain EVERY clinically significant number in what you include: episode counts, durations, volumes (e.g. "soaking 3 pads"), exact vitals (HR, BP, SpO2, Temp, RR), drug names with doses and routes.
 4. Include ALL procedures performed (nasal packing, IV access, NGT, catheter, etc.).
 5. Include ALL investigations sent and results if documented.
 6. Include the clinician's plan exactly as documented.
 7. Omit sections that have no relevant content (e.g. omit Family history if nothing relevant).
 8. NEVER add impressions, diagnoses, differentials, or anything not explicitly in the history.
 9. Write in brief clinical phrases, not full sentences. No padding, no "the patient", no editorialising.
-10. Be complete — missing a convulsion count, a drug dose, or a procedure is a clinical error.`
+10. Be concise — the note must be presentable in under 2 minutes. Every line must earn its place.`
 
 /**
  * Generate a concise ward round presentation note from patient history.
