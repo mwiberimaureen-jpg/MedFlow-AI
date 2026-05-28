@@ -5,10 +5,6 @@ import { getTriageFromRiskLevel, getTriageBadgeVariant, getTriageLabel } from '@
 import {
   calculateDayOfAdmission,
   extractObgynData,
-  extractChiefComplaint,
-  extractPhysicalExamFromHistory,
-  extractTestsFromHistory,
-  extractManagementFromHistory,
   extractPatientNameFromHistory,
   extractPatientAgeFromHistory,
   extractSectionFromAnalysis,
@@ -63,7 +59,6 @@ function extractSuggestedPlan(rawText: string): string {
 
   const parts: string[] = []
 
-  // Management plan steps
   try {
     const parsed = JSON.parse(rawText)
     const plan = parsed?.management_plan
@@ -78,12 +73,10 @@ function extractSuggestedPlan(rawText: string): string {
       }
     }
   } catch {
-    // markdown fallback
     const mgmt = extractSectionFromAnalysis(rawText, 'management_plan')
     if (mgmt) parts.push(mgmt)
   }
 
-  // Confirmatory / follow-up tests
   const confirmatory = extractSectionFromAnalysis(rawText, 'confirmatory_tests')
   if (confirmatory) {
     parts.push(`Follow-up tests:\n${confirmatory}`)
@@ -107,16 +100,22 @@ export function PatientRoundCard({ patient, latestAnalysis, allAnalyses, analysi
   if (obgyn.obstetricFormula) demoLine.push(obgyn.obstetricFormula)
   demoLine.push(`Day ${dayOfAdmission} of Admission`)
 
-  // Factual summary extracted from history
-  const chiefComplaint = extractChiefComplaint(patient.history_text)
-  const physicalExam = extractPhysicalExamFromHistory(patient.history_text)
-  const investigations = extractTestsFromHistory(patient.history_text)
-  const currentPlan = extractManagementFromHistory(patient.history_text)
+  // Most recent day note (user_feedback) — this is the full formatted round note
+  // submitted by the clinician (HPI narrative → ROS → Vitals → PE → Investigations → PLAN)
+  const latestDayNote = allAnalyses
+    .filter(a => a.analysis_version?.startsWith('day_') && a.user_feedback?.trim())
+    .sort((a, b) => {
+      const da = parseInt(a.analysis_version?.replace('day_', '') || '0', 10)
+      const db = parseInt(b.analysis_version?.replace('day_', '') || '0', 10)
+      return db - da
+    })[0]?.user_feedback || ''
 
-  // AI assessment from latest analysis
+  // Fall back to the brief admission summary when no day note exists yet
+  const mainBody = latestDayNote || latestAnalysis?.summary || ''
+
+  // AI assessment sections (from the latest analysis raw text)
   const impression = latestAnalysis ? extractImpression(latestAnalysis.raw_analysis_text) : ''
   const suggestedPlan = latestAnalysis ? extractSuggestedPlan(latestAnalysis.raw_analysis_text) : ''
-
   const hasAiAssessment = !!(impression || suggestedPlan)
 
   return (
@@ -142,38 +141,16 @@ export function PatientRoundCard({ patient, latestAnalysis, allAnalyses, analysi
       </div>
 
       <div className="px-4 py-3 space-y-3 text-sm">
-        {/* ── Factual summary from history ───────────────────────────────── */}
-        <div className="space-y-1.5">
-          {chiefComplaint && (
-            <div className="flex gap-2">
-              <span className="font-medium text-gray-500 dark:text-gray-400 shrink-0 w-24">CC:</span>
-              <span className="text-gray-800 dark:text-gray-200">{chiefComplaint}</span>
-            </div>
-          )}
-          {physicalExam && (
-            <div className="flex gap-2">
-              <span className="font-medium text-gray-500 dark:text-gray-400 shrink-0 w-24">Exam:</span>
-              <span className="text-gray-800 dark:text-gray-200">{physicalExam}</span>
-            </div>
-          )}
-          {investigations && (
-            <div className="flex gap-2">
-              <span className="font-medium text-gray-500 dark:text-gray-400 shrink-0 w-24">Investigations:</span>
-              <span className="text-gray-800 dark:text-gray-200">{investigations}</span>
-            </div>
-          )}
-          {currentPlan && (
-            <div className="flex gap-2">
-              <span className="font-medium text-gray-500 dark:text-gray-400 shrink-0 w-24">Current plan:</span>
-              <span className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{currentPlan}</span>
-            </div>
-          )}
-          {!chiefComplaint && !physicalExam && !investigations && !currentPlan && (
-            <p className="text-gray-400 dark:text-gray-500 italic">History not yet documented.</p>
-          )}
-        </div>
+        {/* Round note body: full day note if available, else admission summary */}
+        {mainBody ? (
+          <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{mainBody}</p>
+        ) : (
+          <p className="text-gray-400 dark:text-gray-500 italic">
+            No analysis available yet — submit the admission history to generate a summary.
+          </p>
+        )}
 
-        {/* ── AI assessment ───────────────────────────────────────────────── */}
+        {/* AI Assessment: Impression + Suggested Plan */}
         {hasAiAssessment && (
           <div className="border-t border-gray-100 dark:border-gray-700 pt-3 space-y-2">
             <p className="text-xs font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">AI Assessment</p>
@@ -190,12 +167,6 @@ export function PatientRoundCard({ patient, latestAnalysis, allAnalyses, analysi
               </div>
             )}
           </div>
-        )}
-
-        {!latestAnalysis && (
-          <p className="text-gray-400 dark:text-gray-500 italic text-xs border-t border-gray-100 dark:border-gray-700 pt-2">
-            No analysis run yet — submit the admission history to generate an AI assessment.
-          </p>
         )}
       </div>
     </div>
