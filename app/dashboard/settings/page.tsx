@@ -226,14 +226,20 @@ export default function SettingsPage() {
       if (uploadError) throw uploadError
 
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+      // Append cache-buster so browsers don't serve a stale image after re-upload
+      const avatarUrl = `${publicUrl}?t=${Date.now()}`
 
-      await fetch('/api/profile', {
+      const res = await fetch('/api/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ avatar_url: publicUrl }),
+        body: JSON.stringify({ avatar_url: avatarUrl }),
       })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to save avatar URL')
+      }
 
-      setProfile(prev => prev ? { ...prev, avatar_url: publicUrl } : null)
+      setProfile(prev => prev ? { ...prev, avatar_url: avatarUrl } : null)
       setProfileMessage({ type: 'success', text: 'Profile photo updated!' })
     } catch {
       setProfileMessage({ type: 'error', text: 'Failed to upload photo. Make sure the "avatars" storage bucket exists in Supabase.' })

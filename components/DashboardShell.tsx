@@ -31,7 +31,13 @@ export default function DashboardShell({ userEmail, displayName, children }: Das
     const supabase = createClient()
     async function load() {
       try {
-        const { data } = await supabase.from('users').select('avatar_url').maybeSingle()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const { data } = await supabase
+          .from('users')
+          .select('avatar_url')
+          .eq('id', user.id)
+          .maybeSingle()
         if (data?.avatar_url) setAvatarUrl(data.avatar_url)
       } catch { /* ignore — avatar is cosmetic */ }
     }
