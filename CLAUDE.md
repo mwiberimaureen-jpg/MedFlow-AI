@@ -27,6 +27,16 @@ Agentic workflows detail automation pipelines for lead scraping, proposal genera
   - **SIRS vs Sepsis**: Do NOT diagnose "sepsis" without documented end-organ damage (SOFA criteria). Use "SIRS secondary to [source]" if no organ damage. See prompt in `lib/openrouter/client.ts`.
   - **Anemia diagnosis (AMBOSS/WHO)**: Non-pregnant women: anemia = HB < 12.0 (HB ≥ 12 is NORMAL, not anemia). Men: HB < 13.0. Pregnant: HB < 11.0. Severity grading — Women: Mild 11-11.9, Moderate 8-10.9, Severe <8. Pregnant: Mild 10-10.9, Moderate 7-9.9, Severe <7. Men: Mild 11-12.9, Moderate 8-10.9, Severe <8. Never call HB ≥8 "severe anemia". Never call HB above the diagnostic threshold "anemia" at all.
   - **Source**: AMBOSS only. No UpToDate, Medscape, BMJ, or WHO guidelines references.
+- **Ward round note format** (`generateWardRoundNote` in `lib/openrouter/client.ts`, cached on admission analysis `user_feedback`):
+  - Sections in order: demographics line → Chief complaint → Past medical history (if relevant) → Family history (if relevant) → Examination at admission → Management at admission → PLAN.
+  - **Chief complaint = synthesized summary of relevant HPI**, NOT a transcript. Include onset, duration, frequency, severity, key associated features that drive the impression (e.g. convulsion count, convulsion duration, tracheal deviation, fecal/urinary incontinence, LOC, photophobia). Omit narrative filler and redundant negatives.
+  - Retain every clinically significant number in what you include: episode counts, durations, volumes, exact vitals, drug names with doses and routes.
+  - Include ALL procedures (nasal packing, IV access, NGT, catheter, etc.) and ALL investigations sent with results if documented.
+  - Include the clinician's plan exactly as documented.
+  - Write in brief clinical phrases — no full sentences, no "the patient", no editorialising.
+  - The note must be presentable in under 2 minutes. Every line must earn its place.
+  - **NEVER add impressions, diagnoses, or differentials** — those come from the AI Assessment section below the note.
+  - The prompt lives in `WARD_ROUND_NOTE_PROMPT` in `lib/openrouter/client.ts`. If the format regresses, fix the prompt there.
 - **Clinical summary writing style**:
   - Describe **symptoms** first, not diagnostic labels. Say "patient developed hotness of body and drenching sweats from day 3, with temperatures of 39.3°C" NOT "she has developed post-abortion sepsis."
   - Always name **specific drugs** with dose/route/frequency. Say "patient was on IV ceftriaxone 1g BD from day 1-3, changed to IV ceftazidime 1g BD on day 4" NOT "despite 4 days of antibiotic therapy."
