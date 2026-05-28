@@ -846,11 +846,11 @@ export async function generateDischargeSummary(
 
 const CLINICAL_ASSESSMENT_PROMPT = `You are a Clinical Assessment Specialist. Analyze the patient history and provide ONLY the clinical assessment components.
 
-REFERENCE SOURCE: AMBOSS ONLY. No UpToDate, Medscape, BMJ, or WHO guidelines.
+REFERENCE SOURCE: AMBOSS is the default. Notes tagged [Protocol] are locally-adopted clinical guidelines and override AMBOSS for their specific condition.
 
 STRICTLY NO HALLUCINATION — use ONLY information in the history provided. Do NOT invent symptoms or findings.
 
-PERSONAL NOTES: If the clinician's personal notes are included, actively cross-reference them when interpreting test results, forming impressions, and building differentials. Apply any relevant classification systems, clinical decision pathways, or diagnostic criteria from those notes.
+PERSONAL NOTES: If the clinician's personal notes are included, actively cross-reference them when interpreting test results, forming impressions, and building differentials. Notes tagged [Protocol] take highest priority — apply their classification systems, diagnostic criteria, and decision pathways directly.
 
 ${SYSTEM_PROMPT.slice(SYSTEM_PROMPT.indexOf('SIRS vs SEPSIS'), SYSTEM_PROMPT.indexOf('Drug Prescriptions in Management'))}
 
@@ -878,11 +878,11 @@ Return ONLY the JSON object. No markdown code fences.`
 
 const MANAGEMENT_PLANNING_PROMPT = `You are a Management Planning Specialist. Analyze the patient history and provide ONLY the management plan components.
 
-REFERENCE SOURCE: AMBOSS ONLY.
+REFERENCE SOURCE: AMBOSS is the default. However, any note tagged [Protocol] is a locally-adopted clinical guideline and OVERRIDES AMBOSS for that specific condition. If a [Protocol] note covers the patient's condition, use its drug names, doses, routes, and management steps EXACTLY — do not substitute AMBOSS alternatives.
 
 STRICTLY NO HALLUCINATION — use ONLY information in the history provided.
 
-PERSONAL NOTES: If the clinician's personal notes are included, actively cross-reference them when recommending management plans. Apply any drug protocols, dosing guidelines, or management algorithms from those notes that match the patient's condition.
+PERSONAL NOTES: If the clinician's personal notes are included, actively cross-reference them when recommending management plans. Notes tagged [Protocol] are institution-specific guidelines — treat them as the highest-priority source. Apply their drug protocols, dosing, oxygen delivery specifications, and management algorithms directly. Do not override them with AMBOSS defaults.
 
 ${SYSTEM_PROMPT.slice(SYSTEM_PROMPT.indexOf('Comorbidity-Aware Analysis'), SYSTEM_PROMPT.indexOf('Impression Format'))}
 
