@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { getTriageFromRiskLevel, getTriageBadgeVariant, getTriageLabel } from '@/lib/utils/triage'
 import {
@@ -7,15 +8,9 @@ import {
   extractObgynData,
   extractPatientNameFromHistory,
   extractPatientAgeFromHistory,
-  extractChiefComplaintWithDuration,
-  extractHpiDetails,
-  extractPMHFromHistory,
-  extractVitalsFromHistory,
   extractWeightFromHistory,
-  extractTestsFromHistory,
-  extractManagementFromHistory,
-  extractSectionFromAnalysis,
 } from '@/lib/utils/rounds-parser'
+import { extractSectionFromAnalysis } from '@/lib/utils/rounds-parser'
 
 interface PatientRoundCardProps {
   patient: {
@@ -44,7 +39,7 @@ interface PatientRoundCardProps {
   rotation?: string | null
 }
 
-// ── AI section helpers ────────────────────────────────────────────────────────
+// ── AI Assessment helpers ─────────────────────────────────────────────────────
 
 function extractImpression(rawText: string): string {
   if (!rawText) return ''
@@ -55,12 +50,9 @@ function extractImpression(rawText: string): string {
         .map((imp: any, i: number) => `${i + 1}. ${imp.diagnosis || imp.impression || imp}`)
         .join('\n')
     }
-    if (typeof parsed.impression === 'string' && parsed.impression) return parsed.impression
   } catch { /* not JSON */ }
   const match = rawText.match(/##\s*Impression\s*([\s\S]*?)(?=\n##\s|$)/i)
-  if (match?.[1]) {
-    return match[1].trim().replace(/\*\*([^*]+)\*\*/g, '$1').replace(/^[-•]\s*/gm, '').trim()
-  }
+  if (match?.[1]) return match[1].trim().replace(/\*\*([^*]+)\*\*/g, '$1').replace(/^[-•]\s*/gm, '').trim()
   return ''
 }
 
@@ -79,11 +71,8 @@ function extractDifferentials(rawText: string): string {
   if (match?.[1]) {
     return match[1].trim()
       .replace(/\*\*([^*]+)\*\*/g, '$1')
-      .split('\n')
-      .map((l: string) => l.replace(/^[-•]\s*/, '').trim())
-      .filter((l: string) => l.length > 3)
-      .slice(0, 5)
-      .join('\n')
+      .split('\n').map((l: string) => l.replace(/^[-•]\s*/, '').trim()).filter((l: string) => l.length > 3)
+      .slice(0, 5).join('\n')
   }
   return ''
 }
@@ -99,9 +88,7 @@ function extractAdjustedPlan(rawText: string): string {
         parts.push(plan.recommended_plan.map((s: any, i: number) => `${i + 1}. ${s.step || s}`).join('\n'))
       }
       const adj = (plan.adjustments_based_on_status || '').trim()
-      if (adj && adj.toLowerCase() !== 'n/a' && adj.length > 5) {
-        parts.push(`Adjustments: ${adj}`)
-      }
+      if (adj && adj.toLowerCase() !== 'n/a' && adj.length > 5) parts.push(`Adjustments: ${adj}`)
     }
   } catch {
     const mgmt = extractSectionFromAnalysis(rawText, 'management_plan')
@@ -118,7 +105,6 @@ export function PatientRoundCard({
   patient,
   latestAnalysis,
   allAnalyses,
-  analysisCount,
   rotation,
 }: PatientRoundCardProps) {
   const { history_text, patient_gender, created_at } = patient
@@ -126,9 +112,9 @@ export function PatientRoundCard({
   const obgyn = extractObgynData(history_text, patient_gender)
   const triage = getTriageFromRiskLevel(latestAnalysis?.risk_level)
 
-  // ── Demographics — ALWAYS from structured fields, never AI text ────────────
+  // ── Demographics — always from structured fields, never AI text ────────────
   const displayName =
-    (patient.patient_name && patient.patient_name.trim()) ||
+    (patient.patient_name?.trim()) ||
     extractPatientNameFromHistory(history_text) ||
     'Patient'
   const displayAge = patient.patient_age || extractPatientAgeFromHistory(history_text)
@@ -140,29 +126,40 @@ export function PatientRoundCard({
 
   const demoParts: string[] = [displayName]
   if (displayAge) demoParts.push(`${displayAge}y`)
-  if (patient_gender) {
-    demoParts.push(patient_gender.charAt(0).toUpperCase() + patient_gender.slice(1))
-  }
+  if (patient_gender) demoParts.push(patient_gender.charAt(0).toUpperCase() + patient_gender.slice(1))
   if (obgyn.lmp) demoParts.push(`LMP: ${obgyn.lmp}`)
   else if (obgyn.gestationalAge) demoParts.push(obgyn.gestationalAge)
   if (obgyn.obstetricFormula) demoParts.push(obgyn.obstetricFormula)
   if (weight) demoParts.push(`Wt: ${weight}`)
   const demographicsLine = `${demoParts.join(', ')} — Day ${dayOfAdmission} of Admission`
 
-  // ── Clinical body from history_text ───────────────────────────────────────
-  // history_text is the doctor's original entry — it is the only source that
-  // is guaranteed to contain everything: convulsion count, episode durations,
-  // tracheal movement, fecal incontinence, procedures, tests sent, plan.
-  // AI summaries stored in the DB may be compressed versions that drop details.
-  const cc = extractChiefComplaintWithDuration(history_text)
-  const hpi = extractHpiDetails(history_text)
-  const pmh = extractPMHFromHistory(history_text)
-  const vitals = extractVitalsFromHistory(history_text)
-  const investigations = extractTestsFromHistory(history_text)
-  const currentPlan = extractManagementFromHistory(history_text)
-  const hasHistoryContent = !!(cc || hpi || vitals || investigations || currentPlan)
+  // ── Ward round note (cached on admission analysis user_feedback) ───────────
+  const admissionAnalysis = allAnalyses.find(a => a.analysis_version === 'admission')
+  const [wardRoundNote, setWardRoundNote] = useState<string>(
+    admissionAnalysis?.user_feedback?.trim() || ''
+  )
+  const [generating, setGenerating] = useState(false)
+  const [genError, setGenError] = useState<string | null>(null)
 
-  // ── Most recent day note (current status update) ───────────────────────────
+  async function handleGenerate() {
+    setGenerating(true)
+    setGenError(null)
+    try {
+      const res = await fetch(`/api/patients/${patient.id}/round-note`, { method: 'POST' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.error || 'Generation failed')
+      }
+      const { note } = await res.json()
+      setWardRoundNote(note)
+    } catch (err: any) {
+      setGenError(err?.message || 'Failed to generate note')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  // ── Most recent day note (current status) ─────────────────────────────────
   const latestDayNote = allAnalyses
     .filter(a => a.analysis_version?.startsWith('day_') && a.user_feedback?.trim())
     .sort((a, b) => {
@@ -170,7 +167,6 @@ export function PatientRoundCard({
       const db = parseInt(b.analysis_version?.replace('day_', '') || '0', 10)
       return db - da
     })[0]
-
   const latestDayNoteText = latestDayNote?.user_feedback?.trim() || ''
   const latestDayLabel = latestDayNote?.analysis_version?.startsWith('day_')
     ? `Day ${latestDayNote.analysis_version.replace('day_', '')} Update`
@@ -191,9 +187,7 @@ export function PatientRoundCard({
           <h3 className="font-semibold text-gray-900 dark:text-white">
             {displayName}
             {patient.patient_identifier && (
-              <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
-                ({patient.patient_identifier})
-              </span>
+              <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">({patient.patient_identifier})</span>
             )}
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{demographicsLine}</p>
@@ -209,53 +203,50 @@ export function PatientRoundCard({
 
       <div className="px-4 py-3 space-y-3 text-sm">
 
-        {/* ── Clinical body from history_text (always shown) ── */}
-        {hasHistoryContent ? (
-          <div className="space-y-1.5 text-sm">
-            {cc && (
-              <div className="flex gap-2">
-                <span className="font-semibold text-gray-500 dark:text-gray-400 shrink-0 w-28">CC:</span>
-                <span className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{cc}</span>
-              </div>
-            )}
-            {hpi && (
-              <div className="flex gap-2">
-                <span className="font-semibold text-gray-500 dark:text-gray-400 shrink-0 w-28">History:</span>
-                <span className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{hpi}</span>
-              </div>
-            )}
-            {pmh && (
-              <div className="flex gap-2">
-                <span className="font-semibold text-gray-500 dark:text-gray-400 shrink-0 w-28">PMH / PSH:</span>
-                <span className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{pmh}</span>
-              </div>
-            )}
-            {vitals && (
-              <div className="flex gap-2">
-                <span className="font-semibold text-gray-500 dark:text-gray-400 shrink-0 w-28">Vitals:</span>
-                <span className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{vitals}</span>
-              </div>
-            )}
-            {investigations && (
-              <div className="flex gap-2">
-                <span className="font-semibold text-gray-500 dark:text-gray-400 shrink-0 w-28">Investigations:</span>
-                <span className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{investigations}</span>
-              </div>
-            )}
-            {currentPlan && (
-              <div className="flex gap-2">
-                <span className="font-semibold text-gray-500 dark:text-gray-400 shrink-0 w-28">Plan:</span>
-                <span className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{currentPlan}</span>
-              </div>
-            )}
+        {/* ── Ward round note body ── */}
+        {wardRoundNote ? (
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-xs font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                Round Note
+              </p>
+              <button
+                onClick={handleGenerate}
+                disabled={generating}
+                className="text-xs text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 disabled:opacity-50"
+              >
+                {generating ? 'Regenerating…' : 'Regenerate'}
+              </button>
+            </div>
+            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+              {wardRoundNote}
+            </p>
           </div>
         ) : (
-          <p className="text-gray-400 dark:text-gray-500 italic text-sm">
-            No history documented yet.
-          </p>
+          <div className="space-y-2">
+            <p className="text-gray-400 dark:text-gray-500 italic">
+              No round note yet.{' '}
+              {!latestAnalysis && 'Run the admission analysis first, then '}
+              {latestAnalysis && 'Click to generate a structured ward round presentation.'}
+            </p>
+            {latestAnalysis && (
+              <>
+                {genError && (
+                  <p className="text-red-500 text-xs">{genError}</p>
+                )}
+                <button
+                  onClick={handleGenerate}
+                  disabled={generating}
+                  className="px-3 py-1.5 text-xs font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-md disabled:opacity-50 transition-colors"
+                >
+                  {generating ? 'Generating…' : 'Generate Round Note'}
+                </button>
+              </>
+            )}
+          </div>
         )}
 
-        {/* ── Current day update (day note) ── */}
+        {/* ── Day note: current status update ── */}
         {latestDayNoteText && (
           <div className="border-t border-gray-100 dark:border-gray-700 pt-3">
             <p className="text-xs font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400 mb-1.5">

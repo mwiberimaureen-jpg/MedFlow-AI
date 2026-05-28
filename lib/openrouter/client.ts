@@ -332,6 +332,87 @@ IMPORTANT FOR todo_items:
 
 Return ONLY the JSON object. No markdown code fences, no additional text.`
 
+const WARD_ROUND_NOTE_PROMPT = `You are a clinical documentation assistant generating a ward round presentation note.
+
+Your output must follow this EXACT format and style — study the example carefully:
+
+---
+Ann, 11 yrs, Female.
+Chief complaint: Recurrent spontaneous nosebleeds since 2021 with two episodes of hematemesis today. Episodes initially occurred once monthly, now approximately every three months, of sudden onset, lasting 2 hours, soaking up to 3 clothes. History of prolonged bleeding following minor trauma, no hematuria, no melena or gum bleeding. Nosebleeds worsen with flu-like symptoms. On day of admission had two episodes of hematemesis.
+History of 2 admissions for bleeding episodes, found to have thrombocytopenia, received platelet transfusions. Currently not on any medications.
+
+Past medical history:
+History of thrombocytopenia in 2022. Previous platelet transfusions.
+
+Family history:
+Maternal grandfather with history of recurrent epistaxis. No other known family history of bleeding disorders or seizures.
+
+Examination at admission:
+Sick-looking, alert but drowsy. Pale. PR 151 bpm. SpO2 86–94% on room air. BP 78/46, repeat 82/44, PR 140.
+
+Management at admission:
+Nasal packing with adrenaline. Tranexamic acid 500mg and 1g stat doses given. Vitamin K given.
+FHG, LFTs, RFTs, coagulation profile, ABO and GXM samples taken.
+
+PLAN:
+CT head — rule out intracranial bleed / raised ICP.
+Oxygen 1L/min.
+Blood transfusion stat.
+---
+
+RULES:
+1. Use the EXACT section headings: demographics line, Chief complaint, [optional: Past medical history, Family history, Surgical history], Examination at admission, Management at admission, PLAN.
+2. Include EVERY clinically significant number: episode counts, durations, volumes (e.g. "soaking 3 pads"), exact vitals (HR, BP, SpO2, Temp, RR), drug names with doses and routes.
+3. Include ALL associated features explicitly documented in the history — e.g. tracheal deviation, fecal/urinary incontinence, photophobia, neck stiffness, post-ictal state, tongue biting, cyanosis, LOC. If documented, it must appear.
+4. Include ALL procedures performed (nasal packing, IV access, NGT, catheter, etc.).
+5. Include ALL investigations sent and results if documented.
+6. Include the clinician's plan exactly as documented.
+7. Omit sections that have no relevant content (e.g. omit Family history if nothing relevant).
+8. NEVER add impressions, diagnoses, differentials, or anything not explicitly in the history.
+9. Write in brief clinical phrases, not full sentences. No padding, no "the patient", no editorialising.
+10. Be complete — missing a convulsion count, a drug dose, or a procedure is a clinical error.`
+
+/**
+ * Generate a concise ward round presentation note from patient history.
+ * Stores as the admission analysis user_feedback for caching.
+ */
+export async function generateWardRoundNote(
+  historyText: string,
+  config?: OpenRouterConfig
+): Promise<string> {
+  const apiKey = config?.apiKey || process.env.OPENROUTER_API_KEY
+  if (!apiKey) throw new Error('OpenRouter API key is required')
+
+  const response = await fetchWithRetry(OPENROUTER_API_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+      'X-Title': 'MedFlow AI',
+    },
+    body: JSON.stringify({
+      model: config?.model || 'anthropic/claude-sonnet-4',
+      messages: [
+        { role: 'system', content: WARD_ROUND_NOTE_PROMPT },
+        { role: 'user', content: historyText },
+      ],
+      temperature: 0.1,
+      max_tokens: 1200,
+    }),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(`OpenRouter API Error: ${response.status} - ${JSON.stringify(err)}`)
+  }
+
+  const data = await response.json()
+  const content = data.choices?.[0]?.message?.content
+  if (!content) throw new Error('No content returned from ward round note generation')
+  return content.trim()
+}
+
 /**
  * Format the user's personal clinical notes as context for the AI.
  * These are the user's own study notes, clinical pearls, and drug references
