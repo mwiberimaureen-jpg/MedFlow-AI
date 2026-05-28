@@ -26,13 +26,14 @@ export default function DashboardShell({ userEmail, displayName, children }: Das
     return () => mq.removeEventListener('change', handler)
   }, [])
 
-  // Fetch avatar separately so a missing column doesn't break the layout
+  // Fetch avatar + dark_mode preference; dark_mode query is isolated so a missing column doesn't break the avatar load
   useEffect(() => {
     const supabase = createClient()
     async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
       try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
         const { data } = await supabase
           .from('users')
           .select('avatar_url')
@@ -40,9 +41,29 @@ export default function DashboardShell({ userEmail, displayName, children }: Das
           .maybeSingle()
         if (data?.avatar_url) setAvatarUrl(data.avatar_url)
       } catch { /* ignore — avatar is cosmetic */ }
+
+      try {
+        const { data: prefs } = await supabase
+          .from('users')
+          .select('dark_mode')
+          .eq('id', user.id)
+          .maybeSingle()
+        if (typeof prefs?.dark_mode === 'boolean') {
+          document.documentElement.classList.toggle('dark', prefs.dark_mode)
+          localStorage.setItem('theme', prefs.dark_mode ? 'dark' : 'light')
+        }
+      } catch { /* dark_mode column may not exist yet — localStorage fallback still applies */ }
     }
     load()
   }, [])
+
+  function handleThemeToggle(isDark: boolean) {
+    fetch('/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dark_mode: isDark }),
+    }).catch(() => {})
+  }
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
@@ -77,7 +98,7 @@ export default function DashboardShell({ userEmail, displayName, children }: Das
           </div>
           <div className="ml-auto flex items-center gap-3">
             <TrialBadge />
-            <ThemeToggle />
+            <ThemeToggle onToggle={handleThemeToggle} />
           </div>
         </div>
 

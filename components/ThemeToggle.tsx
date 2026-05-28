@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from 'react'
 
-export default function ThemeToggle() {
+interface ThemeToggleProps {
+  onToggle?: (isDark: boolean) => void
+}
+
+export default function ThemeToggle({ onToggle }: ThemeToggleProps) {
   const [isDark, setIsDark] = useState(false)
 
   useEffect(() => {
@@ -14,6 +18,7 @@ export default function ThemeToggle() {
     setIsDark(next)
     document.documentElement.classList.toggle('dark', next)
     localStorage.setItem('theme', next ? 'dark' : 'light')
+    onToggle?.(next)
   }
 
   return (

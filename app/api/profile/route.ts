@@ -13,7 +13,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { full_name, phone_number, avatar_url } = body
+    const { full_name, phone_number, avatar_url, dark_mode } = body
 
     const admin = getSupabaseServerClient()
 
@@ -35,6 +35,11 @@ export async function PATCH(request: NextRequest) {
     if (avatar_url !== undefined) {
       const { error } = await admin.from('users').update({ avatar_url }).eq('id', user.id)
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    if (typeof dark_mode === 'boolean') {
+      await admin.from('users').update({ dark_mode }).eq('id', user.id)
+      // silently ignore errors — column may not exist until migration is run
     }
 
     return NextResponse.json({ success: true })
