@@ -236,13 +236,13 @@ export default function SettingsPage() {
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'Failed to save avatar URL')
+        throw new Error(data.error || 'Failed to save avatar URL to database')
       }
 
       setProfile(prev => prev ? { ...prev, avatar_url: avatarUrl } : null)
       setProfileMessage({ type: 'success', text: 'Profile photo updated!' })
-    } catch {
-      setProfileMessage({ type: 'error', text: 'Failed to upload photo. Make sure the "avatars" storage bucket exists in Supabase.' })
+    } catch (err: any) {
+      setProfileMessage({ type: 'error', text: err?.message || 'Failed to upload photo.' })
     } finally {
       setUploadingAvatar(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
