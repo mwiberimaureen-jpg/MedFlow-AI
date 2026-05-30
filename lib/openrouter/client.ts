@@ -596,7 +596,19 @@ function sanitizeAnalysis(parsed: any): any {
     return obj
   }
 
-  return deepClean(parsed)
+  const result = deepClean(parsed)
+
+  // Filter impressions that are action items, not clinical diagnoses.
+  // An impression must name a condition. If it starts with an action verb it is a plan item.
+  if (Array.isArray(result.impressions)) {
+    const ACTION_VERB = /^(assess|monitor|evaluate|check|order|obtain|consider|ensure|continue|start|initiate|review|manage|treat|follow|provide|give|administer|calculate|correct|supplement|replace|refer|consult|arrange|plan|schedule|investigate|screen|measure|document|record|note|perform|request|pursue|determine|rule\s+out|exclude)\b/i
+    result.impressions = result.impressions.filter((imp: string) => {
+      const withoutNumber = String(imp).replace(/^\d+[\.\)]\s*/, '').trim()
+      return !ACTION_VERB.test(withoutNumber)
+    })
+  }
+
+  return result
 }
 
 /**
@@ -856,12 +868,18 @@ ${SYSTEM_PROMPT.slice(SYSTEM_PROMPT.indexOf('SIRS vs SEPSIS'), SYSTEM_PROMPT.ind
 
 ${SYSTEM_PROMPT.slice(SYSTEM_PROMPT.indexOf('LAB & TEST INTERPRETATION'), SYSTEM_PROMPT.indexOf('ORTHOPEDIC'))}
 
+IMPRESSIONS RULE — MANDATORY:
+Each impression MUST be a clinical diagnosis: a named condition, syndrome, or pathological state.
+- CORRECT: "1. Acute gastroenteritis with mild dehydration", "2. Community-acquired pneumonia", "3. SIRS secondary to urinary source"
+- WRONG: "Assess hydration status", "Monitor fluid balance", "Evaluate respiratory status", "Order electrolytes", "Continue IV fluids", "Check vital signs"
+Action verbs (Assess, Monitor, Evaluate, Check, Order, Continue, Initiate, Ensure, Review, Provide, Calculate) indicate a plan item — they do NOT belong in impressions. If you cannot name a diagnosis, state the clinical syndrome: e.g. "Undifferentiated febrile illness", "Decompensated heart failure".
+
 Return ONLY valid JSON:
 {
   "test_interpretation": [
     { "number": 1, "test_name": "Name", "deranged_parameters": ["values"], "interpretation": "Clinical significance" }
   ],
-  "impressions": ["Short diagnosis-style, numbered if multiple"],
+  "impressions": ["Named clinical diagnosis — e.g. 'Acute gastroenteritis with mild dehydration'. NEVER an action item."],
   "differential_diagnoses": [
     { "diagnosis": "Name", "supporting_evidence": "Evidence for", "against_evidence": "Evidence against" }
   ],
@@ -878,11 +896,16 @@ Return ONLY the JSON object. No markdown code fences.`
 
 const MANAGEMENT_PLANNING_PROMPT = `You are a Management Planning Specialist. Analyze the patient history and provide ONLY the management plan components.
 
-REFERENCE SOURCE: AMBOSS is the default. However, any note tagged [Protocol] is a locally-adopted clinical guideline and OVERRIDES AMBOSS for that specific condition. If a [Protocol] note covers the patient's condition, use its drug names, doses, routes, and management steps EXACTLY — do not substitute AMBOSS alternatives.
+PROTOCOL-FIRST RULE — MANDATORY. Follow these steps in order before writing any management plan:
+1. Scan every note tagged [Protocol] in the provided personal notes.
+2. If ANY [Protocol] note is relevant to the patient's condition, diagnosis, or rotation — USE IT EXCLUSIVELY.
+3. Apply the protocol's specific drugs, doses, routes, frequencies, and management steps EXACTLY as written. Do not recalculate doses using generic textbook formulas (e.g. Holliday-Segar maintenance, standard mg/kg defaults) if the protocol already specifies them.
+4. In your rationale for each step, state: "Per [protocol name]: [specific guidance used]."
+5. Only fall back to AMBOSS if NO [Protocol] note covers the patient's condition.
 
 STRICTLY NO HALLUCINATION — use ONLY information in the history provided.
 
-PERSONAL NOTES: If the clinician's personal notes are included, actively cross-reference them when recommending management plans. Notes tagged [Protocol] are institution-specific guidelines — treat them as the highest-priority source. Apply their drug protocols, dosing, oxygen delivery specifications, and management algorithms directly. Do not override them with AMBOSS defaults.
+PERSONAL NOTES: Notes tagged [Protocol] are institution-specific clinical guidelines and carry the HIGHEST priority. They override AMBOSS, UpToDate, and any standard textbook formula. Apply their exact dosing, management algorithms, and classification systems. If the patient is paediatric, look specifically for a paediatric protocol before applying any adult or generic formula.
 
 ${SYSTEM_PROMPT.slice(SYSTEM_PROMPT.indexOf('Comorbidity-Aware Analysis'), SYSTEM_PROMPT.indexOf('Impression Format'))}
 
