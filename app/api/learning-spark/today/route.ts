@@ -76,11 +76,52 @@ export async function GET(request: NextRequest) {
         .limit(5)
 
       if (!recentAnalyses || recentAnalyses.length === 0) {
-        return NextResponse.json({ spark: null, message: 'Complete a patient analysis to unlock today\'s discussion!' })
+        // Second fallback: use patient history text directly
+        const { data: recentHistories } = await supabase
+          .from('patient_histories')
+          .select('history_text')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(5)
+
+        if (!recentHistories || recentHistories.length === 0) {
+          return NextResponse.json({ spark: null, message: 'Add a patient to unlock today\'s discussion!' })
+        }
+
+        return await generateAndStoreFromHistories(supabase, user.id, today, recentHistories, formatOverride)
       }
 
-      // Use recent analyses instead
+      // Use recent analyses — if extractConditions returns nothing, fall back to history text too
+      const conditions = extractConditions(recentAnalyses)
+      if (conditions.length === 0) {
+        const { data: recentHistories } = await supabase
+          .from('patient_histories')
+          .select('history_text')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(5)
+
+        if (recentHistories && recentHistories.length > 0) {
+          return await generateAndStoreFromHistories(supabase, user.id, today, recentHistories, formatOverride)
+        }
+      }
+
       return await generateAndStore(supabase, user.id, today, recentAnalyses, formatOverride)
+    }
+
+    // Also guard against extractConditions returning nothing for today's analyses
+    const todayConditions = extractConditions(todayAnalyses)
+    if (todayConditions.length === 0) {
+      const { data: recentHistories } = await supabase
+        .from('patient_histories')
+        .select('history_text')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+      if (recentHistories && recentHistories.length > 0) {
+        return await generateAndStoreFromHistories(supabase, user.id, today, recentHistories, formatOverride)
+      }
     }
 
     return await generateAndStore(supabase, user.id, today, todayAnalyses, formatOverride)
@@ -149,6 +190,83 @@ async function generateAndStore(
       { status: 500 }
     )
   }
+}
+
+async function generateAndStoreFromHistories(
+  supabase: any,
+  userId: string,
+  today: string,
+  histories: Array<{ history_text: string }>,
+  formatOverride?: SparkFormat
+) {
+  const conditions = extractConditionsFromHistories(histories)
+  const format = formatOverride || getDailyFormat(new Date())
+
+  try {
+    const content = await generateLearningSpark(format, conditions)
+
+    const { data: spark, error: insertError } = await supabase
+      .from('daily_learning_sparks')
+      .insert({
+        user_id: userId,
+        spark_date: today,
+        format_type: format,
+        content,
+        source_conditions: conditions.slice(0, 10),
+      })
+      .select()
+      .single()
+
+    if (insertError) {
+      return NextResponse.json({
+        spark: {
+          id: 'temp',
+          user_id: userId,
+          spark_date: today,
+          format_type: format,
+          content,
+          source_conditions: conditions.slice(0, 10),
+          generated_at: new Date().toISOString(),
+        }
+      })
+    }
+
+    return NextResponse.json({ spark })
+  } catch (genError: any) {
+    console.error('Error generating spark from histories:', genError)
+    return NextResponse.json(
+      { error: 'Failed to generate learning content', message: genError.message },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * Extract clinical conditions from raw patient history text.
+ */
+function extractConditionsFromHistories(histories: Array<{ history_text: string }>): string[] {
+  const conditions = new Set<string>()
+
+  // Common clinical terms to match in free-form history text
+  const pattern = /\b(hypertension|diabetes|malaria|pneumonia|anaemia|anemia|sepsis|tuberculosis|TB|HIV|cardiac failure|heart failure|renal failure|AKI|CKD|hepatitis|cirrhosis|jaundice|meningitis|stroke|seizure|epilepsy|eclampsia|pre-?eclampsia|placenta praevia|ectopic pregnancy|appendicitis|bowel obstruction|pancreatitis|peptic ulcer|GI bleed|DVT|pulmonary embolism|PE|asthma|COPD|sickle cell|typhoid|dengue|cellulitis|osteomyelitis|pyelonephritis|UTI|cholecystitis|GERD|IBD|Crohn|colitis|atrial fibrillation|AF|ACS|MI|STEMI|NSTEMI|chest pain|SOB|dyspnea|dyspnoea|syncope|hyponatraemia|hypokalemia|hyperglycaemia|DKA|hypoglycaemia|thrombocytopenia|leucocytosis|leukaemia|lymphoma|breast cancer|cervical cancer|prostate cancer|ovarian cyst|fibroids|preterm|postpartum haemorrhage|PPH|neonatal sepsis|birth asphyxia|malnutrition|dehydration|diarrhoea|diarrhea|vomiting|abdominal pain|jaundice|cholangitis|pancreatitis|peritonitis)\b/gi
+
+  for (const h of histories) {
+    const text = (h.history_text || '').slice(0, 2000)
+    const matches = text.match(pattern)
+    if (matches) {
+      matches.forEach(m => conditions.add(m.trim()))
+    }
+  }
+
+  // If regex found nothing, extract meaningful noun phrases from the history as context
+  if (conditions.size === 0) {
+    for (const h of histories) {
+      const snippet = (h.history_text || '').slice(0, 400).replace(/\n/g, ' ').trim()
+      if (snippet) conditions.add(snippet)
+    }
+  }
+
+  return Array.from(conditions)
 }
 
 /**
