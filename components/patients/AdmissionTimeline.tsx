@@ -94,8 +94,8 @@ function parseDischargeSummary(rawText: string): DischargeSummaryResponse | null
 }
 
 /** Collapsible wrapper for past day analyses */
-function PastDaySection({ label, children }: { label: string; children: React.ReactNode }) {
-    const [open, setOpen] = useState(false)
+function PastDaySection({ label, children, initialOpen }: { label: string; children: React.ReactNode; initialOpen?: boolean }) {
+    const [open, setOpen] = useState(initialOpen ?? false)
     return (
         <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
             <button
@@ -123,6 +123,7 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
     const [discharging, setDischarging] = useState(false)
     const [dischargeError, setDischargeError] = useState<string | null>(null)
     const [submitting, setSubmitting] = useState(false)
+    const [lastAddedAnalysisId, setLastAddedAnalysisId] = useState<string | null>(null)
 
     // Persist section answers in localStorage
     const storageKey = `section-answers-${patient.id}`
@@ -186,6 +187,7 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
 
     const handleDailyAnalysisComplete = (newAnalysis: Analysis) => {
         setAnalyses(prev => [...prev, newAnalysis])
+        setLastAddedAnalysisId(newAnalysis.id)
         setSectionAnswers({})
         try { localStorage.removeItem(storageKey) } catch {}
         try { localStorage.removeItem(`submitted-sections-${patient.id}`) } catch {}
@@ -287,7 +289,11 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
                     {pastAnalyses.map((analysis, index) => {
                         const versionLabel = getVersionLabel(analysis.analysis_version, index)
                         return (
-                            <PastDaySection key={analysis.id} label={versionLabel}>
+                            <PastDaySection
+                                key={analysis.id}
+                                label={versionLabel}
+                                initialOpen={analysis.id === lastAddedAnalysisId}
+                            >
                                 <InteractiveAnalysisPanel
                                     analysis={analysis}
                                     onRegenerate={() => window.location.reload()}

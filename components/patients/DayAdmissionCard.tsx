@@ -229,7 +229,10 @@ function buildClinicalNotes(
     submittedSections: Set<string>,
     clinicalSummary?: string
 ): string {
-    const get = (key: string) => submittedSections.has(key) ? sectionAnswers[key]?.trim() || '' : ''
+    // Include any section that has content, submitted or not.
+    // The individual Submit buttons are UX confirmation only — they do not gate what
+    // goes into the final notes. This ensures nothing the user typed gets silently dropped.
+    const get = (key: string) => sectionAnswers[key]?.trim() || ''
 
     const hpi = get('follow_up_questions')
     const ros = get('review_of_systems')
