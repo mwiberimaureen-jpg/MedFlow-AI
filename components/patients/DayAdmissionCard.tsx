@@ -227,8 +227,7 @@ function buildClinicalNotes(
     sectionAnswers: Record<string, string>,
     dayLabel: string,
     submittedSections: Set<string>,
-    clinicalSummary?: string,
-    aiPlan?: string
+    clinicalSummary?: string
 ): string {
     const get = (key: string) => submittedSections.has(key) ? sectionAnswers[key]?.trim() || '' : ''
 
@@ -239,7 +238,7 @@ function buildClinicalNotes(
     const investigations = get('confirmatory_tests')
     const userPlan = get('management_plan')
 
-    const hasContent = [hpi, ros, vitals, exam, investigations, userPlan, clinicalSummary, aiPlan].some(v => v)
+    const hasContent = [hpi, ros, vitals, exam, investigations, userPlan, clinicalSummary].some(v => v)
     if (!hasContent) return ''
 
     const blocks: string[] = []
@@ -256,25 +255,16 @@ function buildClinicalNotes(
     if (exam) blocks.push(`Physical Examination:\n${exam}`)
     if (investigations) blocks.push(`Investigations:\n${investigations}`)
 
-    // PLAN — AI recommended plan first, then any user additions
-    if (aiPlan || userPlan) {
-        const planParts: string[] = []
-
-        if (aiPlan) {
-            planParts.push(aiPlan)
-        }
-
-        if (userPlan) {
-            const userLines = userPlan.split('\n').map(line => {
-                const trimmed = line.trim()
-                if (!trimmed) return ''
-                if (trimmed.startsWith('-') || trimmed.startsWith('•') || /^\d+\./.test(trimmed)) return trimmed
-                return `- ${trimmed}`
-            }).filter(Boolean).join('\n')
-            if (userLines) planParts.push(userLines)
-        }
-
-        blocks.push(`PLAN:\n${planParts.join('\n\n')}`)
+    // PLAN — only what the user has entered. The AI's recommended plan is shown
+    // in the Analysis section above; the user copies anything they want from there.
+    if (userPlan) {
+        const userLines = userPlan.split('\n').map(line => {
+            const trimmed = line.trim()
+            if (!trimmed) return ''
+            if (trimmed.startsWith('-') || trimmed.startsWith('•') || /^\d+\./.test(trimmed)) return trimmed
+            return `- ${trimmed}`
+        }).filter(Boolean).join('\n')
+        if (userLines) blocks.push(`PLAN:\n${userLines}`)
     }
 
     return blocks.join('\n\n').trim()
@@ -435,42 +425,10 @@ export function DayAdmissionCard({
     // Filled sections for the summary area
     const filledSections = SUMMARY_SECTIONS.filter(({ key }) => sectionAnswers[key]?.trim())
 
-    // Extract AI recommended plan + adjustments from raw_analysis_text
-    const aiPlan = useMemo(() => {
-        if (!analysis.raw_analysis_text) return undefined
-        const sections = parseAnalysisText(analysis.raw_analysis_text)
-        const mgmt = sections.find(s => s.title.toLowerCase().includes('management plan'))
-        if (!mgmt?.content) return undefined
-
-        const text = mgmt.content.trim()
-
-        // Pull out Recommended Plan numbered items
-        const recMatch = text.match(/\*\*Recommended Plan:\*\*\s*([\s\S]*?)(?:\*\*Adjustments|$)/i)
-        const adjMatch = text.match(/\*\*Adjustments Based on Patient Status:\*\*\s*([\s\S]*?)$/i)
-
-        const parts: string[] = []
-
-        if (recMatch?.[1]?.trim()) {
-            const steps = recMatch[1].trim()
-                .split('\n')
-                .map(l => l.trim())
-                .filter(Boolean)
-                .map(l => l.replace(/^\d+\.\s*/, '').replace(/\*\*(.*?)\*\*/g, '$1').trim())
-                .filter(Boolean)
-                .map((l, i) => `${i + 1}. ${l}`)
-            if (steps.length) parts.push(`Recommended Plan:\n${steps.join('\n')}`)
-        }
-
-        if (adjMatch?.[1]?.trim()) {
-            const adj = adjMatch[1].trim().replace(/\*\*(.*?)\*\*/g, '$1')
-            if (adj && adj.toLowerCase() !== 'n/a') parts.push(`Adjustments Based on Patient Status: ${adj}`)
-        }
-
-        return parts.length ? parts.join('\n\n') : undefined
-    }, [analysis.raw_analysis_text])
-
-    // Auto-generated clinical notes from assessment inputs + AI summary + AI plan
-    const autoNotes = useMemo(() => buildClinicalNotes(sectionAnswers, dayLabel, submittedSections, clinicalSummary, aiPlan), [sectionAnswers, dayLabel, submittedSections, clinicalSummary, aiPlan])
+    // Auto-generated clinical notes from the user's own assessment inputs + AI clinical summary.
+    // The AI's recommended management plan is intentionally excluded — it belongs in the Analysis
+    // section only. If the user wants to borrow from the AI plan they paste it into the Plan field.
+    const autoNotes = useMemo(() => buildClinicalNotes(sectionAnswers, dayLabel, submittedSections, clinicalSummary), [sectionAnswers, dayLabel, submittedSections, clinicalSummary])
 
     // The displayed notes: user-edited version takes priority, otherwise auto-generated
     const displayNotes = editedNotes !== null ? editedNotes : autoNotes
