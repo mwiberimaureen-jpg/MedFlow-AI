@@ -22,6 +22,21 @@ const STORAGE_KEY = 'medflow_learning_spark_state'
 const LAST_ROTATION_KEY = 'medflow_last_star_rotation'
 const SPARK_READ_KEY = 'medflow_spark_read'
 
+const MILESTONES = [3, 7, 14, 21, 30, 60, 100]
+
+function getMilestoneMessage(streak: number): string | null {
+  const messages: Record<number, string> = {
+    3:   "3 days in a row — you're building something real.",
+    7:   "One week straight. The habit is forming.",
+    14:  "Two weeks! This is becoming second nature.",
+    21:  "21 days. Clinical knowledge is compounding.",
+    30:  "One month of daily learning. That's elite.",
+    60:  "60 days. You're in a different league now.",
+    100: "100 days. Absolute legend.",
+  }
+  return messages[streak] ?? null
+}
+
 function loadState(): LearningSparkState {
   if (typeof window === 'undefined') return getDefaultSparkState()
   try {
@@ -99,10 +114,29 @@ export function DailyLearningSpark() {
   const [starSaving, setStarSaving] = useState(false)
   const [showRotationPicker, setShowRotationPicker] = useState(false)
   const [selectedRotation, setSelectedRotation] = useState('')
+  const [milestoneMessage, setMilestoneMessage] = useState<string | null>(null)
 
   useEffect(() => {
-    setState(loadState())
+    const local = loadState()
+    setState(local)
     setSelectedRotation(getLastRotation())
+
+    // Load streak from DB and use whichever is higher (DB wins for persistence)
+    fetch('/api/learning-spark/streak')
+      .then(r => r.json())
+      .then(({ currentStreak, longestStreak, lastSparkDate }) => {
+        if (currentStreak !== null) {
+          const merged: LearningSparkState = {
+            ...local,
+            currentStreak: Math.max(local.currentStreak, currentStreak),
+            longestStreak: Math.max(local.longestStreak, longestStreak ?? 0),
+            lastInteractionDate: lastSparkDate ?? local.lastInteractionDate,
+          }
+          setState(merged)
+          saveState(merged)
+        }
+      })
+      .catch(() => { /* fall back to localStorage silently */ })
   }, [])
 
   useEffect(() => {
@@ -159,11 +193,27 @@ export function DailyLearningSpark() {
   const handleInteraction = useCallback(() => {
     if (!spark) return
     const today = new Date().toISOString().split('T')[0]
+    const prev = state.currentStreak
     const newState = calculateStreak(state, today, spark.id)
     setState(newState)
     saveState(newState)
-    // Mark as read so next visit generates a fresh review
     try { localStorage.setItem(SPARK_READ_KEY, 'true') } catch { /* ignore */ }
+
+    // Show milestone message if streak just hit a milestone
+    if (newState.currentStreak !== prev && MILESTONES.includes(newState.currentStreak)) {
+      setMilestoneMessage(getMilestoneMessage(newState.currentStreak))
+    }
+
+    // Sync to DB (fire-and-forget)
+    fetch('/api/learning-spark/streak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        currentStreak: newState.currentStreak,
+        longestStreak: newState.longestStreak,
+        lastSparkDate: today,
+      }),
+    }).catch(() => { /* silent — localStorage is the fallback */ })
   }, [spark, state])
 
   const handleStarClick = useCallback(() => {
@@ -257,6 +307,7 @@ export function DailyLearningSpark() {
       <SparkHeader
         format={spark.format_type}
         streak={state.currentStreak}
+        longestStreak={state.longestStreak}
         topic={topic}
       />
 
@@ -274,6 +325,25 @@ export function DailyLearningSpark() {
           <ClinicalTwistSpark content={spark.content as ClinicalTwistContent} onInteraction={handleInteraction} />
         )}
       </div>
+
+      {/* Milestone celebration banner */}
+      {milestoneMessage && (
+        <div className="mt-4 flex items-center gap-2 px-4 py-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+          <span className="text-xl">🔥</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-orange-800 dark:text-orange-300">
+              {state.currentStreak}-day streak!
+            </p>
+            <p className="text-xs text-orange-700 dark:text-orange-400">{milestoneMessage}</p>
+          </div>
+          <button
+            onClick={() => setMilestoneMessage(null)}
+            className="text-orange-400 hover:text-orange-600 dark:hover:text-orange-300 text-lg leading-none"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Star button — always visible so users can save any spark */}
       <div className="flex justify-end mt-3">

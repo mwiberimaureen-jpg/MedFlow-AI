@@ -1,4 +1,5 @@
 import { DailyLearningSparkWrapper } from '@/components/learning-spark/DailyLearningSparkWrapper'
+import { StreakCard } from '@/components/learning-spark/StreakCard'
 
 export default function LearningPage() {
   return (
@@ -8,6 +9,7 @@ export default function LearningPage() {
         <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm md:text-base">Daily clinical teaching moments from your patient cases</p>
       </div>
 
+      <StreakCard />
       <DailyLearningSparkWrapper />
     </div>
   )
