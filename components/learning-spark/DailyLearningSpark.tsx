@@ -67,7 +67,13 @@ function saveLastRotation(rotation: string) {
 }
 
 function calculateStreak(state: LearningSparkState, todayISO: string, sparkId: string): LearningSparkState {
-  if (state.seenSparks.includes(sparkId)) return state
+  // Don't track temp IDs — they indicate a failed DB insert and would cause refresh loops
+  const trackableId = sparkId === 'temp' ? null : sparkId
+  if (trackableId && state.seenSparks.includes(trackableId)) return state
+
+  const newSeenSparks = trackableId
+    ? [...state.seenSparks, trackableId]
+    : state.seenSparks
 
   if (!state.lastInteractionDate) {
     return {
@@ -75,7 +81,7 @@ function calculateStreak(state: LearningSparkState, todayISO: string, sparkId: s
       currentStreak: 1,
       longestStreak: Math.max(1, state.longestStreak),
       lastInteractionDate: todayISO,
-      seenSparks: [...state.seenSparks, sparkId],
+      seenSparks: newSeenSparks,
     }
   }
 
@@ -84,7 +90,7 @@ function calculateStreak(state: LearningSparkState, todayISO: string, sparkId: s
   const diffDays = Math.floor((today.getTime() - last.getTime()) / 86400000)
 
   if (diffDays === 0) {
-    return { ...state, seenSparks: [...state.seenSparks, sparkId] }
+    return { ...state, seenSparks: newSeenSparks }
   }
 
   const newStreak = diffDays === 1 ? state.currentStreak + 1 : 1
@@ -93,7 +99,7 @@ function calculateStreak(state: LearningSparkState, todayISO: string, sparkId: s
     currentStreak: newStreak,
     longestStreak: Math.max(newStreak, state.longestStreak),
     lastInteractionDate: todayISO,
-    seenSparks: [...state.seenSparks, sparkId],
+    seenSparks: newSeenSparks,
   }
 }
 
@@ -163,9 +169,12 @@ export function DailyLearningSpark() {
         }
 
         if (!cancelled && data.spark) {
-          // Step 3: If we didn't already refresh via flag, check seenSparks
+          // Step 3: Only check seenSparks for real (non-temp) spark IDs.
+          // 'temp' means the DB insert failed (schema constraint), so don't
+          // treat it as "seen" — that causes an infinite refresh loop.
           const currentState = loadState()
-          if (!sparkReadFlag && currentState.seenSparks.includes(data.spark.id)) {
+          const isRealId = data.spark.id && data.spark.id !== 'temp'
+          if (!sparkReadFlag && isRealId && currentState.seenSparks.includes(data.spark.id)) {
             // User already read this spark — fetch a fresh one
             const refreshRes = await fetch('/api/learning-spark/today?refresh=true')
             const refreshData = await refreshRes.json()

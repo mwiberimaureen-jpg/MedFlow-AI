@@ -61,9 +61,11 @@ export async function GET(request: NextRequest) {
       .eq('user_id', user.id)
       .gte('created_at', startOfDay.toISOString())
 
-    // On refresh, pick a different format than the previous one
-    const formatOverride = (refresh && existingSpark)
-      ? getRandomFormat(existingSpark.format_type)
+    // On refresh: if there's a cached spark, pick a different format.
+    // If there's no cached spark (previous insert failed), still pick randomly
+    // so the user doesn't always see the same deterministic format.
+    const formatOverride = refresh
+      ? getRandomFormat(existingSpark?.format_type)
       : undefined
 
     if (!todayAnalyses || todayAnalyses.length === 0) {
