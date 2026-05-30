@@ -67,6 +67,9 @@ function saveLastRotation(rotation: string) {
 }
 
 function calculateStreak(state: LearningSparkState, todayISO: string, sparkId: string): LearningSparkState {
+  // Same-day guard — only count once per calendar day no matter how many interactions occur
+  if (state.lastInteractionDate === todayISO) return state
+
   // Don't track temp IDs — they indicate a failed DB insert and would cause refresh loops
   const trackableId = sparkId === 'temp' ? null : sparkId
   if (trackableId && state.seenSparks.includes(trackableId)) return state
@@ -127,16 +130,22 @@ export function DailyLearningSpark() {
     setState(local)
     setSelectedRotation(getLastRotation())
 
-    // Load streak from DB and use whichever is higher (DB wins for persistence)
+    // Load streak from DB — take the higher streak count, but never overwrite
+    // a more recent lastInteractionDate with an older one from the DB.
     fetch('/api/learning-spark/streak')
       .then(r => r.json())
       .then(({ currentStreak, longestStreak, lastSparkDate }) => {
         if (currentStreak !== null) {
+          // Only use the DB date if it is newer than what's stored locally
+          const localDate = local.lastInteractionDate ?? ''
+          const dbDate = lastSparkDate ?? ''
+          const mergedLastDate = dbDate > localDate ? dbDate : (localDate || undefined)
+
           const merged: LearningSparkState = {
             ...local,
             currentStreak: Math.max(local.currentStreak, currentStreak),
             longestStreak: Math.max(local.longestStreak, longestStreak ?? 0),
-            lastInteractionDate: lastSparkDate ?? local.lastInteractionDate,
+            lastInteractionDate: mergedLastDate ?? local.lastInteractionDate,
           }
           setState(merged)
           saveState(merged)
