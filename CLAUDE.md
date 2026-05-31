@@ -9,10 +9,28 @@ Agentic workflows detail automation pipelines for lead scraping, proposal genera
 - **Persist ALL UI state to localStorage**: Any user input, submitted/draft status, or UI state that should survive page navigation MUST be persisted to localStorage keyed by patient ID. React state alone is not enough — it resets on navigation.
 - **Admission Workflow page layout order**: Clinical Summary → Past Day Summaries (collapsible, collapsed by default) → Current Day N of Admission → Discharge. Past day summaries sit between the clinical summary and the active day card so the user can reference previous days while working on the current day.
 - **Day N of Admission structure**: The Day card has 3 collapsible sections in order:
-  1. **Assessment** (collapsible) — contains collapsible sub-sections (Follow-up Questions, ROS, Vitals, Physical Exam, Impression, Test Interpretation, Differential Diagnoses, Confirmatory Tests, Management Plan, Complications). Each input section has its own Submit and Edit button.
+  1. **Assessment** (collapsible) — contains collapsible sub-sections (Follow-up Questions, ROS, Vitals, Physical Exam, Impression, Test Interpretation, Differential Diagnoses, Confirmatory Tests, Management Plan, Complications). Each input section has its own Submit and Edit button. Individual Submit buttons are UX confirmation only — they do NOT gate what goes into the final notes.
   2. **Checklist** (collapsible) — brief checkboxes only (no badges/descriptions). Auto-checks from user input in Assessment.
-  3. **Day Notes Summary** (collapsible) — editable textarea formatted as proper clinical documentation. HPI flows as narrative (no header), then each section has its own header on a new line: "Review of Systems:", "Vital Signs:", "Physical Examination:", "Investigations:", "PLAN:" (caps). Matches the format of a clinical history document. Final submit button lives here. Does NOT auto-submit — user reviews and edits before submitting.
+  3. **Day Notes Summary** (collapsible) — editable textarea. Contains ONLY the user's own sections: HPI (no header, narrative), "Review of Systems:", "Vital Signs:", "Physical Examination:", "Investigations:", "PLAN:". The AI clinical summary and AI management plan are NEVER included in these notes — they live in the Analysis only. User reviews, optionally edits, and submits.
+- **Day Notes Summary — what is NOT included**: Never inject the AI clinical summary (causes duplicate investigations/treatment sections). Never inject the AI management plan (user copies from analysis if they choose to use any part of it).
 - **Always show clinical reasoning sections**: Impression, Test Interpretation, Differential Diagnoses, and Complications sections must always be visible (not conditional). Show fallback text if AI content is not available.
+- **Day N Analysis section order** (`app/api/patients/[id]/daily-note/route.ts`): After generating a Day N analysis, the report sections are in this exact order:
+  1. Clinical Summary (faithful transcript of progress notes)
+  2. **Patient Update — Day N** (user's own HPI extracted from progress_notes — replaces "Gaps in History" at the top)
+  3. Test Interpretation
+  4. Impression(s)
+  5. Differential Diagnoses
+  6. Confirmatory Tests
+  7. Management Plan
+  8. Possible Complications & Prevention
+  9. **Outstanding Questions — Next Review** (AI's questions for Day N+1, placed at END not top)
+  - The "Outstanding Questions" section maps to `follow_up_questions` via `getSectionKey` so Day N+1's Follow-up Questions section is still pre-populated.
+- **Day N AI analysis — clinician-input mirroring rules** (`analyzeDailyProgress` prompt in `lib/openrouter/client.ts`):
+  - **MIRROR THE CLINICIAN**: Impressions, differentials, and management must be directly responsive to what the clinician documented in today's progress notes. Never generate generic template content.
+  - **New symptom → new differential**: If today's notes contain any symptom, finding, or result not in the admission history or previous notes, add a new differential specifically explaining it.
+  - **New symptom → new test**: If a new finding warrants investigation not yet ordered, add it to confirmatory_tests with rationale referencing the specific new finding.
+  - **Trajectory**: For each active problem, explicitly state improving / deteriorating / stable.
+  - **Management continuity**: If a drug was started in a previous day, acknowledge it and build on it — never describe it as "unspecified."
 - **Day number calculation**: Day 1 = admission day. Use `Math.floor(diffDays) + 1` from admission date.
 - **AI Clinical Summary format — FAITHFUL TRANSCRIPT**: The summary reports everything documented in the history and nothing else. Include whatever the user wrote — test results, diagnoses, impressions — if they appear in the history. The only rule is: do not add anything that is not in the history. Structure:
   1. Name, age, sex, parity (if OB/GYN), day N of admission.
@@ -28,6 +46,8 @@ Agentic workflows detail automation pipelines for lead scraping, proposal genera
   - **SIRS vs Sepsis**: Do NOT diagnose "sepsis" without documented end-organ damage (SOFA criteria). Use "SIRS secondary to [source]" if no organ damage. See prompt in `lib/openrouter/client.ts`.
   - **Anemia diagnosis (AMBOSS/WHO)**: Non-pregnant women: anemia = HB < 12.0 (HB ≥ 12 is NORMAL, not anemia). Men: HB < 13.0. Pregnant: HB < 11.0. Severity grading — Women: Mild 11-11.9, Moderate 8-10.9, Severe <8. Pregnant: Mild 10-10.9, Moderate 7-9.9, Severe <7. Men: Mild 11-12.9, Moderate 8-10.9, Severe <8. Never call HB ≥8 "severe anemia". Never call HB above the diagnostic threshold "anemia" at all.
   - **Source**: AMBOSS only. No UpToDate, Medscape, BMJ, or WHO guidelines references.
+  - **Impressions must be clinical diagnoses**: Every impression must be a named condition or syndrome (e.g., "Acute gastroenteritis with mild dehydration"). NEVER an assessment action. Forbidden first words: Assess, Monitor, Evaluate, Check, Order, Obtain, Continue, Initiate, Ensure, Review, Provide, Calculate, Correct, Refer, Consult, Rule out, Exclude. These are plan items, not diagnoses. Enforced in `sanitizeAnalysis()` AND in `CLINICAL_ASSESSMENT_PROMPT`.
+  - **Protocol-first management** (enforced in `MANAGEMENT_PLANNING_PROMPT`): Before writing ANY management plan, scan all [Protocol] notes. If a [Protocol] note covers the patient's condition or rotation, use it EXCLUSIVELY — apply its exact drugs, doses, routes, frequencies, and steps. Do NOT recalculate doses using generic textbook formulas (e.g. Holliday-Segar) if the protocol already specifies them. Cite the protocol in each step's rationale: "Per [protocol name]: [guidance]". Only fall back to AMBOSS if no [Protocol] note covers the condition. For paediatric patients, look for a paediatric protocol before applying any adult or generic formula.
 - **Ward round note format** (`generateWardRoundNote` in `lib/openrouter/client.ts`, cached on admission analysis `user_feedback`):
   - Sections in order: demographics line → Chief complaint → Past medical history (if relevant) → Family history (if relevant) → Examination at admission → Management at admission → PLAN.
   - **Chief complaint = synthesized summary of relevant HPI**, NOT a transcript. Include onset, duration, frequency, severity, key associated features that drive the impression (e.g. convulsion count, convulsion duration, tracheal deviation, fecal/urinary incontinence, LOC, photophobia). Omit narrative filler and redundant negatives.
@@ -38,6 +58,11 @@ Agentic workflows detail automation pipelines for lead scraping, proposal genera
   - The note must be presentable in under 2 minutes. Every line must earn its place.
   - **NEVER add impressions, diagnoses, or differentials** — those come from the AI Assessment section below the note.
   - The prompt lives in `WARD_ROUND_NOTE_PROMPT` in `lib/openrouter/client.ts`. If the format regresses, fix the prompt there.
+- **Rounds view — Daily Rounds notes structure** (`components/rounds/PatientDayNotes.tsx`):
+  - Each day update (Day 1 of Admission, Day N Update) is a **collapsible card**. Most recent day is open by default; all others collapsed.
+  - Each card shows: the day's clinical notes (user's sections), then below it an **AI Recommended Plan** panel (blue) extracted from that day's `raw_analysis_text` — impression + recommended plan steps + adjustments + follow-up tests.
+  - Day N updates auto-appear in rounds as soon as the user submits Day N notes (they are stored in `user_feedback` and picked up by `buildDayNotes`).
+  - The `allAnalyses` prop must include `raw_analysis_text` for each analysis so the per-day AI plan can be extracted. Ensure the rounds page query and type include this field.
 - **Clinical summary writing style**:
   - Report the history faithfully — include whatever the user documented: symptoms, exam findings, results, diagnoses, plans.
   - Describe **symptoms** as documented. If the user wrote a diagnostic label, keep it. If they wrote symptoms without a label, report the symptoms.
@@ -162,6 +187,16 @@ Also, use Opus-4.5 for everything while building. It came out a few days ago and
 
 8. **OpenRouter model names**: Use `anthropic/claude-sonnet-4` (not `claude-sonnet-4`). Use `anthropic/claude-3.5-haiku` for fast, cheap tasks like QA checks and learning sparks.
 
+9. **Learning spark format_type constraint**: The `daily_learning_sparks` table must have `CHECK (format_type IN ('senior_asks','quick_teach','know_your_drugs','clinical_twist'))`. The old constraint had `('quiz','mystery','myth','flashcards')`. If inserts fail silently and sparks all look the same format, run `supabase/spark_format_migration.sql`. The temp-ID (`id: 'temp'`) loop: when inserts fail, the spark gets `id: 'temp'`; never add 'temp' to `seenSparks` or the component triggers a refresh every page load.
+
+10. **Learning spark streak — same-day guard**: The streak must increment exactly once per calendar day on the first user interaction. `calculateStreak()` has an early return when `lastInteractionDate === todayISO`. The DB sync merge must always keep the MORE RECENT of the two dates (local vs DB) — never overwrite a newer date with an older DB date, or the next interaction looks like a new day.
+
+11. **Day Notes Submit — all sections included**: `buildClinicalNotes` uses `sectionAnswers[key]?.trim()` directly (no `submittedSections` gate). Individual section Submit buttons are UX confirmation only. If any section has content, it goes into the assembled notes regardless of whether the user clicked the section-level Submit.
+
+12. **Day analysis auto-expands after submit**: After `handleDailyAnalysisComplete`, the new analysis is in `pastAnalyses` (collapsed by default). Track `lastAddedAnalysisId` in `AdmissionTimeline` state and pass `initialOpen={analysis.id === lastAddedAnalysisId}` to `PastDaySection` so the just-submitted analysis is visible.
+
+13. **Rounds duplicate investigations**: Do NOT include the AI clinical summary in `buildClinicalNotes`. It contains investigations and current treatment that already appear in the user's Investigations section, causing duplication. The clinical summary belongs in the separate Clinical Summary card, not embedded in the notes.
+
 ## Lab Notes — What Works
 
 > Patterns and approaches that have proven reliable.
@@ -177,3 +212,9 @@ Also, use Opus-4.5 for everything while building. It came out a few days ago and
 5. **`fetchWithRetry` with exponential backoff**: 3 retries with 1s initial backoff handles transient OpenRouter 5xx errors without user intervention.
 
 6. **Day number calculation**: `Math.floor((today - admissionDate) / 86400000) + 1` — Day 1 = admission day. Consistent and simple.
+
+7. **Protocol notes in clinical context**: Personal notes with `source = 'pdf'` are prefixed as `[Protocol]` when passed to the AI. The AI prompt treats `[Protocol]` notes as highest-priority — they override AMBOSS for their specific condition. If a user reports the AI ignoring their uploaded protocol, check: (a) note source is 'pdf', (b) the protocol content is non-empty, (c) the management prompt's PROTOCOL-FIRST RULE is intact in `MANAGEMENT_PLANNING_PROMPT`.
+
+8. **Learning sparks fallback chain**: If no analyses exist, the spark generator falls back to patient histories. Chain: today's analyses → recent analyses (any date) → patient_histories → raw history text snippet. Only show "Add a patient" empty state if ALL four sources are empty.
+
+9. **Impressions filter in sanitizeAnalysis()**: After the AI generates impressions, `sanitizeAnalysis()` runs a regex filter removing any impression that starts with an action verb. This is a hard backstop — if a prompt regression produces "Assess hydration status" as an impression, this filter catches it before it reaches the UI.
