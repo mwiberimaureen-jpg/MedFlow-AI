@@ -316,6 +316,7 @@ export function AdmissionTimeline({ patient, initialAnalyses }: AdmissionTimelin
                     </div>
 
                     <DayAdmissionCard
+                        key={`day-card-${nextDayNumber}`}
                         patientId={patient.id}
                         dayNumber={nextDayNumber}
                         analysis={latestRegular}
