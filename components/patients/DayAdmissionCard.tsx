@@ -63,7 +63,7 @@ const SECTION_PLACEHOLDERS: Record<string, string> = {
 // Map analysis section titles to our section keys
 function getSectionKey(title: string): string {
     const t = title.toLowerCase()
-    if (t.includes('follow-up') || t.includes('gaps')) return 'follow_up_questions'
+    if (t.includes('follow-up') || t.includes('gaps') || t.includes('outstanding questions') || t.includes('pending questions') || t.includes('next review')) return 'follow_up_questions'
     if (t.includes('physical exam')) return 'physical_exam'
     if (t.includes('test interpretation')) return 'test_interpretation'
     if (t.includes('confirmatory')) return 'confirmatory_tests'

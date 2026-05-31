@@ -74,6 +74,8 @@ export async function POST(
             .order('created_at', { ascending: true })
 
         const versionKey = `day_${day_number}`
+        const ordinals: Record<number, string> = { 1:'One',2:'Two',3:'Three',4:'Four',5:'Five',6:'Six',7:'Seven',8:'Eight',9:'Nine',10:'Ten' }
+        const dayLabel = ordinals[day_number] ? `Day ${ordinals[day_number]}` : `Day ${day_number}`
 
         // Prevent duplicate day analyses
         const dupCheck = existingAnalyses?.find(a => a.analysis_version === versionKey)
@@ -125,21 +127,23 @@ export async function POST(
 
         const processingTime = Date.now() - startTime
 
-        // Build report text sections
+        // Build report text sections for Day N analysis.
+        // Structure: Clinical Summary → Patient Update (user's own HPI) → Test Interpretation
+        //   → Impression → Differentials → Confirmatory Tests → Management Plan
+        //   → Complications → Outstanding Questions for Next Review (at end, not top)
         const reportSections: string[] = []
 
         reportSections.push(`## Clinical Summary\n\n${analysisResponse.summary}`)
 
-        if (analysisResponse.gaps_in_history) {
-            const gaps = analysisResponse.gaps_in_history
-            let gapText = '## Gaps in History / Outstanding Questions\n\n'
-            if (gaps.follow_up_questions?.length) {
-                gapText += '**Follow-up Questions:**\n' + gaps.follow_up_questions.map((q: string, i: number) => `${i + 1}. ${q}`).join('\n') + '\n\n'
-            }
-            if (gaps.physical_exam_checklist?.length) {
-                gapText += '**Physical Exam Checklist:**\n' + gaps.physical_exam_checklist.map((p: string) => `- [ ] ${p}`).join('\n')
-            }
-            reportSections.push(gapText)
+        // Extract user's HPI from progress_notes (everything before the first labelled section header).
+        // This replaces the "Gaps in History" section as the first content section the clinician sees.
+        const hpiCutoff = progress_notes.search(/\n\n[A-Z][a-zA-Z\s\/]+:\n/)
+        const userHPI = (hpiCutoff > 0
+            ? progress_notes.slice(0, hpiCutoff)
+            : progress_notes.split('\n\n')[0]
+        ).trim()
+        if (userHPI) {
+            reportSections.push(`## Patient Update — ${dayLabel}\n\n${userHPI}`)
         }
 
         if (analysisResponse.test_interpretation?.length) {
@@ -202,6 +206,23 @@ export async function POST(
                 compText += 'No complications identified at this stage. Will be reassessed on subsequent days.\n'
             }
             reportSections.push(compText)
+        }
+
+        // Outstanding Questions for the NEXT review — placed at the END so the clinician
+        // sees the analysis first. These feed the next day's "Follow-up Questions" section.
+        if (analysisResponse.gaps_in_history) {
+            const gaps = analysisResponse.gaps_in_history
+            const hasPending = gaps.follow_up_questions?.length || gaps.physical_exam_checklist?.length
+            if (hasPending) {
+                let gapText = '## Outstanding Questions — Next Review\n\n'
+                if (gaps.follow_up_questions?.length) {
+                    gapText += '**Pending Questions:**\n' + gaps.follow_up_questions.map((q: string, i: number) => `${i + 1}. ${q}`).join('\n') + '\n\n'
+                }
+                if (gaps.physical_exam_checklist?.length) {
+                    gapText += '**Physical Exam Checklist:**\n' + gaps.physical_exam_checklist.map((p: string) => `- [ ] ${p}`).join('\n')
+                }
+                reportSections.push(gapText)
+            }
         }
 
         const fullReportText = reportSections.join('\n\n')

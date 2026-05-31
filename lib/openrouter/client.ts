@@ -668,19 +668,17 @@ export async function analyzeDailyProgress(
     `=== ORIGINAL ADMISSION HISTORY ===\n${admissionHistoryText}\n=== END ADMISSION HISTORY ===${previousContext}\n\n` +
     `=== ${dayLabel.toUpperCase()} OF ADMISSION PROGRESS NOTES ===\n${progressNotes}\n=== END PROGRESS NOTES ===${notesContext}\n\n` +
     `You are generating the ${dayLabel} of Admission clinical analysis.\n` +
-    `Focus on:\n` +
-    `1. Changes from the previous day (improving/deteriorating/stable)\n` +
-    `2. ALWAYS interpret ALL test results present in the progress notes AND any test results from the initial admission history that have not been interpreted in previous analyses. The test_interpretation array must NEVER be empty if there are any test results anywhere in the history or progress notes. Apply the same no-repeat-tests rule for ordering new tests.\n` +
-    `3. Adjusting the management plan based on the patient's trajectory\n` +
-    `4. New complications arising or previously flagged complications that have resolved\n` +
-    `5. Updated to-do list for today's tasks — do NOT re-list tasks already completed in previous days\n` +
-    `6. If a pregnancy outcome occurred (delivery, miscarriage, stillbirth), UPDATE the obstetric formula in the clinical summary — e.g. G4P3+0 admitted → after miscarriage → now P3+1 (no longer gravid)\n\n` +
-    `CRITICAL REQUIREMENTS — these sections must NEVER be empty:\n` +
-    `- test_interpretation: Interpret ALL test results from progress notes AND admission history. Never empty if any test results exist.\n` +
-    `- complications: ALWAYS list possible complications and prevention plans based on the patient's current condition, medications, and procedures. Never empty.\n` +
-    `- impressions: ALWAYS provide current clinical impressions.\n` +
-    `- differential_diagnoses: ALWAYS provide differentials.\n` +
-    `- management_plan: Account for ALL medications and treatments mentioned in previous progress notes. If a drug was reported in a previous day (e.g. ceftriaxone), acknowledge it and build on it — do NOT say the antibiotic choice is unspecified.\n\n` +
+    `The progress notes below are the CLINICIAN'S OWN clinical findings for today — treat every item as verified and authoritative.\n\n` +
+    `ANALYSIS RULES — MANDATORY:\n` +
+    `1. MIRROR THE CLINICIAN'S INPUT. Impressions, differentials, and management must be DIRECTLY RESPONSIVE to what the clinician documented in today's progress notes. Do not generate generic or template content — analyse what is actually there.\n` +
+    `2. NEW SYMPTOMS → NEW DIFFERENTIALS. If today's progress notes contain any symptom, finding, or result not present in the admission history or previous day notes, you MUST add a new differential diagnosis that specifically explains it. Label it clearly as arising from the new finding.\n` +
+    `3. NEW SYMPTOMS → NEW TESTS. If a new symptom or finding warrants investigation not yet ordered, you MUST add it to confirmatory_tests with a rationale that references the specific new finding.\n` +
+    `4. TRAJECTORY. Explicitly state whether each active problem is improving, deteriorating, or stable based on the comparison between today and previous notes.\n` +
+    `5. TEST INTERPRETATION: Interpret ALL results in progress notes AND any from admission history not yet interpreted. Never empty if any results exist.\n` +
+    `6. MANAGEMENT: Account for ALL drugs from all previous days. If a drug was started before today, acknowledge it and build on it — do NOT describe it as unspecified.\n` +
+    `7. COMPLICATIONS: Always non-empty. Based on current condition, medications, procedures, and clinical trajectory.\n` +
+    `8. TODO: Updated for today — do not re-list tasks already completed.\n` +
+    `9. OB/GYN: If a pregnancy outcome occurred (delivery, miscarriage, stillbirth), update the obstetric formula in the clinical summary.\n\n` +
     `SUMMARY — FACTUAL HANDOVER (MANDATORY):\n` +
     `The summary is a TRANSCRIPT of the progress notes — REPORT what is documented, never INTERPRET it.\n` +
     `Order: 1) Patient demographics + day N. 2) Today's symptoms and complaints — include ALL detail: duration, frequency, number of episodes, duration of EACH episode, severity, and ALL associated features explicitly documented (e.g. tracheal movement, photophobia, fecal/urinary incontinence, post-ictal state, LOC, cyanosis). 3) Examination findings as documented (vitals, general appearance, key exam). 4) Investigations SENT today ONLY — list them; do NOT include result values or interpret them. 5) Procedures and treatments given today — every drug with dose/route/frequency, every procedure. 6) Any pending plans explicitly stated in the notes.\n` +
