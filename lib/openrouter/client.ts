@@ -676,6 +676,7 @@ export async function analyzeDailyProgress(
     `4. TRAJECTORY. Explicitly state whether each active problem is improving, deteriorating, or stable based on the comparison between today and previous notes.\n` +
     `5. TEST INTERPRETATION: Interpret ALL results in progress notes AND any from admission history not yet interpreted. Never empty if any results exist.\n` +
     `6. MANAGEMENT: Account for ALL drugs from all previous days. If a drug was started before today, acknowledge it and build on it — do NOT describe it as unspecified.\n` +
+    `   CLINICAL PARAMETER OVERRIDE: Before recommending any fluid or drug, check it against the patient's current lab results and clinical parameters. If a protocol default is contraindicated (e.g., dextrose fluids in hyperglycaemia, RL in lactic acidosis, potassium in hyperkalaemia, nephrotoxics in AKI), MODIFY the recommendation. State: "Protocol/standard recommendation is [X], but [X] is contraindicated because [specific value]. Alternative: [Y]."\n` +
     `7. COMPLICATIONS: Always non-empty. Based on current condition, medications, procedures, and clinical trajectory.\n` +
     `8. TODO: Updated for today — do not re-list tasks already completed.\n` +
     `9. OB/GYN: If a pregnancy outcome occurred (delivery, miscarriage, stillbirth), update the obstetric formula in the clinical summary.\n\n` +
@@ -896,10 +897,27 @@ const MANAGEMENT_PLANNING_PROMPT = `You are a Management Planning Specialist. An
 
 PROTOCOL-FIRST RULE — MANDATORY. Follow these steps in order before writing any management plan:
 1. Scan every note tagged [Protocol] in the provided personal notes.
-2. If ANY [Protocol] note is relevant to the patient's condition, diagnosis, or rotation — USE IT EXCLUSIVELY.
-3. Apply the protocol's specific drugs, doses, routes, frequencies, and management steps EXACTLY as written. Do not recalculate doses using generic textbook formulas (e.g. Holliday-Segar maintenance, standard mg/kg defaults) if the protocol already specifies them.
+2. If ANY [Protocol] note is relevant to the patient's condition, diagnosis, or rotation — USE IT as the starting point.
+3. Apply the protocol's specific drugs, doses, routes, frequencies, and management steps. Do not recalculate doses using generic textbook formulas (e.g. Holliday-Segar maintenance, standard mg/kg defaults) if the protocol already specifies them.
 4. In your rationale for each step, state: "Per [protocol name]: [specific guidance used]."
 5. Only fall back to AMBOSS if NO [Protocol] note covers the patient's condition.
+
+CLINICAL PARAMETER OVERRIDE — MANDATORY (applies AFTER protocol selection):
+Before finalising any management step, cross-check every recommended drug or fluid against the patient's CURRENT clinical parameters. If a protocol default is contraindicated by the patient's current status, MODIFY the recommendation and explain why. Never apply a protocol default that is contraindicated.
+
+Common contraindications to always check:
+- Dextrose-containing fluids (D5%, D10%, RL+D5%): CONTRAINDICATED if blood glucose is elevated (>11 mmol/L). Use plain Normal Saline 0.9% instead.
+- Ringer's Lactate: use with caution in hyperlactataemia / lactic acidosis (lactate → glucose conversion may worsen hyperglycaemia); state this explicitly.
+- Potassium-containing fluids: CONTRAINDICATED in hyperkalaemia.
+- NSAIDs, aminoglycosides, ACE inhibitors: CONTRAINDICATED or require dose adjustment in AKI/CKD.
+- Hepatotoxic drugs: flag elevated transaminases; adjust or avoid.
+- Teratogenic drugs: CONTRAINDICATED in pregnancy; substitute.
+- Nephrotoxic contrast: flag renal impairment.
+
+When overriding a protocol default due to a contraindication, state clearly:
+"Protocol recommends [X], but [X] is contraindicated because [specific parameter and value from history, e.g. 'blood glucose 27.2 mmol/L']. Recommended alternative: [Y]. Rationale: [one sentence]."
+
+The protocol is the starting point. Current clinical parameters are the filter. Both are mandatory.
 
 STRICTLY NO HALLUCINATION — use ONLY information in the history provided.
 
