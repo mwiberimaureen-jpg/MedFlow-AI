@@ -4,63 +4,47 @@ import { useState } from 'react'
 import { extractSectionFromAnalysis } from '@/lib/utils/rounds-parser'
 import { PrintButton } from './PrintButton'
 
-// ── AI Assessment helpers ─────────────────────────────────────────────────────
+// ── AI plan extraction ────────────────────────────────────────────────────────
 
-function extractImpression(rawText: string): string {
-  if (!rawText) return ''
-  try {
-    const parsed = JSON.parse(rawText)
-    if (Array.isArray(parsed.impressions) && parsed.impressions.length > 0) {
-      return parsed.impressions
-        .map((imp: any, i: number) => `${i + 1}. ${imp.diagnosis || imp.impression || imp}`)
-        .join('\n')
-    }
-  } catch { /* not JSON */ }
-  const match = rawText.match(/##\s*Impression\s*([\s\S]*?)(?=\n##\s|$)/i)
-  if (match?.[1]) return match[1].trim().replace(/\*\*([^*]+)\*\*/g, '$1').replace(/^[-•]\s*/gm, '').trim()
-  return ''
-}
-
-function extractDifferentials(rawText: string): string {
-  if (!rawText) return ''
-  try {
-    const parsed = JSON.parse(rawText)
-    if (Array.isArray(parsed.differential_diagnoses) && parsed.differential_diagnoses.length > 0) {
-      return parsed.differential_diagnoses
-        .slice(0, 5)
-        .map((d: any, i: number) => `${i + 1}. ${d.diagnosis}`)
-        .join('\n')
-    }
-  } catch { /* not JSON */ }
-  const match = rawText.match(/##\s*Differential\s+Diagnos\w*\s*([\s\S]*?)(?=\n##\s|$)/i)
-  if (match?.[1]) {
-    return match[1].trim()
-      .replace(/\*\*([^*]+)\*\*/g, '$1')
-      .split('\n').map((l: string) => l.replace(/^[-•]\s*/, '').trim()).filter((l: string) => l.length > 3)
-      .slice(0, 5).join('\n')
-  }
-  return ''
-}
-
-function extractAdjustedPlan(rawText: string): string {
+function extractAiPlan(rawText: string): string {
   if (!rawText) return ''
   const parts: string[] = []
-  try {
-    const parsed = JSON.parse(rawText)
-    const plan = parsed?.management_plan
-    if (plan) {
-      if (Array.isArray(plan.recommended_plan) && plan.recommended_plan.length > 0) {
-        parts.push(plan.recommended_plan.map((s: any, i: number) => `${i + 1}. ${s.step || s}`).join('\n'))
-      }
-      const adj = (plan.adjustments_based_on_status || '').trim()
-      if (adj && adj.toLowerCase() !== 'n/a' && adj.length > 5) parts.push(`Adjustments: ${adj}`)
-    }
-  } catch {
-    const mgmt = extractSectionFromAnalysis(rawText, 'management_plan')
-    if (mgmt) parts.push(mgmt)
+
+  // Impression
+  const impMatch = rawText.match(/##\s*Impression\(s\)\s*\n([\s\S]*?)(?=\n##\s|$)/i)
+  if (impMatch?.[1]) {
+    const imp = impMatch[1].trim().replace(/\*\*([^*]+)\*\*/g, '$1').replace(/^[-•]\s*/gm, '').trim()
+    if (imp) parts.push(`Impression:\n${imp}`)
   }
-  const confirmatory = extractSectionFromAnalysis(rawText, 'confirmatory_tests')
-  if (confirmatory) parts.push(`Follow-up tests:\n${confirmatory}`)
+
+  // Recommended management plan
+  const mgmtMatch = rawText.match(/##\s*Management Plan\s*\n([\s\S]*?)(?=\n##\s|$)/i)
+  if (mgmtMatch?.[1]) {
+    const text = mgmtMatch[1].trim()
+    const recMatch = text.match(/\*\*Recommended Plan:\*\*\s*([\s\S]*?)(?:\*\*Adjustments|$)/i)
+    const adjMatch = text.match(/\*\*Adjustments Based on Patient Status:\*\*\s*([\s\S]*?)$/i)
+
+    if (recMatch?.[1]?.trim()) {
+      const steps = recMatch[1].trim()
+        .split('\n').map((l: string) => l.trim()).filter(Boolean)
+        .map((l: string) => l.replace(/^\d+\.\s*/, '').replace(/\*\*(.*?)\*\*/g, '$1').trim())
+        .filter(Boolean)
+        .map((l: string, i: number) => `${i + 1}. ${l}`)
+      if (steps.length) parts.push(`Recommended Plan:\n${steps.join('\n')}`)
+    }
+
+    if (adjMatch?.[1]?.trim()) {
+      const adj = adjMatch[1].trim().replace(/\*\*(.*?)\*\*/g, '$1')
+      if (adj && adj.toLowerCase() !== 'n/a' && adj.length > 5) {
+        parts.push(`Adjustments: ${adj}`)
+      }
+    }
+  }
+
+  // Follow-up / confirmatory tests
+  const testSection = extractSectionFromAnalysis(rawText, 'confirmatory_tests')
+  if (testSection) parts.push(`Follow-up tests:\n${testSection}`)
+
   return parts.join('\n\n')
 }
 
@@ -70,6 +54,7 @@ interface DayNote {
   analysisVersion: string
   label: string
   note: string
+  aiPlan: string
   sortKey: number
 }
 
@@ -94,22 +79,25 @@ interface PatientDayNotesProps {
     analysis_version: string | null
     summary: string
     user_feedback?: string | null
+    raw_analysis_text?: string | null
     created_at: string
   }>
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Build day notes ───────────────────────────────────────────────────────────
 
 function buildDayNotes(
   allAnalyses: PatientDayNotesProps['allAnalyses']
 ): DayNote[] {
   const notes: DayNote[] = []
+
   for (const a of allAnalyses) {
     if (a.analysis_version === 'admission' && a.user_feedback?.trim()) {
       notes.push({
         analysisVersion: 'admission',
         label: 'Day 1 of Admission',
         note: a.user_feedback.trim(),
+        aiPlan: extractAiPlan(a.raw_analysis_text || ''),
         sortKey: 0,
       })
     } else if (a.analysis_version?.startsWith('day_') && a.user_feedback?.trim()) {
@@ -118,14 +106,130 @@ function buildDayNotes(
         analysisVersion: a.analysis_version,
         label: `Day ${n} Update`,
         note: a.user_feedback.trim(),
+        aiPlan: extractAiPlan(a.raw_analysis_text || ''),
         sortKey: n,
       })
     }
   }
+
+  // Newest day first (most recent update at top of rounds view)
   return notes.sort((a, b) => b.sortKey - a.sortKey)
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
+// ── Collapsible day card ──────────────────────────────────────────────────────
+
+function DayCard({
+  dayNote,
+  defaultOpen,
+  onEdit,
+  onRegenerate,
+  generating,
+  editingVersion,
+  editText,
+  onEditTextChange,
+  onSaveEdit,
+  onCancelEdit,
+  saving,
+  saveError,
+}: {
+  dayNote: DayNote
+  defaultOpen: boolean
+  onEdit: (d: DayNote) => void
+  onRegenerate?: () => void
+  generating?: boolean
+  editingVersion: string | null
+  editText: string
+  onEditTextChange: (v: string) => void
+  onSaveEdit: (v: string) => void
+  onCancelEdit: () => void
+  saving: boolean
+  saveError: string | null
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  const isEditing = editingVersion === dayNote.analysisVersion
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden print:break-inside-avoid print:border-gray-400">
+
+      {/* Header — click to collapse/expand */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between text-left hover:bg-gray-100 dark:hover:bg-gray-800/80 transition-colors"
+      >
+        <p className="text-xs font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
+          {dayNote.label}
+        </p>
+        <div className="flex items-center gap-3 print:hidden">
+          {dayNote.analysisVersion === 'admission' && onRegenerate && (
+            <span
+              role="button"
+              onClick={e => { e.stopPropagation(); if (!generating && !isEditing) onRegenerate() }}
+              className="text-xs text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-300 disabled:opacity-40"
+            >
+              {generating ? 'Regenerating…' : 'Regenerate'}
+            </span>
+          )}
+          {isEditing ? (
+            <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+              {saveError && <span className="text-xs text-red-500">{saveError}</span>}
+              <span
+                role="button"
+                onClick={onCancelEdit}
+                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer"
+              >Cancel</span>
+              <span
+                role="button"
+                onClick={() => onSaveEdit(dayNote.analysisVersion)}
+                className="text-xs px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded cursor-pointer"
+              >{saving ? 'Saving…' : 'Save'}</span>
+            </div>
+          ) : (
+            <span
+              role="button"
+              onClick={e => { e.stopPropagation(); onEdit(dayNote) }}
+              className="text-xs text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-300 cursor-pointer"
+            >Edit</span>
+          )}
+          <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">{open ? '▾' : '▸'}</span>
+        </div>
+      </button>
+
+      {open && (
+        <div className="divide-y divide-gray-100 dark:divide-gray-700">
+
+          {/* Clinical notes */}
+          <div className="px-4 py-3">
+            {isEditing ? (
+              <textarea
+                value={editText}
+                onChange={e => onEditTextChange(e.target.value)}
+                className="w-full min-h-[220px] text-sm font-mono text-gray-800 dark:text-gray-200 bg-transparent border border-indigo-200 dark:border-indigo-700 rounded p-2 resize-y focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+            ) : (
+              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                {dayNote.note}
+              </p>
+            )}
+          </div>
+
+          {/* AI recommended plan for this day */}
+          {dayNote.aiPlan && !isEditing && (
+            <div className="px-4 py-3 bg-blue-50 dark:bg-blue-900/10">
+              <p className="text-xs font-bold uppercase tracking-wide text-blue-600 dark:text-blue-400 mb-2">
+                AI Recommended Plan
+              </p>
+              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                {dayNote.aiPlan}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export function PatientDayNotes({ patient, latestAnalysis, allAnalyses }: PatientDayNotesProps) {
   const [dayNotes, setDayNotes] = useState<DayNote[]>(() => buildDayNotes(allAnalyses))
@@ -138,11 +242,6 @@ export function PatientDayNotes({ patient, latestAnalysis, allAnalyses }: Patien
 
   const hasAdmissionNote = dayNotes.some(n => n.analysisVersion === 'admission')
 
-  const impression = latestAnalysis ? extractImpression(latestAnalysis.raw_analysis_text) : ''
-  const differentials = latestAnalysis ? extractDifferentials(latestAnalysis.raw_analysis_text) : ''
-  const adjustedPlan = latestAnalysis ? extractAdjustedPlan(latestAnalysis.raw_analysis_text) : ''
-  const hasAiAssessment = !!(impression || differentials || adjustedPlan)
-
   async function handleGenerate() {
     setGenerating(true)
     setGenError(null)
@@ -153,11 +252,19 @@ export function PatientDayNotes({ patient, latestAnalysis, allAnalyses }: Patien
         throw new Error(data?.error || 'Generation failed')
       }
       const { note } = await res.json()
+      // Use admission analysis for AI plan
+      const admissionAnalysis = allAnalyses.find(a => a.analysis_version === 'admission')
       setDayNotes(prev => {
         const without = prev.filter(n => n.analysisVersion !== 'admission')
         return [
           ...without,
-          { analysisVersion: 'admission', label: 'Day 1 of Admission', note, sortKey: 0 },
+          {
+            analysisVersion: 'admission',
+            label: 'Day 1 of Admission',
+            note,
+            aiPlan: extractAiPlan(admissionAnalysis?.raw_analysis_text || latestAnalysis?.raw_analysis_text || ''),
+            sortKey: 0,
+          },
         ].sort((a, b) => b.sortKey - a.sortKey)
       })
     } catch (err: any) {
@@ -202,72 +309,25 @@ export function PatientDayNotes({ patient, latestAnalysis, allAnalyses }: Patien
   }
 
   return (
-    <div className="space-y-4 print:space-y-4">
+    <div className="space-y-3 print:space-y-4">
 
-      {/* ── Day notes in descending order ── */}
-      {dayNotes.map(dayNote => (
-        <div
+      {/* ── Day notes — newest first, all collapsible ── */}
+      {dayNotes.map((dayNote, idx) => (
+        <DayCard
           key={dayNote.analysisVersion}
-          className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden print:break-inside-avoid print:border-gray-400"
-        >
-          <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
-              {dayNote.label}
-            </p>
-            <div className="flex items-center gap-3">
-              {dayNote.analysisVersion === 'admission' && (
-                <button
-                  onClick={handleGenerate}
-                  disabled={generating || editingVersion === 'admission'}
-                  className="text-xs text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-300 disabled:opacity-40 print:hidden"
-                >
-                  {generating ? 'Regenerating…' : 'Regenerate'}
-                </button>
-              )}
-              {editingVersion === dayNote.analysisVersion ? (
-                <div className="flex items-center gap-2 print:hidden">
-                  {saveError && (
-                    <span className="text-xs text-red-500">{saveError}</span>
-                  )}
-                  <button
-                    onClick={cancelEdit}
-                    className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => saveEdit(dayNote.analysisVersion)}
-                    disabled={saving}
-                    className="text-xs px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded disabled:opacity-50"
-                  >
-                    {saving ? 'Saving…' : 'Save'}
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => startEdit(dayNote)}
-                  className="text-xs text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-300 print:hidden"
-                >
-                  Edit
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="px-4 py-3">
-            {editingVersion === dayNote.analysisVersion ? (
-              <textarea
-                value={editText}
-                onChange={e => setEditText(e.target.value)}
-                className="w-full min-h-[220px] text-sm font-mono text-gray-800 dark:text-gray-200 bg-transparent border border-indigo-200 dark:border-indigo-700 rounded p-2 resize-y focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              />
-            ) : (
-              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
-                {dayNote.note}
-              </p>
-            )}
-          </div>
-        </div>
+          dayNote={dayNote}
+          defaultOpen={idx === 0}
+          onEdit={startEdit}
+          onRegenerate={dayNote.analysisVersion === 'admission' ? handleGenerate : undefined}
+          generating={generating}
+          editingVersion={editingVersion}
+          editText={editText}
+          onEditTextChange={setEditText}
+          onSaveEdit={saveEdit}
+          onCancelEdit={cancelEdit}
+          saving={saving}
+          saveError={saveError}
+        />
       ))}
 
       {/* ── Generate Day 1 note if not yet generated ── */}
@@ -293,37 +353,6 @@ export function PatientDayNotes({ patient, latestAnalysis, allAnalyses }: Patien
               >
                 {generating ? 'Generating…' : 'Generate Round Note'}
               </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── AI Assessment ── */}
-      {hasAiAssessment && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden print:break-inside-avoid print:border-gray-400">
-          <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-            <p className="text-xs font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
-              AI Assessment
-            </p>
-          </div>
-          <div className="px-4 py-3 space-y-3 text-sm">
-            {impression && (
-              <div>
-                <p className="font-semibold text-gray-700 dark:text-gray-300 mb-0.5">Impression</p>
-                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{impression}</p>
-              </div>
-            )}
-            {differentials && (
-              <div>
-                <p className="font-semibold text-gray-700 dark:text-gray-300 mb-0.5">Differentials</p>
-                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{differentials}</p>
-              </div>
-            )}
-            {adjustedPlan && (
-              <div>
-                <p className="font-semibold text-gray-700 dark:text-gray-300 mb-0.5">Adjusted Plan</p>
-                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{adjustedPlan}</p>
-              </div>
             )}
           </div>
         </div>

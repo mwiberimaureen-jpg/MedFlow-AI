@@ -38,6 +38,7 @@ export default async function RoundsPage() {
         analysis_version: a.analysis_version,
         summary: a.summary,
         user_feedback: a.user_feedback,
+        raw_analysis_text: a.raw_analysis_text,
         created_at: a.created_at,
       })),
       analysisCount: analyses.length,

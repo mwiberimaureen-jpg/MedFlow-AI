@@ -29,6 +29,7 @@ interface PatientEntry {
     analysis_version: string | null
     summary: string
     user_feedback?: string | null
+    raw_analysis_text?: string | null
     created_at: string
   }>
   analysisCount: number

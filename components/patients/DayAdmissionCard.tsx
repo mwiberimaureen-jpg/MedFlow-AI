@@ -227,11 +227,12 @@ function buildClinicalNotes(
     sectionAnswers: Record<string, string>,
     dayLabel: string,
     submittedSections: Set<string>,
-    clinicalSummary?: string
 ): string {
     // Include any section that has content, submitted or not.
-    // The individual Submit buttons are UX confirmation only — they do not gate what
-    // goes into the final notes. This ensures nothing the user typed gets silently dropped.
+    // Individual Submit buttons are UX confirmation only — they do not gate what
+    // goes into the final notes.
+    // clinicalSummary is intentionally excluded: it contains investigations and
+    // current treatment, causing duplication when those also appear in user sections.
     const get = (key: string) => sectionAnswers[key]?.trim() || ''
 
     const hpi = get('follow_up_questions')
@@ -241,15 +242,13 @@ function buildClinicalNotes(
     const investigations = get('confirmatory_tests')
     const userPlan = get('management_plan')
 
-    const hasContent = [hpi, ros, vitals, exam, investigations, userPlan, clinicalSummary].some(v => v)
+    const hasContent = [hpi, ros, vitals, exam, investigations, userPlan].some(v => v)
     if (!hasContent) return ''
 
     const blocks: string[] = []
 
-    // HPI — AI clinical summary (factual handover) takes priority over raw user input
-    if (clinicalSummary) {
-        blocks.push(clinicalSummary)
-    } else if (hpi) {
+    // HPI — user's own follow-up questions / history update (no header, flows as narrative)
+    if (hpi) {
         blocks.push(hpi)
     }
 
@@ -428,10 +427,9 @@ export function DayAdmissionCard({
     // Filled sections for the summary area
     const filledSections = SUMMARY_SECTIONS.filter(({ key }) => sectionAnswers[key]?.trim())
 
-    // Auto-generated clinical notes from the user's own assessment inputs + AI clinical summary.
-    // The AI's recommended management plan is intentionally excluded — it belongs in the Analysis
-    // section only. If the user wants to borrow from the AI plan they paste it into the Plan field.
-    const autoNotes = useMemo(() => buildClinicalNotes(sectionAnswers, dayLabel, submittedSections, clinicalSummary), [sectionAnswers, dayLabel, submittedSections, clinicalSummary])
+    // Auto-generated clinical notes from the user's own assessment inputs only.
+    // clinicalSummary and aiPlan are excluded: they live in the Analysis panel, not in the notes.
+    const autoNotes = useMemo(() => buildClinicalNotes(sectionAnswers, dayLabel, submittedSections), [sectionAnswers, dayLabel, submittedSections])
 
     // The displayed notes: user-edited version takes priority, otherwise auto-generated
     const displayNotes = editedNotes !== null ? editedNotes : autoNotes
