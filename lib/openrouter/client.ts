@@ -1433,7 +1433,7 @@ export async function generateLearningSpark(
     throw new Error('OpenRouter API key is required')
   }
 
-  const userMessage = `Medical conditions from the intern's patients: ${conditions.join(', ')}\n\nPick the most clinically interesting condition and generate a focused teaching moment about it. Think about what a senior resident would want to discuss with an intern managing this patient.`
+  const userMessage = `Clinical content from the intern's active patients — this list includes diagnoses, differentials, complications, and drugs:\n${conditions.join(', ')}\n\nPick ONE item from the list that would make the most valuable teaching moment. It does NOT have to be the primary diagnosis — it can be:\n- A differential diagnosis worth understanding in depth\n- A complication to anticipate and prevent\n- A drug that warrants a focused pharmacology discussion\n- A clinical concept tied to any item on the list\n\nVary the choice — don't always pick the same type of item. Think about what a senior resident would find most instructive for an intern managing these patients right now.`
 
   const response = await fetchWithRetry(OPENROUTER_API_URL, {
     method: 'POST',

@@ -232,6 +232,40 @@ function extractConditions(analyses: Array<{ raw_analysis_text: string; summary:
         }
       }
     }
+
+    // Extract complications
+    const compMatch = text.match(/## Possible Complications[^#\n]*\n([\s\S]*?)(?=\n##|$)/i)
+    if (compMatch) {
+      const compLines = compMatch[1].match(/\*\*(.+?)\*\*/g)
+      if (compLines) {
+        for (const c of compLines) {
+          const cleaned = c.replace(/\*\*/g, '').trim()
+          if (cleaned && cleaned.length > 3) {
+            conditions.add(cleaned)
+          }
+        }
+      }
+    }
+
+    // Extract drug names from Management Plan recommended steps
+    const mgmtMatch = text.match(/\*\*Recommended Plan:\*\*\s*([\s\S]*?)(?=\*\*Adjustments|##|$)/i)
+    if (mgmtMatch) {
+      const stepLines = mgmtMatch[1].match(/\d+\.\s*\*\*(.+?)\*\*/g)
+      if (stepLines) {
+        for (const s of stepLines) {
+          // Extract just the drug name: first word(s) before a dose pattern
+          const inner = s.replace(/^\d+\.\s*\*\*/, '').replace(/\*\*.*/, '').trim()
+          // Strip dose suffix (numbers, mg, kg, ml, IU, %, route abbreviations)
+          const drugName = inner
+            .replace(/\s+\d[\d./]*\s*(mg|mcg|g|ml|IU|mmol|mEq|%|units?)[^,]*/gi, '')
+            .replace(/\s+(IV|PO|IM|SC|PR|SL|oral|intravenous|intramuscular)[^,]*/gi, '')
+            .trim()
+          if (drugName && drugName.length > 2 && drugName.length < 50) {
+            conditions.add(drugName)
+          }
+        }
+      }
+    }
   }
 
   return Array.from(conditions)
