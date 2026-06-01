@@ -68,65 +68,45 @@ export async function GET(request: NextRequest) {
       ? getRandomFormat(existingSpark?.format_type)
       : undefined
 
-    if (!todayAnalyses || todayAnalyses.length === 0) {
-      // Fallback: use most recent analyses regardless of date
-      const { data: recentAnalyses } = await supabase
-        .from('analyses')
-        .select('raw_analysis_text, summary')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(5)
+    // Always fetch ALL patient histories to build a diverse condition pool.
+    // Limiting to recent analyses caused sparks to always pick the same diagnosis
+    // (e.g. HEI) if recent work happened to be on one patient type.
+    const { data: allHistories } = await supabase
+      .from('patient_histories')
+      .select('history_text')
+      .eq('user_id', user.id)
+      .is('deleted_at', null)
+      .limit(30)
 
-      if (!recentAnalyses || recentAnalyses.length === 0) {
-        // Second fallback: use patient history text directly
-        const { data: recentHistories } = await supabase
-          .from('patient_histories')
-          .select('history_text')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(5)
+    // Build a broad condition set: today's analyses + recent analyses (across all patients)
+    // + all history texts. This ensures the full case mix is represented.
+    const { data: recentAnalyses } = await supabase
+      .from('analyses')
+      .select('raw_analysis_text, summary')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(20)
 
-        if (!recentHistories || recentHistories.length === 0) {
-          return NextResponse.json({ spark: null, message: 'Add a patient to unlock today\'s discussion!' })
-        }
+    const analysisConditions = extractConditions([
+      ...(todayAnalyses || []),
+      ...(recentAnalyses || []),
+    ])
+    const historyConditions = extractConditionsFromHistories(allHistories || [])
 
-        return await generateAndStoreFromHistories(supabase, user.id, today, recentHistories, formatOverride)
-      }
+    // Merge, deduplicate, and shuffle so the AI sees a varied pool
+    const allConditions = [...new Set([...analysisConditions, ...historyConditions])]
 
-      // Use recent analyses — if extractConditions returns nothing, fall back to history text too
-      const conditions = extractConditions(recentAnalyses)
-      if (conditions.length === 0) {
-        const { data: recentHistories } = await supabase
-          .from('patient_histories')
-          .select('history_text')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(5)
-
-        if (recentHistories && recentHistories.length > 0) {
-          return await generateAndStoreFromHistories(supabase, user.id, today, recentHistories, formatOverride)
-        }
-      }
-
-      return await generateAndStore(supabase, user.id, today, recentAnalyses, formatOverride)
+    if (allConditions.length === 0) {
+      return NextResponse.json({ spark: null, message: 'Add a patient to unlock today\'s discussion!' })
     }
 
-    // Also guard against extractConditions returning nothing for today's analyses
-    const todayConditions = extractConditions(todayAnalyses)
-    if (todayConditions.length === 0) {
-      const { data: recentHistories } = await supabase
-        .from('patient_histories')
-        .select('history_text')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(5)
-
-      if (recentHistories && recentHistories.length > 0) {
-        return await generateAndStoreFromHistories(supabase, user.id, today, recentHistories, formatOverride)
-      }
+    // Shuffle so the AI doesn't always start with the same conditions
+    for (let i = allConditions.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [allConditions[i], allConditions[j]] = [allConditions[j], allConditions[i]]
     }
 
-    return await generateAndStore(supabase, user.id, today, todayAnalyses, formatOverride)
+    return await generateAndStoreWithConditions(supabase, user.id, today, allConditions, formatOverride)
   } catch (error: any) {
     console.error('Error in GET /api/learning-spark/today:', error)
     return NextResponse.json(
@@ -136,72 +116,17 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function generateAndStore(
+async function generateAndStoreWithConditions(
   supabase: any,
   userId: string,
   today: string,
-  analyses: Array<{ raw_analysis_text: string; summary: string }>,
+  conditions: string[],
   formatOverride?: SparkFormat
 ) {
-  // Extract conditions from analyses
-  const conditions = extractConditions(analyses)
-
   if (conditions.length === 0) {
-    return NextResponse.json({ spark: null, message: 'No conditions found in analyses' })
+    return NextResponse.json({ spark: null, message: 'No conditions found in patient records' })
   }
 
-  const format = formatOverride || getDailyFormat(new Date())
-
-  try {
-    const content = await generateLearningSpark(format, conditions)
-
-    // Store in database
-    const { data: spark, error: insertError } = await supabase
-      .from('daily_learning_sparks')
-      .insert({
-        user_id: userId,
-        spark_date: today,
-        format_type: format,
-        content,
-        source_conditions: conditions.slice(0, 10), // cap at 10
-      })
-      .select()
-      .single()
-
-    if (insertError) {
-      console.error('Error storing spark:', insertError)
-      // Return the generated content even if storage fails
-      return NextResponse.json({
-        spark: {
-          id: 'temp',
-          user_id: userId,
-          spark_date: today,
-          format_type: format,
-          content,
-          source_conditions: conditions.slice(0, 10),
-          generated_at: new Date().toISOString(),
-        }
-      })
-    }
-
-    return NextResponse.json({ spark })
-  } catch (genError: any) {
-    console.error('Error generating spark:', genError)
-    return NextResponse.json(
-      { error: 'Failed to generate learning content', message: genError.message },
-      { status: 500 }
-    )
-  }
-}
-
-async function generateAndStoreFromHistories(
-  supabase: any,
-  userId: string,
-  today: string,
-  histories: Array<{ history_text: string }>,
-  formatOverride?: SparkFormat
-) {
-  const conditions = extractConditionsFromHistories(histories)
   const format = formatOverride || getDailyFormat(new Date())
 
   try {
@@ -220,6 +145,7 @@ async function generateAndStoreFromHistories(
       .single()
 
     if (insertError) {
+      console.error('Error storing spark:', insertError)
       return NextResponse.json({
         spark: {
           id: 'temp',
@@ -235,7 +161,7 @@ async function generateAndStoreFromHistories(
 
     return NextResponse.json({ spark })
   } catch (genError: any) {
-    console.error('Error generating spark from histories:', genError)
+    console.error('Error generating spark:', genError)
     return NextResponse.json(
       { error: 'Failed to generate learning content', message: genError.message },
       { status: 500 }

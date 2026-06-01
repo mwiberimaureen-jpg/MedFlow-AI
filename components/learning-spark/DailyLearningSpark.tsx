@@ -210,7 +210,10 @@ export function DailyLearningSpark() {
 
   const handleInteraction = useCallback(() => {
     if (!spark) return
-    const today = new Date().toISOString().split('T')[0]
+    // Use LOCAL date (not UTC) so the streak advances at local midnight,
+    // not at UTC midnight (which would be 3am in Nairobi for UTC+3 users).
+    const now = new Date()
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     const prev = state.currentStreak
     const newState = calculateStreak(state, today, spark.id)
     setState(newState)
