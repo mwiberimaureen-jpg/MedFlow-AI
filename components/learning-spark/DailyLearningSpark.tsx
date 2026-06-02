@@ -149,6 +149,9 @@ export function DailyLearningSpark() {
           }
           setState(merged)
           saveState(merged)
+          window.dispatchEvent(new CustomEvent('medflow:streak-updated', {
+            detail: { currentStreak: merged.currentStreak, longestStreak: merged.longestStreak }
+          }))
         }
       })
       .catch(() => { /* fall back to localStorage silently */ })
@@ -218,6 +221,9 @@ export function DailyLearningSpark() {
     const newState = calculateStreak(state, today, spark.id)
     setState(newState)
     saveState(newState)
+    window.dispatchEvent(new CustomEvent('medflow:streak-updated', {
+      detail: { currentStreak: newState.currentStreak, longestStreak: newState.longestStreak }
+    }))
     try { localStorage.setItem(SPARK_READ_KEY, 'true') } catch { /* ignore */ }
 
     // Show milestone message if streak just hit a milestone

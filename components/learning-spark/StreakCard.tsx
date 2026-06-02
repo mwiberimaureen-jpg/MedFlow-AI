@@ -35,18 +35,14 @@ export function StreakCard() {
     setStreak(state.currentStreak)
     setLongest(state.longestStreak)
 
-    // Sync from DB
-    fetch('/api/learning-spark/streak')
-      .then(r => r.json())
-      .then(({ currentStreak, longestStreak }) => {
-        if (currentStreak !== null) {
-          const merged = Math.max(state.currentStreak, currentStreak)
-          const mergedLongest = Math.max(state.longestStreak, longestStreak ?? 0)
-          setStreak(merged)
-          setLongest(mergedLongest)
-        }
-      })
-      .catch(() => {})
+    // DailyLearningSpark is the authoritative streak source — listen for its updates
+    const handleStreakUpdate = (e: Event) => {
+      const { currentStreak, longestStreak } = (e as CustomEvent).detail
+      setStreak(currentStreak)
+      setLongest(longestStreak)
+    }
+    window.addEventListener('medflow:streak-updated', handleStreakUpdate)
+    return () => window.removeEventListener('medflow:streak-updated', handleStreakUpdate)
   }, [])
 
   const flameSize = streak >= 30 ? 'text-4xl' : streak >= 7 ? 'text-3xl' : 'text-2xl'
