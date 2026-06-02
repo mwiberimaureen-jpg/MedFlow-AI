@@ -23,8 +23,7 @@ export function DeletePatientButton({ patientId, patientName, variant = 'button'
       if (onDeleted) {
         onDeleted()
       } else {
-        router.push('/dashboard/patients')
-        router.refresh()
+        router.push('/dashboard')
       }
     } catch {
       alert('Failed to delete patient. Please try again.')

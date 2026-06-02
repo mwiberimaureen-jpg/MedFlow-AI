@@ -18,7 +18,7 @@ export function PermanentDeleteButton({ patientId, patientName }: PermanentDelet
     try {
       const res = await fetch(`/api/patients/${patientId}?permanent=true`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Failed to delete')
-      router.refresh()
+      router.push('/dashboard')
     } catch {
       alert('Failed to permanently delete patient. Please try again.')
     } finally {
