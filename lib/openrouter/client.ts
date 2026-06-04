@@ -1425,7 +1425,8 @@ Rules:
 export async function generateLearningSpark(
   format: SparkFormat,
   conditions: string[],
-  config?: OpenRouterConfig
+  config?: OpenRouterConfig,
+  recentTopics?: string[]
 ): Promise<SparkContent> {
   const apiKey = config?.apiKey || process.env.OPENROUTER_API_KEY
 
@@ -1433,7 +1434,19 @@ export async function generateLearningSpark(
     throw new Error('OpenRouter API key is required')
   }
 
-  const userMessage = `Clinical content from the intern's active patients — this list includes diagnoses, differentials, complications, and drugs:\n${conditions.join(', ')}\n\nPick ONE item from the list that would make the most valuable teaching moment. It does NOT have to be the primary diagnosis — it can be:\n- A differential diagnosis worth understanding in depth\n- A complication to anticipate and prevent\n- A drug that warrants a focused pharmacology discussion\n- A clinical concept tied to any item on the list\n\nVary the choice — don't always pick the same type of item. Think about what a senior resident would find most instructive for an intern managing these patients right now.`
+  const avoidSection = recentTopics && recentTopics.length > 0
+    ? `\n\nTOPICS COVERED IN THE LAST 14 DAYS — DO NOT REPEAT THESE:\n${[...new Set(recentTopics)].slice(0, 20).join(', ')}\n\nYou MUST pick a topic that is NOT in the above list. If every item in the conditions list was recently covered, pick the one that was covered longest ago or approach the same condition from a completely different angle (e.g. mechanism vs management vs complications vs a specific drug used).`
+    : ''
+
+  // Extract unique rotations from labeled conditions (format: "[Rotation] condition")
+  const rotations = [...new Set(conditions
+    .map(c => { const m = c.match(/^\[(.+?)\]/) ; return m ? m[1] : null })
+    .filter(Boolean))]
+  const rotationHint = rotations.length > 1
+    ? `\n\nROTATION BALANCE: Conditions span these rotations: ${rotations.join(', ')}. Do NOT pick from the same rotation two days in a row. Actively choose from an underrepresented rotation.`
+    : ''
+
+  const userMessage = `Clinical content from the intern's active patients — this list includes diagnoses, differentials, complications, tests, and drugs (some labeled by rotation):\n${conditions.join(', ')}\n\nPick ONE item for today's teaching moment. It can be:\n- A differential diagnosis worth understanding in depth\n- A complication to anticipate and prevent\n- A drug that warrants focused pharmacology (mechanism, dosing trap, contraindication)\n- A lab or test interpretation (e.g. BGA/ABG, metabolic acidosis pattern, electrolyte disturbance)\n- A mnemonic or classification system tied to any item (e.g. MUDPILES for metabolic acidosis, causes of high anion gap)\n- A clinical concept or decision threshold tied to any item on the list${avoidSection}${rotationHint}\n\nThink like a senior resident — pick the teaching point an intern on these rotations most needs right now, not just the most prominent diagnosis.`
 
   const response = await fetchWithRetry(OPENROUTER_API_URL, {
     method: 'POST',

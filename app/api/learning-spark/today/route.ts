@@ -51,35 +51,42 @@ export async function GET(request: NextRequest) {
         .eq('id', existingSpark.id)
     }
 
-    // Get today's analyses to extract conditions
+    const formatOverride = refresh
+      ? getRandomFormat(existingSpark?.format_type)
+      : undefined
+
+    // Fetch last 14 days of sparks so the AI knows what to avoid
+    const fourteenDaysAgo = new Date()
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
+    const { data: recentSparks } = await supabase
+      .from('daily_learning_sparks')
+      .select('content, source_conditions, spark_date')
+      .eq('user_id', user.id)
+      .gte('spark_date', fourteenDaysAgo.toISOString().split('T')[0])
+      .order('spark_date', { ascending: false })
+
+    const recentTopics: string[] = (recentSparks || []).flatMap(s => {
+      const c = s.content as any
+      return [c?.topic, c?.question, c?.drug_focus, ...(s.source_conditions || [])].filter(Boolean)
+    })
+
+    // Fetch patient histories WITH rotation from metadata
+    const { data: allHistories } = await supabase
+      .from('patient_histories')
+      .select('history_text, metadata')
+      .eq('user_id', user.id)
+      .is('deleted_at', null)
+      .limit(30)
+
+    // Fetch all analyses with rotation-aware context
     const startOfDay = new Date()
     startOfDay.setHours(0, 0, 0, 0)
-
     const { data: todayAnalyses } = await supabase
       .from('analyses')
       .select('raw_analysis_text, summary')
       .eq('user_id', user.id)
       .gte('created_at', startOfDay.toISOString())
 
-    // On refresh: if there's a cached spark, pick a different format.
-    // If there's no cached spark (previous insert failed), still pick randomly
-    // so the user doesn't always see the same deterministic format.
-    const formatOverride = refresh
-      ? getRandomFormat(existingSpark?.format_type)
-      : undefined
-
-    // Always fetch ALL patient histories to build a diverse condition pool.
-    // Limiting to recent analyses caused sparks to always pick the same diagnosis
-    // (e.g. HEI) if recent work happened to be on one patient type.
-    const { data: allHistories } = await supabase
-      .from('patient_histories')
-      .select('history_text')
-      .eq('user_id', user.id)
-      .is('deleted_at', null)
-      .limit(30)
-
-    // Build a broad condition set: today's analyses + recent analyses (across all patients)
-    // + all history texts. This ensures the full case mix is represented.
     const { data: recentAnalyses } = await supabase
       .from('analyses')
       .select('raw_analysis_text, summary')
@@ -93,20 +100,19 @@ export async function GET(request: NextRequest) {
     ])
     const historyConditions = extractConditionsFromHistories(allHistories || [])
 
-    // Merge, deduplicate, and shuffle so the AI sees a varied pool
+    // Merge, deduplicate, and shuffle
     const allConditions = [...new Set([...analysisConditions, ...historyConditions])]
 
     if (allConditions.length === 0) {
       return NextResponse.json({ spark: null, message: 'Add a patient to unlock today\'s discussion!' })
     }
 
-    // Shuffle so the AI doesn't always start with the same conditions
     for (let i = allConditions.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [allConditions[i], allConditions[j]] = [allConditions[j], allConditions[i]]
     }
 
-    return await generateAndStoreWithConditions(supabase, user.id, today, allConditions, formatOverride)
+    return await generateAndStoreWithConditions(supabase, user.id, today, allConditions, formatOverride, recentTopics)
   } catch (error: any) {
     console.error('Error in GET /api/learning-spark/today:', error)
     return NextResponse.json(
@@ -121,7 +127,8 @@ async function generateAndStoreWithConditions(
   userId: string,
   today: string,
   conditions: string[],
-  formatOverride?: SparkFormat
+  formatOverride?: SparkFormat,
+  recentTopics?: string[]
 ) {
   if (conditions.length === 0) {
     return NextResponse.json({ spark: null, message: 'No conditions found in patient records' })
@@ -130,7 +137,7 @@ async function generateAndStoreWithConditions(
   const format = formatOverride || getDailyFormat(new Date())
 
   try {
-    const content = await generateLearningSpark(format, conditions)
+    const content = await generateLearningSpark(format, conditions, undefined, recentTopics)
 
     const { data: spark, error: insertError } = await supabase
       .from('daily_learning_sparks')
@@ -170,23 +177,32 @@ async function generateAndStoreWithConditions(
 }
 
 /**
- * Extract clinical conditions from raw patient history text.
+ * Extract clinical conditions from raw patient history text, with rotation labels.
  */
-function extractConditionsFromHistories(histories: Array<{ history_text: string }>): string[] {
+function extractConditionsFromHistories(histories: Array<{ history_text: string; metadata?: any }>): string[] {
   const conditions = new Set<string>()
 
-  // Common clinical terms to match in free-form history text
-  const pattern = /\b(hypertension|diabetes|malaria|pneumonia|anaemia|anemia|sepsis|tuberculosis|TB|HIV|cardiac failure|heart failure|renal failure|AKI|CKD|hepatitis|cirrhosis|jaundice|meningitis|stroke|seizure|epilepsy|eclampsia|pre-?eclampsia|placenta praevia|ectopic pregnancy|appendicitis|bowel obstruction|pancreatitis|peptic ulcer|GI bleed|DVT|pulmonary embolism|PE|asthma|COPD|sickle cell|typhoid|dengue|cellulitis|osteomyelitis|pyelonephritis|UTI|cholecystitis|GERD|IBD|Crohn|colitis|atrial fibrillation|AF|ACS|MI|STEMI|NSTEMI|chest pain|SOB|dyspnea|dyspnoea|syncope|hyponatraemia|hypokalemia|hyperglycaemia|DKA|hypoglycaemia|thrombocytopenia|leucocytosis|leukaemia|lymphoma|breast cancer|cervical cancer|prostate cancer|ovarian cyst|fibroids|preterm|postpartum haemorrhage|PPH|neonatal sepsis|birth asphyxia|malnutrition|dehydration|diarrhoea|diarrhea|vomiting|abdominal pain|jaundice|cholangitis|pancreatitis|peritonitis)\b/gi
+  const pattern = /\b(hypertension|diabetes|malaria|pneumonia|anaemia|anemia|sepsis|tuberculosis|TB|HIV|cardiac failure|heart failure|renal failure|AKI|CKD|hepatitis|cirrhosis|jaundice|meningitis|stroke|seizure|epilepsy|eclampsia|pre-?eclampsia|placenta praevia|ectopic pregnancy|appendicitis|bowel obstruction|pancreatitis|peptic ulcer|GI bleed|DVT|pulmonary embolism|PE|asthma|COPD|sickle cell|typhoid|dengue|cellulitis|osteomyelitis|pyelonephritis|UTI|cholecystitis|GERD|IBD|Crohn|colitis|atrial fibrillation|AF|ACS|MI|STEMI|NSTEMI|chest pain|SOB|dyspnea|dyspnoea|syncope|hyponatraemia|hyponatremia|hypokalemia|hypokalaemia|hyperkalemia|hyperkalaemia|hyperglycaemia|hyperglycemia|DKA|hypoglycaemia|hypoglycemia|thrombocytopenia|leucocytosis|leukocytosis|leukaemia|leukemia|lymphoma|breast cancer|cervical cancer|prostate cancer|ovarian cyst|fibroids|preterm|postpartum haemorrhage|PPH|neonatal sepsis|birth asphyxia|HIE|hypoxic.?ischaemic|malnutrition|dehydration|diarrhoea|diarrhea|vomiting|abdominal pain|cholangitis|peritonitis|meconium aspiration|respiratory distress|ARDS|pneumothorax|pleural effusion|ascites|osteomyelitis|fracture|trauma|burns|shock|hypotension|bradycardia|tachycardia|arrhythmia|coagulopathy|DIC|metabolic acidosis|metabolic alkalosis|respiratory acidosis|lactic acidosis|hyperlactataemia|BGA|ABG|blood gas|CPAP|oxygen therapy|mechanical ventilation|intubation|transfusion|dialysis|appendicitis|cholecystitis|hernia|obstruction|perforation|peritonitis|wound infection|post-?operative|pre-?operative|anaesthesia)\b/gi
+
+  // Also extract lab parameters and tests that make good teaching topics
+  const labPattern = /\b(haemoglobin|hemoglobin|WBC|white.?cell|platelet|creatinine|urea|electrolytes|sodium|potassium|chloride|bicarbonate|pH|pCO2|pO2|lactate|bilirubin|ALT|AST|albumin|INR|PT|PTT|fibrinogen|troponin|BNP|CRP|ESR|procalcitonin|glucose|HbA1c|TSH|T3|T4|cortisol|blood culture|urine culture|CSF|ECG|chest.?X.?ray|ultrasound|CT.?scan|MRI)\b/gi
 
   for (const h of histories) {
-    const text = (h.history_text || '').slice(0, 2000)
+    const rotation: string = h.metadata?.rotation || ''
+    const prefix = rotation ? `[${rotation}] ` : ''
+    const text = (h.history_text || '').slice(0, 3000)
+
     const matches = text.match(pattern)
     if (matches) {
-      matches.forEach(m => conditions.add(m.trim()))
+      matches.forEach(m => conditions.add(`${prefix}${m.trim()}`))
+    }
+
+    const labMatches = text.match(labPattern)
+    if (labMatches) {
+      labMatches.forEach(m => conditions.add(`${prefix}${m.trim()}`))
     }
   }
 
-  // If regex found nothing, extract meaningful noun phrases from the history as context
   if (conditions.size === 0) {
     for (const h of histories) {
       const snippet = (h.history_text || '').slice(0, 400).replace(/\n/g, ' ').trim()
@@ -247,15 +263,41 @@ function extractConditions(analyses: Array<{ raw_analysis_text: string; summary:
       }
     }
 
+    // Extract test names from Test Interpretation section
+    const testMatch = text.match(/## Test Interpretation\s*\n([\s\S]*?)(?=\n##|$)/i)
+    if (testMatch) {
+      const testLines = testMatch[1].match(/\*\*(.+?)\*\*/g)
+      if (testLines) {
+        for (const t of testLines) {
+          const cleaned = t.replace(/\*\*/g, '').trim()
+          if (cleaned && cleaned.length > 2 && cleaned.length < 60) {
+            conditions.add(cleaned)
+          }
+        }
+      }
+    }
+
+    // Extract confirmatory tests ordered
+    const confirmMatch = text.match(/## Confirmatory Tests[^#\n]*\n([\s\S]*?)(?=\n##|$)/i)
+    if (confirmMatch) {
+      const confirmLines = confirmMatch[1].match(/\*\*(.+?)\*\*/g)
+      if (confirmLines) {
+        for (const t of confirmLines) {
+          const cleaned = t.replace(/\*\*/g, '').trim()
+          if (cleaned && cleaned.length > 2 && cleaned.length < 60) {
+            conditions.add(cleaned)
+          }
+        }
+      }
+    }
+
     // Extract drug names from Management Plan recommended steps
     const mgmtMatch = text.match(/\*\*Recommended Plan:\*\*\s*([\s\S]*?)(?=\*\*Adjustments|##|$)/i)
     if (mgmtMatch) {
       const stepLines = mgmtMatch[1].match(/\d+\.\s*\*\*(.+?)\*\*/g)
       if (stepLines) {
         for (const s of stepLines) {
-          // Extract just the drug name: first word(s) before a dose pattern
           const inner = s.replace(/^\d+\.\s*\*\*/, '').replace(/\*\*.*/, '').trim()
-          // Strip dose suffix (numbers, mg, kg, ml, IU, %, route abbreviations)
           const drugName = inner
             .replace(/\s+\d[\d./]*\s*(mg|mcg|g|ml|IU|mmol|mEq|%|units?)[^,]*/gi, '')
             .replace(/\s+(IV|PO|IM|SC|PR|SL|oral|intravenous|intramuscular)[^,]*/gi, '')
