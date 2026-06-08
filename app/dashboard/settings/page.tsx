@@ -240,6 +240,8 @@ export default function SettingsPage() {
       }
 
       setProfile(prev => prev ? { ...prev, avatar_url: avatarUrl } : null)
+      // Sync the top-bar avatar in DashboardShell, which only fetches once on layout mount
+      window.dispatchEvent(new CustomEvent('medflow:avatar-updated', { detail: { avatarUrl } }))
       setProfileMessage({ type: 'success', text: 'Profile photo updated!' })
     } catch (err: any) {
       setProfileMessage({ type: 'error', text: err?.message || 'Failed to upload photo.' })

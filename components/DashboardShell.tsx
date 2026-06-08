@@ -29,18 +29,25 @@ export default function DashboardShell({ userEmail, displayName, children }: Das
   // Fetch avatar + dark_mode preference; dark_mode query is isolated so a missing column doesn't break the avatar load
   useEffect(() => {
     const supabase = createClient()
-    async function load() {
+    async function loadAvatar() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      try {
-        const { data } = await supabase
-          .from('users')
-          .select('avatar_url')
-          .eq('id', user.id)
-          .maybeSingle()
-        if (data?.avatar_url) setAvatarUrl(data.avatar_url)
-      } catch { /* ignore — avatar is cosmetic */ }
+      const { data, error } = await supabase
+        .from('users')
+        .select('avatar_url')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (error) {
+        console.error('Failed to load avatar:', error.message)
+        return
+      }
+      setAvatarUrl(data?.avatar_url || null)
+    }
+
+    async function loadDarkMode() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
 
       try {
         const { data: prefs } = await supabase
@@ -54,7 +61,26 @@ export default function DashboardShell({ userEmail, displayName, children }: Das
         }
       } catch { /* dark_mode column may not exist yet — localStorage fallback still applies */ }
     }
-    load()
+
+    loadAvatar()
+    loadDarkMode()
+
+    // Settings page dispatches this immediately after a successful upload so the
+    // top-bar avatar updates without waiting for a full page reload (the layout
+    // persists across client-side navigation, so it won't refetch on its own).
+    function onAvatarUpdated(e: Event) {
+      const url = (e as CustomEvent).detail?.avatarUrl
+      if (url) setAvatarUrl(url)
+    }
+    window.addEventListener('medflow:avatar-updated', onAvatarUpdated)
+
+    // Re-sync on focus in case the avatar was changed in another tab/session
+    window.addEventListener('focus', loadAvatar)
+
+    return () => {
+      window.removeEventListener('medflow:avatar-updated', onAvatarUpdated)
+      window.removeEventListener('focus', loadAvatar)
+    }
   }, [])
 
   function handleThemeToggle(isDark: boolean) {
