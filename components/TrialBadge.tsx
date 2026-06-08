@@ -66,9 +66,9 @@ export default function TrialBadge() {
         <button
           onClick={() => setShowReview(true)}
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/30 dark:border-purple-800 dark:text-purple-300"
-          title="Leave a review to unlock 5 more free patient files"
+          title="Leave a review to unlock 1 more free patient file"
         >
-          <span>⭐ Leave a review → unlock 5 more patients</span>
+          <span>⭐ Leave a review → unlock 1 more patient</span>
         </button>
 
         {showReview && userInfo && (

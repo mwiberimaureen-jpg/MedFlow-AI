@@ -1,7 +1,7 @@
 /**
  * Billing quota logic.
  *
- * Free tier:   1 new patient file → leave a review → 5 more (total 6 free)
+ * Free tier:   1 new patient file → leave a review → 1 more (total 2 free)
  * Basic plan:  KES 1,000/month → 20 new patient files per billing period
  * Pro plan:    KES 2,000/month → 50 new patient files per billing period
  *
@@ -29,7 +29,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const FREE_TRIAL_LIMIT = 1
-export const BONUS_TRIAL_LIMIT = 5   // unlocked after leaving a review
+export const BONUS_TRIAL_LIMIT = 1   // unlocked after leaving a review
 export const BASIC_PLAN_LIMIT = 20
 export const PRO_PLAN_LIMIT = 50
 export const ANALYSES_PER_FILE = 15  // slots per patient file before another file is consumed
