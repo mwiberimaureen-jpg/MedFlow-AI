@@ -200,7 +200,7 @@ export default function SignupPage() {
             placeholder="e.g. 4729"
             maxLength={4}
           />
-          <p className="text-xs text-gray-500 mt-1">Get 25% off your first subscription when someone referred you</p>
+          <p className="text-xs text-gray-500 mt-1">If someone referred you, enter their code here</p>
         </div>
 
         <button
