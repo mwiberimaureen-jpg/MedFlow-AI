@@ -57,7 +57,7 @@ export function ReviewModal({ userEmail, userName, context, onClose, onSubmitted
     'Enjoying MedFlow AI?'
 
   const subtitle =
-    context === 'unlock' ? "You've used your 5 free patient files. Leave a quick review to unlock 5 more — it takes 30 seconds." :
+    context === 'unlock' ? "You've used your free patient file. Leave a quick review to unlock 5 more — it takes 30 seconds." :
     context === 'renewal' ? 'A quick review is required before renewing. It takes 30 seconds.' :
     context === 'trial' ? "Your early feedback shapes what we build next." :
     'Leave a review before renewing — it means a lot to our small team.'

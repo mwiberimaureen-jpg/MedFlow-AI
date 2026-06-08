@@ -196,7 +196,7 @@ export default function PricingPage() {
 
             <div className="mt-8 text-center">
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                New users get 5 free patient files. Leave a review to unlock 5 more.
+                New users get 1 free patient file. Leave a review to unlock 5 more.
               </p>
             </div>
 
