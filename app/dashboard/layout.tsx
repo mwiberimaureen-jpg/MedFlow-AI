@@ -35,7 +35,11 @@ export default async function DashboardLayout({
   }
 
   return (
-    <DashboardShell userEmail={user.email || ''} displayName={(userRow as any)?.full_name || undefined}>
+    <DashboardShell
+      userEmail={user.email || ''}
+      displayName={(userRow as any)?.full_name || undefined}
+      avatarUrl={(userRow as any)?.avatar_url || undefined}
+    >
       {children}
     </DashboardShell>
   )

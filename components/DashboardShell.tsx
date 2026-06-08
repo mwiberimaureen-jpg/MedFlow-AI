@@ -10,12 +10,18 @@ import { ReviewTrigger } from './ReviewTrigger'
 interface DashboardShellProps {
   userEmail: string
   displayName?: string
+  avatarUrl?: string
   children: React.ReactNode
 }
 
-export default function DashboardShell({ userEmail, displayName, children }: DashboardShellProps) {
+export default function DashboardShell({ userEmail, displayName, avatarUrl: initialAvatarUrl, children }: DashboardShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  // Seeded from the server layout, which reads avatar_url with the admin client —
+  // a client-side query here would be subject to RLS + auth.uid(), and a stale/
+  // refreshing JWT on first load can make that silently return zero rows (the
+  // exact "stale JWT -> RLS returns null" trap the layout already guards against
+  // for terms_version). Don't replace this with a client-side fetch.
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl || null)
 
   // Open sidebar by default on desktop, closed on mobile
   useEffect(() => {
@@ -26,29 +32,25 @@ export default function DashboardShell({ userEmail, displayName, children }: Das
     return () => mq.removeEventListener('change', handler)
   }, [])
 
-  // Fetch avatar + dark_mode preference; dark_mode query is isolated so a missing column doesn't break the avatar load
+  // Keep the top-bar avatar in sync with uploads on the Settings page. The event
+  // carries the new URL directly (no DB round-trip), so it can't hit the RLS/JWT
+  // trap above — the layout persists across client-side navigation, so without
+  // this the avatar would only ever update after a hard reload.
+  useEffect(() => {
+    function onAvatarUpdated(e: Event) {
+      const url = (e as CustomEvent).detail?.avatarUrl
+      if (url) setAvatarUrl(url)
+    }
+    window.addEventListener('medflow:avatar-updated', onAvatarUpdated)
+    return () => window.removeEventListener('medflow:avatar-updated', onAvatarUpdated)
+  }, [])
+
+  // dark_mode preference — isolated try/catch so a missing column doesn't break anything
   useEffect(() => {
     const supabase = createClient()
-    async function loadAvatar() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data, error } = await supabase
-        .from('users')
-        .select('avatar_url')
-        .eq('id', user.id)
-        .maybeSingle()
-      if (error) {
-        console.error('Failed to load avatar:', error.message)
-        return
-      }
-      setAvatarUrl(data?.avatar_url || null)
-    }
-
     async function loadDarkMode() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-
       try {
         const { data: prefs } = await supabase
           .from('users')
@@ -61,26 +63,7 @@ export default function DashboardShell({ userEmail, displayName, children }: Das
         }
       } catch { /* dark_mode column may not exist yet — localStorage fallback still applies */ }
     }
-
-    loadAvatar()
     loadDarkMode()
-
-    // Settings page dispatches this immediately after a successful upload so the
-    // top-bar avatar updates without waiting for a full page reload (the layout
-    // persists across client-side navigation, so it won't refetch on its own).
-    function onAvatarUpdated(e: Event) {
-      const url = (e as CustomEvent).detail?.avatarUrl
-      if (url) setAvatarUrl(url)
-    }
-    window.addEventListener('medflow:avatar-updated', onAvatarUpdated)
-
-    // Re-sync on focus in case the avatar was changed in another tab/session
-    window.addEventListener('focus', loadAvatar)
-
-    return () => {
-      window.removeEventListener('medflow:avatar-updated', onAvatarUpdated)
-      window.removeEventListener('focus', loadAvatar)
-    }
   }, [])
 
   function handleThemeToggle(isDark: boolean) {
