@@ -64,13 +64,15 @@ Avatar is stored in Supabase Storage bucket `avatars` (public) and saved to `use
 - The `avatar_url` column must exist — migration: `supabase/avatar_migration.sql`
 - Upload path: `{user_id}/avatar.jpg` (always JPEG, compressed to max 400×400px client-side)
 - Append `?t={timestamp}` cache-buster to the URL after every new upload
-- `DashboardShell` fetches `avatar_url` from DB on mount and displays it on every page
+- `app/dashboard/layout.tsx` fetches the user row (incl. `avatar_url`) **with the admin/service-role client** and passes `avatarUrl` down to `DashboardShell` as a prop — DO NOT switch this to a client-side `supabase.from('users').select(...)` query. A fresh/refreshing session JWT makes RLS (`auth.uid() = id`) silently return zero rows, so the avatar comes back null and the placeholder shows even though the DB has the value (this is the exact "stale JWT → RLS returns null" trap the layout already documents and routes around for `terms_version` — same fix, same reason).
+- After a new upload, the Settings page dispatches `window.dispatchEvent(new CustomEvent('medflow:avatar-updated', { detail: { avatarUrl } }))` (same `medflow:` event-prefix convention as `medflow:streak-updated`) — `DashboardShell` listens and updates immediately, carrying the URL directly so no DB round-trip (and no RLS trap) is involved. This is required because the dashboard layout persists across client-side navigation and won't otherwise refetch.
 - `/api/profile` PATCH handles `avatar_url` updates — errors must be surfaced, never silently swallowed
 
 ### Do NOT
 - Clear `avatar_url` on navigation, re-render, or session refresh
 - Overwrite `avatar_url` unless the user explicitly uploads a new photo
 - Show a default/blank avatar when `avatar_url` exists in DB
+- Fetch `avatar_url` client-side via the user's own JWT/RLS path — always seed it server-side with the admin client (see Invariants above); this was the actual root cause of the "photo disappears" bug on 2026-06-08
 
 ---
 
