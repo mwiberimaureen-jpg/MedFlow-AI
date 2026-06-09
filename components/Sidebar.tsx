@@ -42,7 +42,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
       {/* Sidebar panel */}
       <div
-        className={`fixed top-0 left-0 h-full z-40 flex flex-col bg-gradient-to-b from-blue-900 to-blue-800 text-white transition-transform duration-200 ease-in-out w-64 ${
+        className={`fixed top-0 left-0 h-dvh z-40 flex flex-col bg-gradient-to-b from-blue-900 to-blue-800 text-white transition-transform duration-200 ease-in-out w-64 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

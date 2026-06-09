@@ -75,7 +75,7 @@ export default function DashboardShell({ userEmail, displayName, avatarUrl: init
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-dvh bg-gray-50 dark:bg-gray-900">
       <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(prev => !prev)} />
 
       {/* Main content — shifts right when sidebar is open on desktop */}
