@@ -12,6 +12,7 @@ interface TrialQuota {
   subscribed: boolean
   exempt?: boolean
   reviewRequired: boolean
+  trialPurged: boolean
   planType: 'trial' | 'basic' | 'pro'
 }
 
@@ -55,9 +56,22 @@ export default function TrialBadge() {
 
   if (!quota || quota.subscribed || quota.exempt) return null
 
-  const { used, limit, remaining, reviewRequired } = quota
+  const { used, limit, remaining, reviewRequired, trialPurged } = quota
   const exhausted = remaining === 0
   const low = remaining <= 1
+
+  // Trial data was purged after 30 days — must subscribe, no more free access
+  if (trialPurged) {
+    return (
+      <Link
+        href="/pricing"
+        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors bg-red-50 border-red-200 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300"
+        title="Free trial expired — subscribe to continue"
+      >
+        <span>Trial expired — subscribe to continue</span>
+      </Link>
+    )
+  }
 
   // If review is required (free tier used up), show a prompt instead of the badge
   if (reviewRequired) {
@@ -66,9 +80,9 @@ export default function TrialBadge() {
         <button
           onClick={() => setShowReview(true)}
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/30 dark:border-purple-800 dark:text-purple-300"
-          title="Leave a review to unlock 1 more free patient file"
+          title="Leave a review to unlock 2 more free patient files"
         >
-          <span>⭐ Leave a review → unlock 1 more patient</span>
+          <span>⭐ Leave a review → unlock 2 more patients</span>
         </button>
 
         {showReview && userInfo && (

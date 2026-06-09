@@ -5,7 +5,7 @@ import { useState } from 'react'
 interface ReviewModalProps {
   userEmail: string
   userName?: string
-  // unlock  = free tier exhausted, review unlocks 1 more analysis (no skip)
+  // unlock  = free tier exhausted, review unlocks 2 more analyses (no skip)
   // renewal = mandatory before 2nd month payment (no skip)
   // paid    = optional before 3rd month payment (skippable)
   // trial   = voluntary from settings (skippable)
@@ -51,13 +51,13 @@ export function ReviewModal({ userEmail, userName, context, onClose, onSubmitted
   const activeStars = hovered || rating
 
   const title =
-    context === 'unlock' ? 'Unlock 1 more free analysis' :
+    context === 'unlock' ? 'Unlock 2 more free patient files' :
     context === 'renewal' ? 'Before you renew — share your experience' :
     context === 'trial' ? 'How are you finding MedFlow AI?' :
     'Enjoying MedFlow AI?'
 
   const subtitle =
-    context === 'unlock' ? "You've used your free patient file. Leave a quick review to unlock 1 more — it takes 30 seconds." :
+    context === 'unlock' ? "You've used your 2 free patient files. Leave a quick review to unlock 2 more — it takes 30 seconds." :
     context === 'renewal' ? 'A quick review is required before renewing. It takes 30 seconds.' :
     context === 'trial' ? "Your early feedback shapes what we build next." :
     'Leave a review before renewing — it means a lot to our small team.'

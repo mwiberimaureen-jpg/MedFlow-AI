@@ -1,7 +1,7 @@
 /**
  * Billing quota logic.
  *
- * Free tier:   1 new patient file → leave a review → 1 more (total 2 free)
+ * Free tier:   2 new patient files → leave a review → 2 more (total 4 free)
  * Basic plan:  KES 1,000/month → 20 new patient files per billing period
  * Pro plan:    KES 2,000/month → 50 new patient files per billing period
  *
@@ -17,19 +17,26 @@
  *
  * Example: patient with 14 daily analyses + 3 history edits = 17 slots → 2 files
  *
+ * Trial expiry: if a free-tier user hasn't subscribed within 30 days, a pg_cron
+ * job hard-deletes all their patient data and sets users.trial_data_purged_at.
+ * Once purged, they cannot access another free trial — they must subscribe.
+ *
  * All stored notes, summaries, and data remain accessible regardless of
  * subscription status. Analysis stops only when the subscription lapses or
  * the monthly patient-file limit is reached.
  *
  * OWNER_EMAILS bypass all limits entirely.
  *
- * PREREQUISITE: Run supabase/regeneration_count_migration.sql before deploying.
+ * PREREQUISITES:
+ *   Run supabase/regeneration_count_migration.sql before deploying.
+ *   Run supabase/trial_expiry_migration.sql to add trial_data_purged_at column
+ *   and schedule the nightly cleanup pg_cron job.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-export const FREE_TRIAL_LIMIT = 1
-export const BONUS_TRIAL_LIMIT = 1   // unlocked after leaving a review
+export const FREE_TRIAL_LIMIT = 2
+export const BONUS_TRIAL_LIMIT = 2   // unlocked after leaving a review
 export const BASIC_PLAN_LIMIT = 20
 export const PRO_PLAN_LIMIT = 50
 export const ANALYSES_PER_FILE = 15  // slots per patient file before another file is consumed
@@ -44,6 +51,7 @@ export interface TrialQuota {
   subscribed: boolean
   exempt: boolean
   reviewRequired: boolean
+  trialPurged: boolean  // trial data was deleted after 30 days of non-subscription
   planType: PlanType
 }
 
@@ -70,7 +78,7 @@ export async function getTrialQuota(
   const [userRes, subRes] = await Promise.all([
     supabase
       .from('users')
-      .select('email, subscription_status, review_submitted')
+      .select('email, subscription_status, review_submitted, trial_data_purged_at')
       .eq('id', userId)
       .maybeSingle(),
     supabase
@@ -90,6 +98,22 @@ export async function getTrialQuota(
   const email = (authEmail || userRow?.email || '').toLowerCase()
   const exempt = email !== '' && getExemptEmails().has(email)
   const reviewSubmitted = userRow?.review_submitted === true
+  const trialPurged = !subscribed && !exempt && !!userRow?.trial_data_purged_at
+
+  // Purged non-subscribers cannot start another free trial — they must subscribe
+  if (trialPurged) {
+    return {
+      allowed: false,
+      used: 0,
+      limit: 0,
+      remaining: 0,
+      subscribed: false,
+      exempt: false,
+      reviewRequired: false,
+      trialPurged: true,
+      planType: 'trial',
+    }
+  }
 
   const rawPlanType = activeSub?.plan_type || 'trial'
   const planType: PlanType = subscribed
@@ -150,6 +174,7 @@ export async function getTrialQuota(
     subscribed,
     exempt,
     reviewRequired,
+    trialPurged: false,
     planType,
   }
 }
