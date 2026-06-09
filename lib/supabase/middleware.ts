@@ -29,36 +29,28 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // Use getSession() instead of getUser() to avoid a network call to Supabase.
-  // getSession() reads the JWT from the cookie locally, which is fast enough
-  // for Vercel's strict middleware timeout. Actual token verification via
-  // getUser() should happen in server components / API routes where timeouts
-  // are more generous.
+  // getSession() reads the JWT from the cookie without a Supabase network call,
+  // which keeps middleware fast enough for Vercel's edge timeout.
+  // IMPORTANT: we intentionally do NOT redirect authenticated users away from
+  // /login or /signup here. getSession() cannot verify whether the stored JWT
+  // is still valid on Supabase's side (it may be expired or revoked). If we
+  // bounce a "session-cookie-present" user to /dashboard and the dashboard
+  // layout's getUser() then finds no valid user, the result is an infinite
+  // redirect loop ("too many redirects" on mobile). Let the login/signup pages
+  // and auth callbacks handle post-login navigation instead.
   const {
     data: { session },
   } = await supabase.auth.getSession()
 
-  // Protected routes - redirect to login if not authenticated
+  // Guard /dashboard routes — gate on cookie presence only (fast path).
+  // The dashboard layout does the authoritative getUser() check and will
+  // redirect to /login if the session turns out to be invalid.
   if (
     !session &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/signup') &&
-    !request.nextUrl.pathname.startsWith('/forgot-password') &&
     request.nextUrl.pathname.startsWith('/dashboard')
   ) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
-    return NextResponse.redirect(url)
-  }
-
-  // Redirect authenticated users from auth pages to dashboard
-  if (
-    session &&
-    (request.nextUrl.pathname.startsWith('/login') ||
-      request.nextUrl.pathname.startsWith('/signup'))
-  ) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
     return NextResponse.redirect(url)
   }
 
