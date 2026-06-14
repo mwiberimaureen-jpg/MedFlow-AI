@@ -124,9 +124,23 @@ export function DailyLearningSpark() {
   const [showRotationPicker, setShowRotationPicker] = useState(false)
   const [selectedRotation, setSelectedRotation] = useState('')
   const [milestoneMessage, setMilestoneMessage] = useState<string | null>(null)
+  // Session-only "saved" flag for sparks whose DB insert failed (id === 'temp').
+  // Every such spark shares the id 'temp', so it can't be tracked in
+  // starredSparks (that would make every future temp spark look pre-saved).
+  // Resets whenever a new spark is loaded.
+  const [tempStarred, setTempStarred] = useState(false)
 
   useEffect(() => {
-    const local = loadState()
+    let local = loadState()
+    // Self-heal: 'temp' previously got recorded as a "starred" spark id when
+    // a DB insert failed (see seenSparks guard below for the same issue).
+    // Since every spark with a failed insert shares id 'temp', a single
+    // stale 'temp' entry here makes EVERY future spark look already-starred,
+    // permanently disabling the star button.
+    if (local.starredSparks?.includes('temp')) {
+      local = { ...local, starredSparks: local.starredSparks.filter(id => id !== 'temp') }
+      saveState(local)
+    }
     setState(local)
     setSelectedRotation(getLastRotation())
 
@@ -196,10 +210,12 @@ export function DailyLearningSpark() {
             const refreshRes = await fetch('/api/learning-spark/today?refresh=true')
             const refreshData = await refreshRes.json()
             if (!cancelled && refreshData.spark) {
+              setTempStarred(false)
               setSpark(refreshData.spark)
               return
             }
           }
+          setTempStarred(false)
           setSpark(data.spark)
         }
       } catch (err: any) {
@@ -214,7 +230,13 @@ export function DailyLearningSpark() {
     return () => { cancelled = true }
   }, [])
 
-  const isStarred = !!(spark && state.starredSparks?.includes(spark.id))
+  // 'temp' means the DB insert failed for this spark — every such spark
+  // shares the same id, so persisted starredSparks can't track it. Use the
+  // session-only tempStarred flag instead, or every future temp spark would
+  // look already-saved and the button would be permanently disabled.
+  const isStarred = !!spark && (spark.id !== 'temp'
+    ? !!state.starredSparks?.includes(spark.id)
+    : tempStarred)
 
   const handleInteraction = useCallback(() => {
     if (!spark) return
@@ -276,12 +298,16 @@ export function DailyLearningSpark() {
 
       if (!res.ok) throw new Error('Failed to save')
 
-      const newState = {
-        ...state,
-        starredSparks: [...(state.starredSparks || []), spark.id],
+      if (spark.id === 'temp') {
+        setTempStarred(true)
+      } else {
+        const newState = {
+          ...state,
+          starredSparks: [...(state.starredSparks || []), spark.id],
+        }
+        setState(newState)
+        saveState(newState)
       }
-      setState(newState)
-      saveState(newState)
       if (selectedRotation) saveLastRotation(selectedRotation)
     } catch (err) {
       console.error('Failed to star spark:', err)
