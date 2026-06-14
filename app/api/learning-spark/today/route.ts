@@ -87,16 +87,27 @@ export async function GET(request: NextRequest) {
       .eq('user_id', user.id)
       .gte('created_at', startOfDay.toISOString())
 
-    const { data: recentAnalyses } = await supabase
+    const { data: recentAnalysesRaw } = await supabase
       .from('analyses')
-      .select('raw_analysis_text, summary')
+      .select('raw_analysis_text, summary, patient_history_id, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-      .limit(20)
+      .limit(60)
+
+    // Keep only the most recent analysis per patient. Without this, a patient
+    // admitted for many days dominates the conditions list with day-by-day
+    // variants of the same diagnosis (e.g. 10 days of HIE impressions), while
+    // patients with fewer analyses barely show up.
+    const latestPerPatient = new Map<string, { raw_analysis_text: string; summary: string }>()
+    for (const a of recentAnalysesRaw || []) {
+      if (!latestPerPatient.has(a.patient_history_id)) {
+        latestPerPatient.set(a.patient_history_id, a)
+      }
+    }
 
     const analysisConditions = extractConditions([
       ...(todayAnalyses || []),
-      ...(recentAnalyses || []),
+      ...latestPerPatient.values(),
     ])
     const historyConditions = extractConditionsFromHistories(allHistories || [])
 

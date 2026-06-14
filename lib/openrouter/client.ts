@@ -1435,7 +1435,7 @@ export async function generateLearningSpark(
   }
 
   const avoidSection = recentTopics && recentTopics.length > 0
-    ? `\n\nTOPICS COVERED IN THE LAST 14 DAYS — DO NOT REPEAT THESE:\n${[...new Set(recentTopics)].slice(0, 20).join(', ')}\n\nYou MUST pick a topic that is NOT in the above list. If every item in the conditions list was recently covered, pick the one that was covered longest ago or approach the same condition from a completely different angle (e.g. mechanism vs management vs complications vs a specific drug used).`
+    ? `\n\nTOPICS COVERED IN THE LAST 14 DAYS — DO NOT REPEAT THESE:\n${[...new Set(recentTopics)].slice(0, 20).join(', ')}\n\nYou MUST pick a topic that is NOT in the above list. This means the same UNDERLYING condition is off-limits even if you rename it, rephrase it, change its stage/severity, or pivot to a different drug, complication, or test tied to it — "a different angle on the same diagnosis" still counts as a repeat. Pick a DIFFERENT underlying condition entirely, ideally from a different patient. Only fall back to a previously-covered condition if every other item in the conditions list is also recently covered.`
     : ''
 
   // Extract unique rotations from labeled conditions (format: "[Rotation] condition")
