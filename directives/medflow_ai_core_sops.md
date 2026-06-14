@@ -296,4 +296,31 @@ After adding/editing `RESEND_API_KEY` in Vercel, a new Production deployment mus
 
 ---
 
+## 17. Learning Sparks — Condition Pool, Repeat Policy & Streak Sync
+
+Generation lives in `app/api/learning-spark/today/route.ts` (pool building) and `generateLearningSpark` in `lib/openrouter/client.ts` (prompting).
+
+### Condition pool — ALL patients, not just recent ones
+- `recentAnalysesRaw` fetches up to **500** analyses (was 60), `allHistories` fetches up to **200** patient histories (was 30) — these caps exist only as a sanity ceiling, not a "recent N patients" restriction.
+- `latestPerPatient` keeps only the most-recent analysis per `patient_history_id` so a long admission (many days of analyses for one patient) can't dominate the pool and crowd out other patients.
+- If the "always the same condition" complaint returns, check whether one of these limits is being hit before the dedup — i.e. whether the patient pool is large enough that 500 analyses no longer covers everyone.
+
+### Source categories mined per analysis
+`extractConditions()` pulls from, per analysis:
+- `analysis.summary` (the faithful clinical-summary text) — both `CONDITION_PATTERN` matches (diagnoses/conditions/labs as documented) and `EXAM_FINDINGS_PATTERN` matches (e.g. Murphy's sign, tracheal deviation, rebound tenderness, raised JVP — tagged `"(exam finding)"` for spot-diagnosis teaching moments)
+- `## Impression(s)`, `## Differential Diagnoses`, `## Possible Complications`, `## Test Interpretation`, `## Confirmatory Tests`, and drug names from the Recommended Plan — all from `raw_analysis_text` as before
+
+`CONDITION_PATTERN`, `LAB_PATTERN`, and `EXAM_FINDINGS_PATTERN` are module-level regexes shared between `extractConditions` (analyses) and `extractConditionsFromHistories` (patient histories) — add new terms to these constants, not inline copies.
+
+### Repeat policy — weekly, not a flat 14-day ban
+- `daily_learning_sparks` is queried for the last **60 days** and split by `getWeekStart()` (Monday-start) into:
+  - `thisWeekTopics` — **hard avoid**. The same underlying condition (any angle: renamed, restaged, different drug/complication/test) is off-limits until next week.
+  - `earlierTopics` — **soft avoid**. May repeat on a different week, but only as a last resort and from a genuinely new angle.
+- `generateLearningSpark(format, conditions, config, thisWeekTopics, earlierTopics)` — if this signature changes, update both call sites (route + any future callers) and keep the hard/soft distinction in the prompt; collapsing back to one flat list re-introduces the "always HIE" bug.
+
+### Streak "forgetting the day" — race condition fix
+`DailyLearningSpark.tsx`'s mount effect fetches `/api/learning-spark/streak` and merges it with local state. **Do not merge against the `local` variable captured at mount** — `handleInteraction` can update localStorage (and React state) while that fetch is still in flight, and merging against the stale mount-time snapshot reverts today's streak increment, which looks like the app "forgot" what day the streak is on. The fix: re-read via `loadState()` (`fresh`) at the moment the fetch resolves, and merge against `fresh`, not `local`.
+
+---
+
 *Last updated: 2026-06-14*
