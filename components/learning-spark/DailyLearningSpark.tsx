@@ -136,16 +136,21 @@ export function DailyLearningSpark() {
       .then(r => r.json())
       .then(({ currentStreak, longestStreak, lastSparkDate }) => {
         if (currentStreak !== null) {
-          // Only use the DB date if it is newer than what's stored locally
-          const localDate = local.lastInteractionDate ?? ''
+          // Re-read localStorage now (not the `local` captured at mount) —
+          // handleInteraction may have already updated it while this fetch
+          // was in flight. Merging against the stale `local` would revert
+          // today's streak increment, making it look like the app "forgot"
+          // which day the streak is on.
+          const fresh = loadState()
+          const localDate = fresh.lastInteractionDate ?? ''
           const dbDate = lastSparkDate ?? ''
           const mergedLastDate = dbDate > localDate ? dbDate : (localDate || undefined)
 
           const merged: LearningSparkState = {
-            ...local,
-            currentStreak: Math.max(local.currentStreak, currentStreak),
-            longestStreak: Math.max(local.longestStreak, longestStreak ?? 0),
-            lastInteractionDate: mergedLastDate ?? local.lastInteractionDate,
+            ...fresh,
+            currentStreak: Math.max(fresh.currentStreak, currentStreak),
+            longestStreak: Math.max(fresh.longestStreak, longestStreak ?? 0),
+            lastInteractionDate: mergedLastDate ?? fresh.lastInteractionDate,
           }
           setState(merged)
           saveState(merged)

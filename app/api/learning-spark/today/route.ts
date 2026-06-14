@@ -19,6 +19,26 @@ function getRandomFormat(excludeFormat?: string): SparkFormat {
   return options[Math.floor(Math.random() * options.length)]
 }
 
+// Monday-start ISO date (YYYY-MM-DD) for the week containing `date`.
+function getWeekStart(date: Date): string {
+  const d = new Date(date)
+  const day = d.getDay() // 0 = Sun .. 6 = Sat
+  const diff = (day === 0 ? -6 : 1) - day
+  d.setDate(d.getDate() + diff)
+  d.setHours(0, 0, 0, 0)
+  return d.toISOString().split('T')[0]
+}
+
+// Conditions/diagnoses worth teaching on, shared by history and analysis extraction.
+const CONDITION_PATTERN = /\b(hypertension|diabetes|malaria|pneumonia|anaemia|anemia|sepsis|tuberculosis|TB|HIV|cardiac failure|heart failure|renal failure|AKI|CKD|hepatitis|cirrhosis|jaundice|meningitis|stroke|seizure|epilepsy|eclampsia|pre-?eclampsia|placenta praevia|ectopic pregnancy|appendicitis|bowel obstruction|pancreatitis|peptic ulcer|GI bleed|DVT|pulmonary embolism|PE|asthma|COPD|sickle cell|typhoid|dengue|cellulitis|osteomyelitis|pyelonephritis|UTI|cholecystitis|GERD|IBD|Crohn|colitis|atrial fibrillation|AF|ACS|MI|STEMI|NSTEMI|chest pain|SOB|dyspnea|dyspnoea|syncope|hyponatraemia|hyponatremia|hypokalemia|hypokalaemia|hyperkalemia|hyperkalaemia|hyperglycaemia|hyperglycemia|DKA|hypoglycaemia|hypoglycemia|thrombocytopenia|leucocytosis|leukocytosis|leukaemia|leukemia|lymphoma|breast cancer|cervical cancer|prostate cancer|ovarian cyst|fibroids|preterm|postpartum haemorrhage|PPH|neonatal sepsis|birth asphyxia|HIE|hypoxic.?ischaemic|malnutrition|dehydration|diarrhoea|diarrhea|vomiting|abdominal pain|cholangitis|peritonitis|meconium aspiration|respiratory distress|ARDS|pneumothorax|pleural effusion|ascites|osteomyelitis|fracture|trauma|burns|shock|hypotension|bradycardia|tachycardia|arrhythmia|coagulopathy|DIC|metabolic acidosis|metabolic alkalosis|respiratory acidosis|lactic acidosis|hyperlactataemia|BGA|ABG|blood gas|CPAP|oxygen therapy|mechanical ventilation|intubation|transfusion|dialysis|appendicitis|cholecystitis|hernia|obstruction|perforation|peritonitis|wound infection|post-?operative|pre-?operative|anaesthesia)\b/gi
+
+// Lab parameters/tests that make good teaching topics.
+const LAB_PATTERN = /\b(haemoglobin|hemoglobin|WBC|white.?cell|platelet|creatinine|urea|electrolytes|sodium|potassium|chloride|bicarbonate|pH|pCO2|pO2|lactate|bilirubin|ALT|AST|albumin|INR|PT|PTT|fibrinogen|troponin|BNP|CRP|ESR|procalcitonin|glucose|HbA1c|TSH|T3|T4|cortisol|blood culture|urine culture|CSF|ECG|chest.?X.?ray|ultrasound|CT.?scan|MRI)\b/gi
+
+// "Peculiar" physical exam findings that drive a spot diagnosis — good source
+// material for clinical-reasoning learning sparks.
+const EXAM_FINDINGS_PATTERN = /\b(tracheal deviation|Murphy'?s sign|Kernig'?s sign|Brudzinski'?s sign|McBurney'?s point|Cullen'?s sign|Grey Turner'?s sign|Chvostek'?s sign|Trousseau'?s sign|Homans'?s? sign|rebound tenderness|guarding|rigidity|tracheal tug|clubbing|cyanosis|lymphadenopathy|hepatosplenomegaly|hepatomegaly|splenomegaly|ascites|pedal oedema|pedal edema|petechiae|purpura|pallor|tachypnoea|tachypnea|stridor|wheeze|crepitations|crackles|reduced air entry|hyper-?resonant|dull(?:ness)? to percussion|Kussmaul breathing|pulsus paradoxus|raised JVP|murmur|gallop rhythm|S3 gallop|cardiac thrill|precordial heave|hypotonia|hypertonia|hyperreflexia|hyporeflexia|clonus|Babinski|nuchal rigidity|photophobia|bulging fontanelle|sunken fontanelle|sunken eyes|skin turgor|capillary refill|Battle'?s sign|raccoon eyes|CSF otorrhoea|CSF rhinorrhoea)\b/gi
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -55,28 +75,38 @@ export async function GET(request: NextRequest) {
       ? getRandomFormat(existingSpark?.format_type)
       : undefined
 
-    // Fetch last 14 days of sparks so the AI knows what to avoid
-    const fourteenDaysAgo = new Date()
-    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
+    // Fetch last 60 days of sparks and split into "this week" (hard avoid)
+    // vs "earlier weeks" (soft avoid — can revisit on a different week).
+    const weekStart = getWeekStart(new Date())
+    const sixtyDaysAgo = new Date()
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60)
     const { data: recentSparks } = await supabase
       .from('daily_learning_sparks')
       .select('content, source_conditions, spark_date')
       .eq('user_id', user.id)
-      .gte('spark_date', fourteenDaysAgo.toISOString().split('T')[0])
+      .gte('spark_date', sixtyDaysAgo.toISOString().split('T')[0])
       .order('spark_date', { ascending: false })
 
-    const recentTopics: string[] = (recentSparks || []).flatMap(s => {
+    const thisWeekTopics: string[] = []
+    const earlierTopics: string[] = []
+    for (const s of recentSparks || []) {
       const c = s.content as any
-      return [c?.topic, c?.question, c?.drug_focus, ...(s.source_conditions || [])].filter(Boolean)
-    })
+      const topics = [c?.topic, c?.question, c?.drug_focus, ...(s.source_conditions || [])].filter(Boolean)
+      if (s.spark_date >= weekStart) {
+        thisWeekTopics.push(...topics)
+      } else {
+        earlierTopics.push(...topics)
+      }
+    }
 
-    // Fetch patient histories WITH rotation from metadata
+    // Fetch patient histories WITH rotation from metadata — covers ALL patient
+    // files, not just the most recent few.
     const { data: allHistories } = await supabase
       .from('patient_histories')
       .select('history_text, metadata')
       .eq('user_id', user.id)
       .is('deleted_at', null)
-      .limit(30)
+      .limit(200)
 
     // Fetch all analyses with rotation-aware context
     const startOfDay = new Date()
@@ -92,7 +122,7 @@ export async function GET(request: NextRequest) {
       .select('raw_analysis_text, summary, patient_history_id, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-      .limit(60)
+      .limit(500)
 
     // Keep only the most recent analysis per patient. Without this, a patient
     // admitted for many days dominates the conditions list with day-by-day
@@ -123,7 +153,7 @@ export async function GET(request: NextRequest) {
       [allConditions[i], allConditions[j]] = [allConditions[j], allConditions[i]]
     }
 
-    return await generateAndStoreWithConditions(supabase, user.id, today, allConditions, formatOverride, recentTopics)
+    return await generateAndStoreWithConditions(supabase, user.id, today, allConditions, formatOverride, thisWeekTopics, earlierTopics)
   } catch (error: any) {
     console.error('Error in GET /api/learning-spark/today:', error)
     return NextResponse.json(
@@ -139,7 +169,8 @@ async function generateAndStoreWithConditions(
   today: string,
   conditions: string[],
   formatOverride?: SparkFormat,
-  recentTopics?: string[]
+  thisWeekTopics?: string[],
+  earlierTopics?: string[]
 ) {
   if (conditions.length === 0) {
     return NextResponse.json({ spark: null, message: 'No conditions found in patient records' })
@@ -148,7 +179,7 @@ async function generateAndStoreWithConditions(
   const format = formatOverride || getDailyFormat(new Date())
 
   try {
-    const content = await generateLearningSpark(format, conditions, undefined, recentTopics)
+    const content = await generateLearningSpark(format, conditions, undefined, thisWeekTopics, earlierTopics)
 
     const { data: spark, error: insertError } = await supabase
       .from('daily_learning_sparks')
@@ -193,22 +224,17 @@ async function generateAndStoreWithConditions(
 function extractConditionsFromHistories(histories: Array<{ history_text: string; metadata?: any }>): string[] {
   const conditions = new Set<string>()
 
-  const pattern = /\b(hypertension|diabetes|malaria|pneumonia|anaemia|anemia|sepsis|tuberculosis|TB|HIV|cardiac failure|heart failure|renal failure|AKI|CKD|hepatitis|cirrhosis|jaundice|meningitis|stroke|seizure|epilepsy|eclampsia|pre-?eclampsia|placenta praevia|ectopic pregnancy|appendicitis|bowel obstruction|pancreatitis|peptic ulcer|GI bleed|DVT|pulmonary embolism|PE|asthma|COPD|sickle cell|typhoid|dengue|cellulitis|osteomyelitis|pyelonephritis|UTI|cholecystitis|GERD|IBD|Crohn|colitis|atrial fibrillation|AF|ACS|MI|STEMI|NSTEMI|chest pain|SOB|dyspnea|dyspnoea|syncope|hyponatraemia|hyponatremia|hypokalemia|hypokalaemia|hyperkalemia|hyperkalaemia|hyperglycaemia|hyperglycemia|DKA|hypoglycaemia|hypoglycemia|thrombocytopenia|leucocytosis|leukocytosis|leukaemia|leukemia|lymphoma|breast cancer|cervical cancer|prostate cancer|ovarian cyst|fibroids|preterm|postpartum haemorrhage|PPH|neonatal sepsis|birth asphyxia|HIE|hypoxic.?ischaemic|malnutrition|dehydration|diarrhoea|diarrhea|vomiting|abdominal pain|cholangitis|peritonitis|meconium aspiration|respiratory distress|ARDS|pneumothorax|pleural effusion|ascites|osteomyelitis|fracture|trauma|burns|shock|hypotension|bradycardia|tachycardia|arrhythmia|coagulopathy|DIC|metabolic acidosis|metabolic alkalosis|respiratory acidosis|lactic acidosis|hyperlactataemia|BGA|ABG|blood gas|CPAP|oxygen therapy|mechanical ventilation|intubation|transfusion|dialysis|appendicitis|cholecystitis|hernia|obstruction|perforation|peritonitis|wound infection|post-?operative|pre-?operative|anaesthesia)\b/gi
-
-  // Also extract lab parameters and tests that make good teaching topics
-  const labPattern = /\b(haemoglobin|hemoglobin|WBC|white.?cell|platelet|creatinine|urea|electrolytes|sodium|potassium|chloride|bicarbonate|pH|pCO2|pO2|lactate|bilirubin|ALT|AST|albumin|INR|PT|PTT|fibrinogen|troponin|BNP|CRP|ESR|procalcitonin|glucose|HbA1c|TSH|T3|T4|cortisol|blood culture|urine culture|CSF|ECG|chest.?X.?ray|ultrasound|CT.?scan|MRI)\b/gi
-
   for (const h of histories) {
     const rotation: string = h.metadata?.rotation || ''
     const prefix = rotation ? `[${rotation}] ` : ''
     const text = (h.history_text || '').slice(0, 3000)
 
-    const matches = text.match(pattern)
+    const matches = text.match(CONDITION_PATTERN)
     if (matches) {
       matches.forEach(m => conditions.add(`${prefix}${m.trim()}`))
     }
 
-    const labMatches = text.match(labPattern)
+    const labMatches = text.match(LAB_PATTERN)
     if (labMatches) {
       labMatches.forEach(m => conditions.add(`${prefix}${m.trim()}`))
     }
@@ -232,6 +258,22 @@ function extractConditions(analyses: Array<{ raw_analysis_text: string; summary:
 
   for (const analysis of analyses) {
     const text = analysis.raw_analysis_text || ''
+
+    // Mine the faithful clinical summary for documented conditions and
+    // "peculiar" physical exam findings that drive a spot diagnosis —
+    // these are written by the user, not generated, so they're great
+    // teaching material that the section-based extraction below misses.
+    const summaryText = analysis.summary || ''
+    if (summaryText) {
+      const summaryConditions = summaryText.match(CONDITION_PATTERN)
+      if (summaryConditions) {
+        summaryConditions.forEach(m => conditions.add(m.trim()))
+      }
+      const examFindings = summaryText.match(EXAM_FINDINGS_PATTERN)
+      if (examFindings) {
+        examFindings.forEach(m => conditions.add(`${m.trim()} (exam finding)`))
+      }
+    }
 
     // Extract from ## Impression(s) section
     const impressionMatch = text.match(/## Impression\(s\)\s*\n([\s\S]*?)(?=\n##|$)/)

@@ -1426,7 +1426,8 @@ export async function generateLearningSpark(
   format: SparkFormat,
   conditions: string[],
   config?: OpenRouterConfig,
-  recentTopics?: string[]
+  thisWeekTopics?: string[],
+  earlierTopics?: string[]
 ): Promise<SparkContent> {
   const apiKey = config?.apiKey || process.env.OPENROUTER_API_KEY
 
@@ -1434,9 +1435,15 @@ export async function generateLearningSpark(
     throw new Error('OpenRouter API key is required')
   }
 
-  const avoidSection = recentTopics && recentTopics.length > 0
-    ? `\n\nTOPICS COVERED IN THE LAST 14 DAYS — DO NOT REPEAT THESE:\n${[...new Set(recentTopics)].slice(0, 20).join(', ')}\n\nYou MUST pick a topic that is NOT in the above list. This means the same UNDERLYING condition is off-limits even if you rename it, rephrase it, change its stage/severity, or pivot to a different drug, complication, or test tied to it — "a different angle on the same diagnosis" still counts as a repeat. Pick a DIFFERENT underlying condition entirely, ideally from a different patient. Only fall back to a previously-covered condition if every other item in the conditions list is also recently covered.`
+  const hardAvoidSection = thisWeekTopics && thisWeekTopics.length > 0
+    ? `\n\nTOPICS ALREADY COVERED THIS WEEK — DO NOT REPEAT THESE:\n${[...new Set(thisWeekTopics)].slice(0, 20).join(', ')}\n\nYou MUST pick a topic that is NOT in the above list. This means the same UNDERLYING condition is off-limits this week even if you rename it, rephrase it, change its stage/severity, or pivot to a different drug, complication, or test tied to it — "a different angle on the same diagnosis" still counts as a repeat. Pick a DIFFERENT underlying condition entirely, ideally from a different patient.`
     : ''
+
+  const softAvoidSection = earlierTopics && earlierTopics.length > 0
+    ? `\n\nTOPICS COVERED IN EARLIER WEEKS (revisiting is fine, but only if nothing fresher fits):\n${[...new Set(earlierTopics)].slice(0, 30).join(', ')}\n\nPrefer a topic that ISN'T in this list either. A condition from this list may repeat ON A DIFFERENT WEEK, but if you do revisit one, approach it from a genuinely new angle (different complication, drug, test, or decision point than before) and only do so if every other item in the conditions list has also been covered recently.`
+    : ''
+
+  const avoidSection = hardAvoidSection + softAvoidSection
 
   // Extract unique rotations from labeled conditions (format: "[Rotation] condition")
   const rotations = [...new Set(conditions
@@ -1446,7 +1453,7 @@ export async function generateLearningSpark(
     ? `\n\nROTATION BALANCE: Conditions span these rotations: ${rotations.join(', ')}. Do NOT pick from the same rotation two days in a row. Actively choose from an underrepresented rotation.`
     : ''
 
-  const userMessage = `Clinical content from the intern's active patients — this list includes diagnoses, differentials, complications, tests, and drugs (some labeled by rotation):\n${conditions.join(', ')}\n\nPick ONE item for today's teaching moment. It can be:\n- A differential diagnosis worth understanding in depth\n- A complication to anticipate and prevent\n- A drug that warrants focused pharmacology (mechanism, dosing trap, contraindication)\n- A lab or test interpretation (e.g. BGA/ABG, metabolic acidosis pattern, electrolyte disturbance)\n- A mnemonic or classification system tied to any item (e.g. MUDPILES for metabolic acidosis, causes of high anion gap)\n- A clinical concept or decision threshold tied to any item on the list${avoidSection}${rotationHint}\n\nThink like a senior resident — pick the teaching point an intern on these rotations most needs right now, not just the most prominent diagnosis.`
+  const userMessage = `Clinical content pulled from across ALL of the intern's patient files (not just recent ones) — this list includes: impressions and working diagnoses, differential diagnoses, complications and their prevention, confirmatory/diagnostic tests and lab/blood-gas interpretations (e.g. ABG patterns and the complications that follow them), drugs used in management, and "peculiar" physical exam findings that point toward a spot diagnosis (marked "(exam finding)") — some items are labeled by rotation:\n${conditions.join(', ')}\n\nPick ONE item for today's teaching moment. It can be:\n- A differential diagnosis worth understanding in depth\n- A complication to anticipate and prevent\n- A drug that warrants focused pharmacology (mechanism, dosing trap, contraindication)\n- A lab or test interpretation (e.g. BGA/ABG, metabolic acidosis pattern, electrolyte disturbance) and its downstream complications\n- An exam finding marked "(exam finding)" — use it as the hook for a spot-diagnosis teaching moment (what does this sign mean, what does it rule in/out, what's the next step)\n- A mnemonic or classification system tied to any item (e.g. MUDPILES for metabolic acidosis, causes of high anion gap)\n- A clinical concept or decision threshold tied to any item on the list${avoidSection}${rotationHint}\n\nThink like a senior resident — pick the teaching point an intern on these rotations most needs right now, not just the most prominent diagnosis. With this many patients and findings to draw from, there is no need to repeat the same condition every day — favor variety.`
 
   const response = await fetchWithRetry(OPENROUTER_API_URL, {
     method: 'POST',
