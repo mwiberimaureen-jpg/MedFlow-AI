@@ -321,6 +321,19 @@ Generation lives in `app/api/learning-spark/today/route.ts` (pool building) and 
 ### Streak "forgetting the day" — race condition fix
 `DailyLearningSpark.tsx`'s mount effect fetches `/api/learning-spark/streak` and merges it with local state. **Do not merge against the `local` variable captured at mount** — `handleInteraction` can update localStorage (and React state) while that fetch is still in flight, and merging against the stale mount-time snapshot reverts today's streak increment, which looks like the app "forgot" what day the streak is on. The fix: re-read via `loadState()` (`fresh`) at the moment the fetch resolves, and merge against `fresh`, not `local`.
 
+### `format_type` constraint — RESOLVED 2026-06-14
+The `daily_learning_sparks_format_type_check` constraint had never been migrated from the old `('quiz','mystery','myth','flashcards')` values to the current `('senior_asks','quick_teach','know_your_drugs','clinical_twist')`. Result: **every spark insert silently failed for ~3 months** (only one stale row existed, from 2026-03-18, format_type='mystery') — every spark got `id: 'temp'`, never cached, regenerated via the AI on every page load, and the star feature broke (see below).
+
+Fixed by running `supabase/spark_format_migration.sql` in the Supabase SQL Editor on 2026-06-14 (delete stale rows BEFORE adding the new constraint — `ADD CONSTRAINT` validates existing rows immediately, so adding it first throws `23514`). Confirmed: table is now empty and accepts the new format_type values. **Do not re-run this migration** — if sparks stop caching again, the constraint is not the cause; look elsewhere first.
+
+### Star button permanently disabled by stale 'temp' id — fixed 2026-06-14
+Because every failed insert returned the same `id: 'temp'`, the first time a user starred a temp spark, `'temp'` got written into `state.starredSparks` in localStorage. From then on, `isStarred = starredSparks.includes(spark.id)` was true for EVERY future spark (also `'temp'`), permanently disabling the Save button.
+
+Fix in `DailyLearningSpark.tsx`:
+- On mount, strip any `'temp'` entry from persisted `starredSparks` (self-heal for users who hit this before the format_type fix)
+- `isStarred` for `spark.id === 'temp'` is tracked via a session-only `tempStarred` flag, never via persisted `starredSparks` — reset whenever a new spark loads
+- With the format_type constraint now fixed, `spark.id` should be a real UUID going forward and this code path shouldn't trigger — but the guard stays as defense-in-depth in case an insert ever fails for an unrelated reason
+
 ---
 
 *Last updated: 2026-06-14*
