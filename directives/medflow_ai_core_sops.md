@@ -272,4 +272,28 @@ Bare `jsonb_set` on a NULL column returns NULL. Always guard with `COALESCE(meta
 
 ---
 
-*Last updated: 2026-05-28*
+## 16. Free Trial Limits & Review-Unlock Forwarding
+
+### Current limits (as of 2026-06-14)
+- `FREE_TRIAL_LIMIT = 5`, `BONUS_TRIAL_LIMIT = 5` (total 10 free patient files) — defined in `lib/billing/trial.ts`
+- New users get 5 free patient files. Leaving a review unlocks 5 more.
+
+If these numbers change again, update copy in all of these places (they do not read from a shared constant on the client):
+- `lib/billing/trial.ts` — `FREE_TRIAL_LIMIT`, `BONUS_TRIAL_LIMIT`, and the doc comment at the top of the file
+- `app/(auth)/signup/page.tsx` — "Join our medical platform — N free patient files to get started"
+- `app/pricing/page.tsx` — "New users get N free patient files. Leave a review to unlock N more."
+- `components/ReviewModal.tsx` — `title`/`subtitle` for `context === 'unlock'`, plus the comment on the `context` prop
+- `components/TrialBadge.tsx` — the `reviewRequired` button title and label ("Leave a review to unlock N more free patient files")
+
+`app/api/patients/[id]/analyze/route.ts` is dynamic (`quota.limit`) and does not need editing.
+
+### Review email forwarding to medflowai.ke@gmail.com
+`app/api/review/route.ts` saves every review to the `reviews` table AND, if `RESEND_API_KEY` is set, emails it to `medflowai.ke@gmail.com` via Resend (`onboarding@resend.dev` sender — no custom domain needed to receive).
+
+**Critical gotcha (cost ~30 min to debug on 2026-06-14):** Vercel environment variable names are case-sensitive. The code reads `process.env.RESEND_API_KEY` (uppercase). If the Vercel env var is saved as `resend_api_key` (or any other casing), `process.env.RESEND_API_KEY` is `undefined`, the `if (resendKey)` check is falsy, the Resend call is silently skipped, and `/api/review` still returns `{"success": true}` — there is no error anywhere. If reviews aren't arriving by email, check the exact casing of the env var name in Vercel Settings → Environment Variables first, before anything else.
+
+After adding/editing `RESEND_API_KEY` in Vercel, a new Production deployment must run (redeploy) before it takes effect.
+
+---
+
+*Last updated: 2026-06-14*
