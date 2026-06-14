@@ -80,12 +80,43 @@ export async function GET(request: NextRequest) {
     const weekStart = getWeekStart(new Date())
     const sixtyDaysAgo = new Date()
     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60)
-    const { data: recentSparks } = await supabase
-      .from('daily_learning_sparks')
-      .select('content, source_conditions, spark_date')
-      .eq('user_id', user.id)
-      .gte('spark_date', sixtyDaysAgo.toISOString().split('T')[0])
-      .order('spark_date', { ascending: false })
+    const startOfDay = new Date()
+    startOfDay.setHours(0, 0, 0, 0)
+
+    // These four queries are independent — run them in parallel instead of
+    // one-by-one to cut round-trip latency before generation even starts.
+    const [
+      { data: recentSparks },
+      { data: allHistories },
+      { data: todayAnalyses },
+      { data: recentAnalysesRaw },
+    ] = await Promise.all([
+      supabase
+        .from('daily_learning_sparks')
+        .select('content, source_conditions, spark_date')
+        .eq('user_id', user.id)
+        .gte('spark_date', sixtyDaysAgo.toISOString().split('T')[0])
+        .order('spark_date', { ascending: false }),
+      // Patient histories WITH rotation from metadata — covers ALL patient
+      // files, not just the most recent few.
+      supabase
+        .from('patient_histories')
+        .select('history_text, metadata')
+        .eq('user_id', user.id)
+        .is('deleted_at', null)
+        .limit(200),
+      supabase
+        .from('analyses')
+        .select('raw_analysis_text, summary')
+        .eq('user_id', user.id)
+        .gte('created_at', startOfDay.toISOString()),
+      supabase
+        .from('analyses')
+        .select('raw_analysis_text, summary, patient_history_id, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(500),
+    ])
 
     const thisWeekTopics: string[] = []
     const earlierTopics: string[] = []
@@ -98,31 +129,6 @@ export async function GET(request: NextRequest) {
         earlierTopics.push(...topics)
       }
     }
-
-    // Fetch patient histories WITH rotation from metadata — covers ALL patient
-    // files, not just the most recent few.
-    const { data: allHistories } = await supabase
-      .from('patient_histories')
-      .select('history_text, metadata')
-      .eq('user_id', user.id)
-      .is('deleted_at', null)
-      .limit(200)
-
-    // Fetch all analyses with rotation-aware context
-    const startOfDay = new Date()
-    startOfDay.setHours(0, 0, 0, 0)
-    const { data: todayAnalyses } = await supabase
-      .from('analyses')
-      .select('raw_analysis_text, summary')
-      .eq('user_id', user.id)
-      .gte('created_at', startOfDay.toISOString())
-
-    const { data: recentAnalysesRaw } = await supabase
-      .from('analyses')
-      .select('raw_analysis_text, summary, patient_history_id, created_at')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(500)
 
     // Keep only the most recent analysis per patient. Without this, a patient
     // admitted for many days dominates the conditions list with day-by-day
@@ -153,7 +159,14 @@ export async function GET(request: NextRequest) {
       [allConditions[i], allConditions[j]] = [allConditions[j], allConditions[i]]
     }
 
-    return await generateAndStoreWithConditions(supabase, user.id, today, allConditions, formatOverride, thisWeekTopics, earlierTopics)
+    // Cap how many items go into the prompt. The pool itself is drawn from
+    // ALL patients (no restriction there) — but sending hundreds of items
+    // bloats the prompt enough to push generation past a minute. A random
+    // 60-item sample (shuffled above) still rotates through the full pool
+    // across days/refreshes while keeping latency low.
+    const promptConditions = allConditions.slice(0, 60)
+
+    return await generateAndStoreWithConditions(supabase, user.id, today, promptConditions, formatOverride, thisWeekTopics, earlierTopics)
   } catch (error: any) {
     console.error('Error in GET /api/learning-spark/today:', error)
     return NextResponse.json(
