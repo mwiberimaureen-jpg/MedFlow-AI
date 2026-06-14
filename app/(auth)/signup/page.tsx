@@ -94,7 +94,7 @@ export default function SignupPage() {
     <div className="bg-white rounded-lg shadow-xl p-8">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Create Account</h1>
-        <p className="text-gray-600 mt-2">Join our medical platform — 2 free patient files to get started</p>
+        <p className="text-gray-600 mt-2">Join our medical platform — 5 free patient files to get started</p>
       </div>
 
       {error && (
