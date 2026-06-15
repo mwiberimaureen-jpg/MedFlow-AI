@@ -78,7 +78,7 @@ export async function getTrialQuota(
   const [userRes, subRes] = await Promise.all([
     supabase
       .from('users')
-      .select('email, subscription_status, review_submitted, trial_data_purged_at')
+      .select('email, subscription_status, review_submitted, trial_data_purged_at, trial_exhausted_at')
       .eq('id', userId)
       .maybeSingle(),
     supabase
@@ -165,6 +165,16 @@ export async function getTrialQuota(
 
   // Prompt for review once free tier is exhausted and review not yet submitted
   const reviewRequired = !subscribed && !exempt && used >= FREE_TRIAL_LIMIT && !reviewSubmitted
+
+  // Stamp the moment a non-subscribed user first exhausts their trial quota.
+  // The nightly cleanup-expired-trial-data job purges their data 10 days
+  // after this timestamp if they still haven't subscribed.
+  if (!subscribed && !exempt && used >= limit && !userRow?.trial_exhausted_at) {
+    await supabase
+      .from('users')
+      .update({ trial_exhausted_at: new Date().toISOString() })
+      .eq('id', userId)
+  }
 
   return {
     allowed: subscribed || exempt || used < limit,

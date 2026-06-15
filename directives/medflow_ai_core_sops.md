@@ -341,12 +341,19 @@ Fix in `DailyLearningSpark.tsx`:
 Migration: `supabase/basic_plan_retention_migration.sql` (run once in the Supabase SQL Editor — adds two pg_cron jobs).
 
 ### Rule
-- **Basic plan users** (`subscriptions.plan_type = 'basic'`, `status = 'active'`): any patient history that has **never been edited** since creation (`updated_at = created_at`) and is **not starred** (`is_starred = false`) is auto-moved to trash (`deleted_at = now()`) once it is **older than 1 month** (`created_at < now() - 30 days`).
+- **Basic plan users**: any patient history that has **never been edited** since creation (`updated_at = created_at`) and is **not starred** (`is_starred = false`) is auto-moved to trash (`deleted_at = now()`) once it is **older than 1 month** (`created_at < now() - 30 days`).
   - Starring (`StarPatientButton.tsx` → `POST /api/patients/[id]/star`) exempts a history from this regardless of age or edit status.
   - "Edited" = the user went through the edit flow (`PATCH` with `action: 'edit'` or `patient_name`/`history_text` fields) at least once — that's the only code path that sets `updated_at` on `patient_histories`. Rotation changes, status transitions (analyzing/completed/error), and regeneration do NOT bump `updated_at`, so they don't count as "edited".
-  - Pro plan and free-trial users are unaffected by this job (existing 90-day `cleanup_old_patient_histories` job from `auto_delete_migration.sql` still applies to everyone who hasn't opted out).
-- **Pro plan users** (`subscriptions.plan_type = 'pro'`, `status = 'active'`): same rule as basic, but **older than 2 months** (`created_at < now() - 60 days`) instead of 1 month. Migration: `supabase/pro_plan_retention_migration.sql` (adds `cleanup_unedited_pro_plan_histories()`).
+  - Free-trial users are unaffected by this job (existing 90-day `cleanup_old_patient_histories` job from `auto_delete_migration.sql` still applies to everyone who hasn't opted out, and the trial-exhaustion purge below applies separately).
+- **Pro plan users**: same rule as basic, but **older than 2 months** (`created_at < now() - 60 days`) instead of 1 month. Migration: `supabase/pro_plan_retention_migration.sql` (adds `cleanup_unedited_pro_plan_histories()`).
+- **"Plan" = most recent `subscriptions` row's `plan_type`, regardless of current `status`** (RESOLVED 2026-06-15 via `supabase/trial_exhaustion_and_renewal_migration.sql`). Originally these functions required `subscriptions.status = 'active'`, which meant a basic/pro user who failed to renew would fall out of their plan's retention window entirely (and back onto the generic 90-day rule). Per the rule "histories remain for the days given even when they fail to renew", both functions now look at `(SELECT plan_type FROM subscriptions WHERE user_id = ... ORDER BY created_at DESC LIMIT 1)` — so the 30/60-day window keeps applying based on the last plan they were on, lapsed or not.
 - **Trash retention is 3 days** (was 7 — `components/patients/TrashSection.tsx` updated to match). Anything with `deleted_at` older than 3 days is permanently (hard) deleted, cascading `todo_items` → `analyses` → `patient_histories`. This purge job is shared by basic and pro — no separate pro-specific purge job needed.
+
+### Free trial — exhaustion-based purge (RESOLVED 2026-06-15)
+Previously, `cleanup_expired_trial_data()` purged a non-subscribed user's data once their **account** was >30 days old, regardless of whether they'd used any of their free trial. Now (via `supabase/trial_exhaustion_and_renewal_migration.sql`):
+- `lib/billing/trial.ts`'s `getTrialQuota()` stamps `users.trial_exhausted_at = now()` the **first time** a non-subscribed, non-exempt user's `used >= limit` (i.e. all 5, or all 10 if reviewed, free patient files are consumed). Guarded so it only writes once (`!userRow?.trial_exhausted_at`).
+- `cleanup_expired_trial_data()` now hard-deletes `todo_items` → `analyses` → `patient_histories` and sets `trial_data_purged_at` when `subscription_status != 'active' AND trial_exhausted_at IS NOT NULL AND trial_exhausted_at < now() - interval '10 days'`.
+- Net effect: a trial user who never exhausts their 5/10 free files is never auto-purged by this job (account-age is no longer the trigger). A user who exhausts their trial has **10 days** to subscribe before their patient data is permanently deleted.
 
 ### Cron schedule (staggered after existing nightly jobs)
 - `cleanup-old-patient-histories` — 03:00 UTC (90-day, all users, existing)
@@ -362,13 +369,16 @@ All three new functions log to `audit_logs` (`patient.auto_delete_basic_plan`, `
 
 `supabase/pro_plan_retention_migration.sql` was run successfully in the Supabase SQL Editor on 2026-06-15 (`cron.schedule` returned jobid 6 for `cleanup-unedited-pro-plan-histories`). **Do not re-run this migration** for normal operation.
 
+`supabase/trial_exhaustion_and_renewal_migration.sql` still needs to be run in the SQL Editor (added 2026-06-15, not yet executed) — it `CREATE OR REPLACE`s `cleanup_expired_trial_data()`, `cleanup_unedited_basic_plan_histories()`, and `cleanup_unedited_pro_plan_histories()` in place, so no re-scheduling is needed afterward.
+
 To apply the policies to **existing accounts immediately** (instead of waiting for the next nightly run), run once in the SQL Editor:
 ```sql
 SELECT public.cleanup_unedited_basic_plan_histories();
 SELECT public.cleanup_unedited_pro_plan_histories();
 SELECT public.purge_trashed_patient_histories();
+SELECT public.cleanup_expired_trial_data();
 ```
-Each returns the number of rows affected (soft-deleted / hard-deleted respectively).
+Each returns the number of rows affected.
 
 ---
 
