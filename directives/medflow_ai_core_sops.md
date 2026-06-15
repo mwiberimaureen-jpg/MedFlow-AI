@@ -360,7 +360,7 @@ All three new functions log to `audit_logs` (`patient.auto_delete_basic_plan`, `
 ### Status — RESOLVED 2026-06-15
 `supabase/basic_plan_retention_migration.sql` was run successfully in the Supabase SQL Editor on 2026-06-15. Both cron jobs are registered and will run nightly going forward. **Do not re-run this migration** — `CREATE OR REPLACE FUNCTION` + the unschedule/schedule blocks are idempotent if it ever needs to be re-applied (e.g. after editing the function bodies), but a fresh run isn't needed for normal operation.
 
-`supabase/pro_plan_retention_migration.sql` still needs to be run in the SQL Editor (added 2026-06-15, not yet executed).
+`supabase/pro_plan_retention_migration.sql` was run successfully in the Supabase SQL Editor on 2026-06-15 (`cron.schedule` returned jobid 6 for `cleanup-unedited-pro-plan-histories`). **Do not re-run this migration** for normal operation.
 
 To apply the policies to **existing accounts immediately** (instead of waiting for the next nightly run), run once in the SQL Editor:
 ```sql
