@@ -25,12 +25,12 @@ export function TrashSection({ patients }: TrashSectionProps) {
       </div>
       <div className="p-6">
         {patients.length === 0 ? (
-          <p className="text-gray-400 dark:text-gray-500 text-center text-sm py-2">Trash is empty. Deleted patients will appear here for 7 days.</p>
+          <p className="text-gray-400 dark:text-gray-500 text-center text-sm py-2">Trash is empty. Deleted patients will appear here for 3 days.</p>
         ) : (
           <div className="space-y-3">
             {patients.map((patient) => {
               const deletedDate = new Date(patient.deleted_at)
-              const expiresDate = new Date(deletedDate.getTime() + 7 * 24 * 60 * 60 * 1000)
+              const expiresDate = new Date(deletedDate.getTime() + 3 * 24 * 60 * 60 * 1000)
               const daysLeft = Math.max(0, Math.ceil((expiresDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
 
               return (

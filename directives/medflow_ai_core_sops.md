@@ -336,4 +336,25 @@ Fix in `DailyLearningSpark.tsx`:
 
 ---
 
-*Last updated: 2026-06-14*
+## 18. Data Retention — Basic Plan Auto-Delete & Trash Purge
+
+Migration: `supabase/basic_plan_retention_migration.sql` (run once in the Supabase SQL Editor — adds two pg_cron jobs).
+
+### Rule
+- **Basic plan users** (`subscriptions.plan_type = 'basic'`, `status = 'active'`): any patient history that has **never been edited** since creation (`updated_at = created_at`) and is **not starred** (`is_starred = false`) is auto-moved to trash (`deleted_at = now()`) once it is **older than 1 month** (`created_at < now() - 30 days`).
+  - Starring (`StarPatientButton.tsx` → `POST /api/patients/[id]/star`) exempts a history from this regardless of age or edit status.
+  - "Edited" = the user went through the edit flow (`PATCH` with `action: 'edit'` or `patient_name`/`history_text` fields) at least once — that's the only code path that sets `updated_at` on `patient_histories`. Rotation changes, status transitions (analyzing/completed/error), and regeneration do NOT bump `updated_at`, so they don't count as "edited".
+  - Pro plan and free-trial users are unaffected by this job (existing 90-day `cleanup_old_patient_histories` job from `auto_delete_migration.sql` still applies to everyone who hasn't opted out).
+- **Trash retention is 3 days** (was 7 — `components/patients/TrashSection.tsx` updated to match). Anything with `deleted_at` older than 3 days is permanently (hard) deleted, cascading `todo_items` → `analyses` → `patient_histories`.
+
+### Cron schedule (staggered after existing nightly jobs)
+- `cleanup-old-patient-histories` — 03:00 UTC (90-day, all users, existing)
+- `cleanup-unedited-basic-plan-histories` — 03:10 UTC (1-month, basic plan, un-edited+unstarred — new)
+- `cleanup-expired-trial-data` — 03:30 UTC (30-day trial purge, existing)
+- `purge-trashed-patient-histories` — 03:40 UTC (3-day trash hard-delete — new)
+
+Both new functions log to `audit_logs` (`patient.auto_delete_basic_plan`, `patient.trash_purge`) with row counts for auditing.
+
+---
+
+*Last updated: 2026-06-15*
