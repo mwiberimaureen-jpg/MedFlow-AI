@@ -345,22 +345,27 @@ Migration: `supabase/basic_plan_retention_migration.sql` (run once in the Supaba
   - Starring (`StarPatientButton.tsx` → `POST /api/patients/[id]/star`) exempts a history from this regardless of age or edit status.
   - "Edited" = the user went through the edit flow (`PATCH` with `action: 'edit'` or `patient_name`/`history_text` fields) at least once — that's the only code path that sets `updated_at` on `patient_histories`. Rotation changes, status transitions (analyzing/completed/error), and regeneration do NOT bump `updated_at`, so they don't count as "edited".
   - Pro plan and free-trial users are unaffected by this job (existing 90-day `cleanup_old_patient_histories` job from `auto_delete_migration.sql` still applies to everyone who hasn't opted out).
-- **Trash retention is 3 days** (was 7 — `components/patients/TrashSection.tsx` updated to match). Anything with `deleted_at` older than 3 days is permanently (hard) deleted, cascading `todo_items` → `analyses` → `patient_histories`.
+- **Pro plan users** (`subscriptions.plan_type = 'pro'`, `status = 'active'`): same rule as basic, but **older than 2 months** (`created_at < now() - 60 days`) instead of 1 month. Migration: `supabase/pro_plan_retention_migration.sql` (adds `cleanup_unedited_pro_plan_histories()`).
+- **Trash retention is 3 days** (was 7 — `components/patients/TrashSection.tsx` updated to match). Anything with `deleted_at` older than 3 days is permanently (hard) deleted, cascading `todo_items` → `analyses` → `patient_histories`. This purge job is shared by basic and pro — no separate pro-specific purge job needed.
 
 ### Cron schedule (staggered after existing nightly jobs)
 - `cleanup-old-patient-histories` — 03:00 UTC (90-day, all users, existing)
 - `cleanup-unedited-basic-plan-histories` — 03:10 UTC (1-month, basic plan, un-edited+unstarred — new)
+- `cleanup-unedited-pro-plan-histories` — 03:15 UTC (2-month, pro plan, un-edited+unstarred — new)
 - `cleanup-expired-trial-data` — 03:30 UTC (30-day trial purge, existing)
 - `purge-trashed-patient-histories` — 03:40 UTC (3-day trash hard-delete — new)
 
-Both new functions log to `audit_logs` (`patient.auto_delete_basic_plan`, `patient.trash_purge`) with row counts for auditing.
+All three new functions log to `audit_logs` (`patient.auto_delete_basic_plan`, `patient.auto_delete_pro_plan`, `patient.trash_purge`) with row counts for auditing.
 
 ### Status — RESOLVED 2026-06-15
 `supabase/basic_plan_retention_migration.sql` was run successfully in the Supabase SQL Editor on 2026-06-15. Both cron jobs are registered and will run nightly going forward. **Do not re-run this migration** — `CREATE OR REPLACE FUNCTION` + the unschedule/schedule blocks are idempotent if it ever needs to be re-applied (e.g. after editing the function bodies), but a fresh run isn't needed for normal operation.
 
-To apply the policy to **existing accounts immediately** (instead of waiting for the next 03:10/03:40 UTC run), run once in the SQL Editor:
+`supabase/pro_plan_retention_migration.sql` still needs to be run in the SQL Editor (added 2026-06-15, not yet executed).
+
+To apply the policies to **existing accounts immediately** (instead of waiting for the next nightly run), run once in the SQL Editor:
 ```sql
 SELECT public.cleanup_unedited_basic_plan_histories();
+SELECT public.cleanup_unedited_pro_plan_histories();
 SELECT public.purge_trashed_patient_histories();
 ```
 Each returns the number of rows affected (soft-deleted / hard-deleted respectively).
