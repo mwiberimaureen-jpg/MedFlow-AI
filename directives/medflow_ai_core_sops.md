@@ -355,6 +355,16 @@ Migration: `supabase/basic_plan_retention_migration.sql` (run once in the Supaba
 
 Both new functions log to `audit_logs` (`patient.auto_delete_basic_plan`, `patient.trash_purge`) with row counts for auditing.
 
+### Status — RESOLVED 2026-06-15
+`supabase/basic_plan_retention_migration.sql` was run successfully in the Supabase SQL Editor on 2026-06-15. Both cron jobs are registered and will run nightly going forward. **Do not re-run this migration** — `CREATE OR REPLACE FUNCTION` + the unschedule/schedule blocks are idempotent if it ever needs to be re-applied (e.g. after editing the function bodies), but a fresh run isn't needed for normal operation.
+
+To apply the policy to **existing accounts immediately** (instead of waiting for the next 03:10/03:40 UTC run), run once in the SQL Editor:
+```sql
+SELECT public.cleanup_unedited_basic_plan_histories();
+SELECT public.purge_trashed_patient_histories();
+```
+Each returns the number of rows affected (soft-deleted / hard-deleted respectively).
+
 ---
 
 *Last updated: 2026-06-15*
