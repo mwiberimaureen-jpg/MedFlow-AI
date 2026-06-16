@@ -369,7 +369,7 @@ All three new functions log to `audit_logs` (`patient.auto_delete_basic_plan`, `
 
 `supabase/pro_plan_retention_migration.sql` was run successfully in the Supabase SQL Editor on 2026-06-15 (`cron.schedule` returned jobid 6 for `cleanup-unedited-pro-plan-histories`). **Do not re-run this migration** for normal operation.
 
-`supabase/trial_exhaustion_and_renewal_migration.sql` still needs to be run in the SQL Editor (added 2026-06-15, not yet executed) — it `CREATE OR REPLACE`s `cleanup_expired_trial_data()`, `cleanup_unedited_basic_plan_histories()`, and `cleanup_unedited_pro_plan_histories()` in place, so no re-scheduling is needed afterward.
+`supabase/trial_exhaustion_and_renewal_migration.sql` was run successfully in the Supabase SQL Editor on 2026-06-16. It `CREATE OR REPLACE`d `cleanup_expired_trial_data()`, `cleanup_unedited_basic_plan_histories()`, and `cleanup_unedited_pro_plan_histories()` in place — no re-scheduling was needed. **Do not re-run** for normal operation.
 
 To apply the policies to **existing accounts immediately** (instead of waiting for the next nightly run), run once in the SQL Editor:
 ```sql
