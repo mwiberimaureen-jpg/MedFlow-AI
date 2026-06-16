@@ -214,7 +214,9 @@ function TermsBody() {
           and Accountability Act (HIPAA) where applicable, the EU/UK GDPR where
           applicable, and any institutional or jurisdictional rules governing your
           practice. You will not enter patient information into the Service unless
-          you are lawfully permitted to do so.
+          you are lawfully permitted to do so. You are required to de-identify all
+          patient history text before entry — see Section 7 for the specific
+          prohibition on direct patient identifiers in the history field.
         </p>
       </section>
 
@@ -227,7 +229,8 @@ function TermsBody() {
           <li>use the Service to train, fine-tune, or evaluate any competing AI system;</li>
           <li>upload malware, attempt to gain unauthorised access to other accounts or infrastructure, or interfere with the Service&apos;s operation;</li>
           <li>upload data you are not authorised to process, or use the Service to harass, discriminate against, or harm any individual;</li>
-          <li>use the Service for veterinary, forensic, or insurance-adjudication purposes without prior written authorisation.</li>
+          <li>use the Service for veterinary, forensic, or insurance-adjudication purposes without prior written authorisation;</li>
+          <li><strong>enter any direct patient identifier into the patient history text field.</strong> The history field must contain de-identified clinical information only. Direct identifiers that are strictly prohibited in the history field include, but are not limited to: the patient&apos;s full name or any part of it beyond initials, national ID or passport number, birth certificate number, phone number, email address, postal or physical address, employer name, or any other information that could, alone or in combination, identify a specific individual. Patient initials are permitted only in the designated &ldquo;Patient Initials&rdquo; field, and the hospital admission or outpatient number only in the &ldquo;IP/OP Number&rdquo; field. Breach of this rule constitutes a material breach of these Terms and may expose you to liability under applicable data-protection law.</li>
         </ul>
       </section>
 
