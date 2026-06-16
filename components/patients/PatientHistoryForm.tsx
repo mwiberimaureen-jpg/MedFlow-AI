@@ -14,14 +14,6 @@ import { createClient } from '@/lib/supabase/client'
 const MAX_HISTORY_LENGTH = 10000
 const MIN_HISTORY_LENGTH = 50
 
-function generatePatientId(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  const suffix = Array.from({ length: 8 }, () =>
-    chars[Math.floor(Math.random() * chars.length)]
-  ).join('')
-  return `MF${suffix}`
-}
-
 interface InitialData {
   patient_name?: string
   patient_age?: string | number
@@ -56,7 +48,7 @@ export function PatientHistoryForm({ patientId, initialData, isCompleted }: Pati
     patient_name: initialData?.patient_name || '',
     patient_age: initialData?.patient_age ? String(initialData.patient_age) : '',
     patient_gender: initialData?.patient_gender || '',
-    patient_identifier: initialData?.patient_identifier || (!patientId ? generatePatientId() : ''),
+    patient_identifier: initialData?.patient_identifier || '',
     history_text: initialData?.history_text || '',
     rotation: initialData?.rotation || ''
   })
@@ -106,6 +98,12 @@ export function PatientHistoryForm({ patientId, initialData, isCompleted }: Pati
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
+    if (name === 'patient_name') {
+      // Initials only — strip everything except letters, dots, spaces; auto-uppercase
+      const initials = value.replace(/[^A-Za-z. ]/g, '').toUpperCase()
+      setFormData(prev => ({ ...prev, patient_name: initials }))
+      return
+    }
     if (name === 'rotation') {
       if (value === '__custom__') {
         setShowCustomRotation(true)
@@ -123,7 +121,7 @@ export function PatientHistoryForm({ patientId, initialData, isCompleted }: Pati
 
   const validateForm = useCallback(() => {
     if (!formData.patient_name.trim()) {
-      setError('Patient name is required')
+      setError('Patient initials are required')
       return false
     }
 
@@ -348,25 +346,29 @@ export function PatientHistoryForm({ patientId, initialData, isCompleted }: Pati
 
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Input
-            label="Patient Name *"
-            id="patient_name"
-            name="patient_name"
-            type="text"
-            value={formData.patient_name}
-            onChange={handleChange}
-            placeholder="John Doe"
-            required
-          />
+          <div>
+            <Input
+              label="Patient Initials *"
+              id="patient_name"
+              name="patient_name"
+              type="text"
+              value={formData.patient_name}
+              onChange={handleChange}
+              placeholder="e.g. J.D."
+              maxLength={10}
+              required
+            />
+            <p className="mt-1 text-xs text-gray-500">Initials only — no full names are sent to the AI.</p>
+          </div>
 
           <Input
-            label="Patient ID"
+            label="IP/OP Number"
             id="patient_identifier"
             name="patient_identifier"
             type="text"
             value={formData.patient_identifier}
             onChange={handleChange}
-            placeholder="Auto-generated"
+            placeholder="e.g. IP-12345"
           />
 
           <Input
