@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { generateLearningSpark } from '@/lib/openrouter/client'
-import type { SparkFormat } from '@/lib/types/learning-spark'
+import type { SparkFormat, SparkContent } from '@/lib/types/learning-spark'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,6 +17,35 @@ function getDailyFormat(date: Date): SparkFormat {
 function getRandomFormat(excludeFormat?: string): SparkFormat {
   const options = excludeFormat ? FORMATS.filter(f => f !== excludeFormat) : FORMATS
   return options[Math.floor(Math.random() * options.length)]
+}
+
+// Normalize a topic for fuzzy duplicate detection: lowercase, drop
+// parentheticals and severity/stage qualifiers so "Acute Pancreatitis" and
+// "pancreatitis (severe, with necrosis)" are recognized as the same topic
+// even though the model renamed/restaged it.
+function normalizeTopic(topic: string): string {
+  return topic
+    .toLowerCase()
+    .replace(/\(.*?\)/g, ' ')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\b(acute|chronic|severe|moderate|mild|early|late|with|without|secondary|due|to|complicated|by|stage|grade)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+// The "do not repeat this week's topics" instruction is prompt-level only —
+// claude-3.5-haiku doesn't reliably honor it (same model that ignores
+// "return ONLY JSON" — see generateLearningSpark). This is the deterministic
+// backstop: reject a chosen topic that fuzzy-matches the hard-avoid list and
+// force a retry, rather than trusting the model's compliance.
+function isRepeatTopic(topic: string, avoidList: string[]): boolean {
+  const norm = normalizeTopic(topic)
+  if (!norm) return false
+  return avoidList.some(t => {
+    const other = normalizeTopic(t)
+    if (!other) return false
+    return norm === other || norm.includes(other) || other.includes(norm)
+  })
 }
 
 // Monday-start ISO date (YYYY-MM-DD) for the week containing `date`.
@@ -192,7 +221,18 @@ async function generateAndStoreWithConditions(
   const format = formatOverride || getDailyFormat(new Date())
 
   try {
-    const content = await generateLearningSpark(format, conditions, undefined, thisWeekTopics, earlierTopics)
+    // Hard-avoid list sent to the model, growing with each rejected pick so
+    // a retry can't choose the same repeat twice.
+    const hardAvoid = [...(thisWeekTopics || [])]
+    let content!: SparkContent
+    const maxAttempts = 3
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      content = await generateLearningSpark(format, conditions, undefined, hardAvoid, earlierTopics)
+      const chosenTopic = (content as any)?.topic?.trim() || ''
+      if (attempt === maxAttempts || !isRepeatTopic(chosenTopic, thisWeekTopics || [])) break
+      console.warn(`Learning spark picked a repeat topic ("${chosenTopic}") on attempt ${attempt}, retrying with it explicitly excluded`)
+      hardAvoid.push(chosenTopic)
+    }
 
     const { data: spark, error: insertError } = await supabase
       .from('daily_learning_sparks')

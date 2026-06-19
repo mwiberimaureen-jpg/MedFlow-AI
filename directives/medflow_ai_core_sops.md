@@ -318,6 +318,13 @@ Generation lives in `app/api/learning-spark/today/route.ts` (pool building) and 
   - `earlierTopics` — **soft avoid**. May repeat on a different week, but only as a last resort and from a genuinely new angle.
 - `generateLearningSpark(format, conditions, config, thisWeekTopics, earlierTopics)` — if this signature changes, update both call sites (route + any future callers) and keep the hard/soft distinction in the prompt; collapsing back to one flat list re-introduces the "always HIE" bug.
 
+### Repeat enforcement is deterministic, not prompt-only — fixed 2026-06-19
+The hard-avoid instruction above is text in the system/user prompt — `claude-3.5-haiku` does not reliably honor it (same model intermittently ignores "return ONLY JSON" too, see the parsing fix below). Relying on the prompt alone let repeats slip back in even with `thisWeekTopics` wired up correctly.
+
+Fix in `generateAndStoreWithConditions()` (`app/api/learning-spark/today/route.ts`): after generation, the chosen `content.topic` is checked against `thisWeekTopics` with `isRepeatTopic()` — a fuzzy match (`normalizeTopic()` lowercases and strips parentheticals + severity/stage qualifiers like "acute", "severe", "grade", then checks substring containment both ways). If it matches, the topic is pushed onto a growing `hardAvoid` array and the model is re-prompted, up to **3 attempts total**. This is a deterministic backstop layered on top of the existing prompt instruction, not a replacement for it.
+- If "always the same topic" returns again, first check whether `isRepeatTopic()`'s normalization is too loose/strict for the specific phrasing involved (e.g. a topic renamed enough that substring containment no longer matches) before assuming the retry loop itself is broken.
+- `maxAttempts = 3` is a latency/cost tradeoff (each attempt is a full haiku call, and `generateLearningSpark` itself already retries up to 2x internally on malformed JSON — worst case ~6 OpenRouter calls). If repeats still get through after this fix, raise `maxAttempts` before reaching for anything more complex.
+
 ### Streak "forgetting the day" — race condition fix
 `DailyLearningSpark.tsx`'s mount effect fetches `/api/learning-spark/streak` and merges it with local state. **Do not merge against the `local` variable captured at mount** — `handleInteraction` can update localStorage (and React state) while that fetch is still in flight, and merging against the stale mount-time snapshot reverts today's streak increment, which looks like the app "forgot" what day the streak is on. The fix: re-read via `loadState()` (`fresh`) at the moment the fetch resolves, and merge against `fresh`, not `local`.
 
