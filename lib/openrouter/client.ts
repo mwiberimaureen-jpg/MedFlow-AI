@@ -116,6 +116,8 @@ Impression Format:
 - Example: "1. Congestive cardiac failure (HTN + pedal edema + ascites)"
 
 Comprehensive Differential Diagnosis:
+- Provide AT LEAST 5 differential diagnoses. AMBOSS lists extensive differentials for almost every presentation — draw from that breadth, not just the first 1-2 obvious options.
+- differential_diagnoses must NEVER repeat an entry already listed in impressions. A differential is an OTHER condition being actively ruled in/out — not a restatement of the working diagnosis.
 - Consider multiple differentials, not just the obvious impression
 - For ELDERLY patients (>50 years) with ascites: Rule out malignancy
 - For patients with EDEMA + hypertension: Consider cardiac failure, renal failure
@@ -620,7 +622,35 @@ function sanitizeAnalysis(parsed: any): any {
     })
   }
 
+  // Drop any differential that just restates an impression. The prompt asks
+  // for this too, but the model isn't reliable about it (same model that
+  // ignores "ONLY JSON" elsewhere in this file), so enforce it deterministically.
+  if (Array.isArray(result.differential_diagnoses) && Array.isArray(result.impressions)) {
+    const normalizedImpressions = result.impressions
+      .map((imp: string) => normalizeDiagnosisText(String(imp).replace(/^\d+[\.\)]\s*/, '')))
+      .filter(Boolean)
+    result.differential_diagnoses = result.differential_diagnoses.filter((d: any) => {
+      const dx = normalizeDiagnosisText(String(d?.diagnosis || ''))
+      if (!dx) return true
+      return !normalizedImpressions.some((imp: string) => dx === imp || dx.includes(imp) || imp.includes(dx))
+    })
+  }
+
   return result
+}
+
+// Normalize a diagnosis name for fuzzy duplicate detection against
+// impressions: lowercase, drop parentheticals and severity/stage qualifiers
+// so "Decompensated liver cirrhosis" and "liver cirrhosis (decompensated)"
+// are recognized as the same diagnosis even when reworded.
+function normalizeDiagnosisText(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/\(.*?\)/g, ' ')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\b(acute|chronic|severe|moderate|mild|early|late|with|without|secondary|due|to|complicated|by|stage|grade)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 /**
@@ -885,6 +915,11 @@ Each impression MUST be a clinical diagnosis: a named condition, syndrome, or pa
 - WRONG: "Assess hydration status", "Monitor fluid balance", "Evaluate respiratory status", "Order electrolytes", "Continue IV fluids", "Check vital signs"
 Action verbs (Assess, Monitor, Evaluate, Check, Order, Continue, Initiate, Ensure, Review, Provide, Calculate) indicate a plan item — they do NOT belong in impressions. If you cannot name a diagnosis, state the clinical syndrome: e.g. "Undifferentiated febrile illness", "Decompensated heart failure".
 
+DIFFERENTIAL DIAGNOSES — MANDATORY MINIMUM AND SCOPE:
+- Provide AT LEAST 5 differential diagnoses. AMBOSS lists extensive differentials for almost every presentation — draw from that breadth, not just the first 1-2 obvious options.
+- differential_diagnoses must NEVER repeat an entry already listed in impressions. A differential is an OTHER condition being actively ruled in/out — it is not a restatement of the working diagnosis.
+- Each differential must have real supporting_evidence and against_evidence drawn from the documented history — do not pad the list with diagnoses that have no basis in the findings.
+
 Return ONLY valid JSON:
 {
   "test_interpretation": [
@@ -892,7 +927,7 @@ Return ONLY valid JSON:
   ],
   "impressions": ["Named clinical diagnosis — e.g. 'Acute gastroenteritis with mild dehydration'. NEVER an action item."],
   "differential_diagnoses": [
-    { "diagnosis": "Name", "supporting_evidence": "Evidence for", "against_evidence": "Evidence against" }
+    { "diagnosis": "Name — AT LEAST 5 entries, none duplicating an impression", "supporting_evidence": "Evidence for", "against_evidence": "Evidence against" }
   ],
   "gaps_in_history": {
     "follow_up_questions": ["Specific questions"],
