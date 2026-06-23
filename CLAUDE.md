@@ -227,3 +227,5 @@ Also, use Opus-4.5 for everything while building. It came out a few days ago and
 8. **Learning sparks fallback chain**: If no analyses exist, the spark generator falls back to patient histories. Chain: today's analyses → recent analyses (any date) → patient_histories → raw history text snippet. Only show "Add a patient" empty state if ALL four sources are empty.
 
 9. **Impressions filter in sanitizeAnalysis()**: After the AI generates impressions, `sanitizeAnalysis()` runs a regex filter removing any impression that starts with an action verb. This is a hard backstop — if a prompt regression produces "Assess hydration status" as an impression, this filter catches it before it reaches the UI.
+
+10. **Saved spark notes are collapsible** (`components/notes/NoteCard.tsx`, fixed 2026-06-23): Starred learning sparks saved to Notes were always rendered fully expanded (every card/answer/pearl), unlike every other collapsible section in the app. Fixed by gating `SparkNoteContent` behind the existing `expanded` state with a "Show details" chevron toggle, collapsed by default. Same `expanded` state already drove the manual-note truncation toggle — just reused it.

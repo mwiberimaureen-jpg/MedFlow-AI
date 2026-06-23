@@ -387,7 +387,18 @@ export function NoteCard({ note, onDelete, onRotationChange, customRotations = [
       {note.source === 'pdf' ? (
         note.pdf_url ? <PdfNoteContent pdfUrl={note.pdf_url} /> : null
       ) : isSparkNote ? (
-        <SparkNoteContent content={note.content} source={note.source} />
+        <div className="mt-2">
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            <svg className={`w-3.5 h-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+            {expanded ? 'Hide details' : 'Show details'}
+          </button>
+          {expanded && <SparkNoteContent content={note.content} source={note.source} />}
+        </div>
       ) : (
         <div className="mt-2">
           <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{displayContent}</p>
