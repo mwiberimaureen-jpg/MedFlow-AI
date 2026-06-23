@@ -34,7 +34,7 @@ function normalizeTopic(topic: string): string {
 }
 
 // The "do not repeat this week's topics" instruction is prompt-level only —
-// claude-3.5-haiku doesn't reliably honor it (same model that ignores
+// claude-haiku-4.5 doesn't reliably honor it (same model that ignores
 // "return ONLY JSON" — see generateLearningSpark). This is the deterministic
 // backstop: reject a chosen topic that fuzzy-matches the hard-avoid list and
 // force a retry, rather than trusting the model's compliance.

@@ -194,7 +194,7 @@ Also, use Opus-4.5 for everything while building. It came out a few days ago and
 
 7. **Vercel deployment lag**: After `git push`, Vercel deployments can take 1-3 minutes. If a user reports "changes aren't showing," verify the deployment timestamp before debugging code.
 
-8. **OpenRouter model names**: Use `anthropic/claude-sonnet-4` (not `claude-sonnet-4`). Use `anthropic/claude-3.5-haiku` for fast, cheap tasks like QA checks and learning sparks.
+8. **OpenRouter model names**: Use `anthropic/claude-sonnet-4` (not `claude-sonnet-4`). Use `anthropic/claude-haiku-4.5` for fast, cheap tasks like QA checks and learning sparks — `anthropic/claude-3.5-haiku` was sunset by OpenRouter (returns 404 "No endpoints found") and must not be used.
 
 9. **Learning spark format_type constraint**: The `daily_learning_sparks` table must have `CHECK (format_type IN ('senior_asks','quick_teach','know_your_drugs','clinical_twist'))`. The old constraint had `('quiz','mystery','myth','flashcards')`. If inserts fail silently and sparks all look the same format, run `supabase/spark_format_migration.sql`. The temp-ID (`id: 'temp'`) loop: when inserts fail, the spark gets `id: 'temp'`; never add 'temp' to `seenSparks` or the component triggers a refresh every page load.
 

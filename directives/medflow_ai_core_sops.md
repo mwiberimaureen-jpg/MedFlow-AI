@@ -192,7 +192,7 @@ Do NOT produce:
 - Introductory definitions
 - Anything a second-year student would already know
 
-Model: `anthropic/claude-3.5-haiku` (fast, cheap). Prompts are in the learning sparks generation file.
+Model: `anthropic/claude-haiku-4.5` (fast, cheap). Prompts are in the learning sparks generation file.
 
 ---
 
@@ -256,9 +256,9 @@ Store rotation in `patient_histories.metadata` JSONB column. Always use `{ ...(p
 
 Use the full namespaced model ID:
 - `anthropic/claude-sonnet-4` — main analysis model
-- `anthropic/claude-3.5-haiku` — fast tasks (QA checks, learning sparks)
+- `anthropic/claude-haiku-4.5` — fast tasks (QA checks, learning sparks)
 
-Do NOT use bare model names like `claude-sonnet-4` — they will fail.
+Do NOT use bare model names like `claude-sonnet-4` — they will fail. Do NOT use `anthropic/claude-3.5-haiku` — OpenRouter sunset it (404 "No endpoints found", hit 2026-06-23).
 
 ---
 
@@ -319,7 +319,7 @@ Generation lives in `app/api/learning-spark/today/route.ts` (pool building) and 
 - `generateLearningSpark(format, conditions, config, thisWeekTopics, earlierTopics)` — if this signature changes, update both call sites (route + any future callers) and keep the hard/soft distinction in the prompt; collapsing back to one flat list re-introduces the "always HIE" bug.
 
 ### Repeat enforcement is deterministic, not prompt-only — fixed 2026-06-19
-The hard-avoid instruction above is text in the system/user prompt — `claude-3.5-haiku` does not reliably honor it (same model intermittently ignores "return ONLY JSON" too, see the parsing fix below). Relying on the prompt alone let repeats slip back in even with `thisWeekTopics` wired up correctly.
+The hard-avoid instruction above is text in the system/user prompt — `claude-haiku-4.5` does not reliably honor it (same model intermittently ignores "return ONLY JSON" too, see the parsing fix below). Relying on the prompt alone let repeats slip back in even with `thisWeekTopics` wired up correctly.
 
 Fix in `generateAndStoreWithConditions()` (`app/api/learning-spark/today/route.ts`): after generation, the chosen `content.topic` is checked against `thisWeekTopics` with `isRepeatTopic()` — a fuzzy match (`normalizeTopic()` lowercases and strips parentheticals + severity/stage qualifiers like "acute", "severe", "grade", then checks substring containment both ways). If it matches, the topic is pushed onto a growing `hardAvoid` array and the model is re-prompted, up to **3 attempts total**. This is a deterministic backstop layered on top of the existing prompt instruction, not a replacement for it.
 - If "always the same topic" returns again, first check whether `isRepeatTopic()`'s normalization is too loose/strict for the specific phrasing involved (e.g. a topic renamed enough that substring containment no longer matches) before assuming the retry loop itself is broken.

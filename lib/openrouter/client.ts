@@ -1117,7 +1117,7 @@ async function qaCheckAnalysis(
         'X-Title': 'MedFlow AI - QA',
       },
       body: JSON.stringify({
-        model: 'anthropic/claude-3.5-haiku',
+        model: 'anthropic/claude-haiku-4.5',
         messages: [
           { role: 'system', content: QA_PROMPT },
           { role: 'user', content: userMessage }
@@ -1503,7 +1503,7 @@ export async function generateLearningSpark(
   const userMessage = `Clinical content pulled from across ALL of the intern's patient files (not just recent ones) — this list includes: impressions and working diagnoses, differential diagnoses, complications and their prevention, confirmatory/diagnostic tests and lab/blood-gas interpretations (e.g. ABG patterns and the complications that follow them), drugs used in management, and "peculiar" physical exam findings that point toward a spot diagnosis (marked "(exam finding)") — some items are labeled by rotation:\n${conditions.join(', ')}\n\nPick ONE item for today's teaching moment. It can be:\n- A differential diagnosis worth understanding in depth\n- A complication to anticipate and prevent\n- A drug that warrants focused pharmacology (mechanism, dosing trap, contraindication)\n- A lab or test interpretation (e.g. BGA/ABG, metabolic acidosis pattern, electrolyte disturbance) and its downstream complications\n- An exam finding marked "(exam finding)" — use it as the hook for a spot-diagnosis teaching moment (what does this sign mean, what does it rule in/out, what's the next step)\n- A mnemonic or classification system tied to any item (e.g. MUDPILES for metabolic acidosis, causes of high anion gap)\n- A clinical concept or decision threshold tied to any item on the list${avoidSection}${rotationHint}\n\nThink like a senior resident — pick the teaching point an intern on these rotations most needs right now, not just the most prominent diagnosis. With this many patients and findings to draw from, there is no need to repeat the same condition every day — favor variety.`
 
   const requestBody = JSON.stringify({
-    model: config?.model || 'anthropic/claude-3.5-haiku',
+    model: config?.model || 'anthropic/claude-haiku-4.5',
     messages: [
       { role: 'system', content: SPARK_PROMPTS[format] },
       { role: 'user', content: userMessage }

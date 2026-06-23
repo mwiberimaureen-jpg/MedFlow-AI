@@ -56,7 +56,7 @@ Score each summary on these criteria (1-5 scale):
 - Current prompt: `SYSTEM_PROMPT` in `lib/openrouter/client.ts` (~305 lines)
 - Current model: `anthropic/claude-sonnet-4`
 - Current temperature: 0.3
-- QA agent: `anthropic/claude-3.5-haiku` at temperature 0.1
+- QA agent: `anthropic/claude-haiku-4.5` at temperature 0.1
 
 ### Step 2: Variant Testing
 When testing a prompt change:
