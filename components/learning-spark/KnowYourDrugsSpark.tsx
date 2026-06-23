@@ -51,15 +51,15 @@ export function KnowYourDrugsSpark({ content, onInteraction }: KnowYourDrugsSpar
                 <div className="mt-3 space-y-2 text-sm">
                   <div>
                     <span className="font-medium text-gray-600 dark:text-gray-400">Mechanism: </span>
-                    <span className="text-gray-800 dark:text-gray-200">{drug.mechanism}</span>
+                    <span className="text-gray-800 dark:text-gray-200 whitespace-pre-line">{drug.mechanism}</span>
                   </div>
                   <div>
                     <span className="font-medium text-gray-600 dark:text-gray-400">When to use: </span>
-                    <span className="text-gray-800 dark:text-gray-200">{drug.when_to_use}</span>
+                    <span className="text-gray-800 dark:text-gray-200 whitespace-pre-line">{drug.when_to_use}</span>
                   </div>
                   <div className="bg-amber-50 dark:bg-amber-900/15 rounded p-2 border border-amber-200 dark:border-amber-800/50">
                     <span className="font-medium text-amber-700 dark:text-amber-400">Key point: </span>
-                    <span className="text-gray-800 dark:text-gray-200">{drug.key_point}</span>
+                    <span className="text-gray-800 dark:text-gray-200 whitespace-pre-line">{drug.key_point}</span>
                   </div>
                 </div>
               )}

@@ -62,12 +62,12 @@ export function ClinicalTwistSpark({ content, onInteraction }: ClinicalTwistSpar
         <div className="space-y-3">
           <div className="bg-blue-50 dark:bg-blue-900/15 rounded-lg p-4 border border-blue-200 dark:border-blue-800/50">
             <p className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wide mb-1">Revised Plan</p>
-            <p className="text-sm text-gray-800 dark:text-gray-200">{content.revised_plan}</p>
+            <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line">{content.revised_plan}</p>
           </div>
 
           <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
             <p className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1">Reasoning</p>
-            <p className="text-sm text-gray-700 dark:text-gray-300">{content.reasoning}</p>
+            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">{content.reasoning}</p>
           </div>
 
           <div className="bg-green-50 dark:bg-green-900/15 rounded-lg p-3 border border-green-200 dark:border-green-800/50">

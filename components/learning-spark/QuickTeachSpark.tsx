@@ -71,7 +71,7 @@ export function QuickTeachSpark({ content, onInteraction }: QuickTeachSparkProps
                 )}
               </div>
               {isRevealed && (
-                <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">{card.content}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 mt-2 whitespace-pre-line">{card.content}</p>
               )}
             </div>
           )

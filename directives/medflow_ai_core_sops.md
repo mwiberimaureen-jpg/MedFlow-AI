@@ -192,7 +192,11 @@ Do NOT produce:
 - Introductory definitions
 - Anything a second-year student would already know
 
-Model: `anthropic/claude-haiku-4.5` (fast, cheap). Prompts are in the learning sparks generation file.
+**Format mix — fixed 2026-06-23**: Interns strongly prefer mnemonics over pure Q&A. `FORMATS` in `app/api/learning-spark/today/route.ts` weights `quick_teach` 2x in the daily rotation (`['quick_teach', 'senior_asks', 'quick_teach', 'know_your_drugs', 'clinical_twist']`), and `SPARK_PROMPTS.quick_teach` now defaults `teach_type` to "mnemonic" whenever a real one exists, falling back to classification/criteria/pathophysiology only when none fits.
+
+**Mnemonic card rule**: One card per letter/component, always — never cram multiple letters into a single card's `content` as a list or paragraph (an 8-letter mnemonic needs 8 cards, not 3-5; the old 3-5 cap only applies to non-mnemonic teach_types). This was the actual cause of mnemonics rendering as "one continuous paragraph" — the model was packing every letter into one card joined by `\n`, and the `<p>` tags rendering `card.content` had no `whitespace-pre-line`, so literal `\n` collapsed visually in the browser. Fixed both: the prompt (split into separate cards) and `whitespace-pre-line` on the text-rendering elements in all four spark components (`components/learning-spark/*.tsx`), as a defensive backstop in case the model still returns multi-line text in one field.
+
+Model: `anthropic/claude-haiku-4.5` (fast, cheap, ~5-7.5s per call empirically — the prior `claude-3.5-haiku` was sunset by OpenRouter). The repeat-topic retry loop in `today/route.ts` is capped at 2 attempts (was 3) to bound worst-case latency, since each attempt is a full model round trip. Prompts are in the learning sparks generation file.
 
 ---
 

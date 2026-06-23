@@ -1385,7 +1385,7 @@ Rules:
   quick_teach: `You are a PGY-3 senior resident giving a focused teaching moment to an intern. Tone: efficient, practical.
 
 INPUT: A medical condition.
-OUTPUT: A tight teaching card deck — a classification with clinical implications, a mnemonic that encodes a decision rule, diagnostic criteria with their most-missed pitfall, or a pathophysiology insight that explains why management works the way it does.
+OUTPUT: A tight teaching card deck — strongly PREFER a mnemonic that encodes a decision rule (most AMBOSS topics — causes, criteria, red flags, management steps — have one). Only fall back to a classification, diagnostic criteria, or pathophysiology insight when no clean, well-known mnemonic fits this condition or angle.
 
 The intro does NOT have to reference a patient. It can open directly: "Here is what most people get wrong about X", "The classification that actually changes your management in X", or "The thing the textbook doesn't emphasise about X". Lead with the insight, not the scenario.
 
@@ -1404,8 +1404,9 @@ Return ONLY valid JSON:
 }
 
 Rules:
-- 3-5 cards. Each card must go beyond the label — include what it MEANS for management
-- For mnemonics: each letter encodes a clinical action or decision, not just a noun
+- DEFAULT to teach_type "mnemonic" whenever a real, recognized mnemonic exists for this condition/angle. Prefer this over classification/pathophysiology/criteria.
+- For mnemonics: ONE card per letter/component, no exceptions. Each card's "title" is just that letter plus the word/phrase it stands for (e.g. "M — Methanol"), and "content" is 1-2 sentences on the clinical action or decision that letter encodes. NEVER cram two or more letters into one card's content as a list or paragraph — each letter is its own separate card, even if that means more than 5 cards total (an 8-letter mnemonic like MUDPILES needs 8 cards, not 3-5).
+- The "3-5 cards" guidance applies ONLY to non-mnemonic teach_types (classification, pathophysiology, criteria). Mnemonics are sized by the mnemonic itself.
 - For classifications: each class includes the management implication that changes with it
 - Content must be ward-applicable with specific numbers, drugs, or monitoring targets where relevant
 - Reference AMBOSS only
@@ -1509,7 +1510,10 @@ export async function generateLearningSpark(
       { role: 'user', content: userMessage }
     ],
     temperature: 0.7,
-    max_tokens: 1000,
+    // 1500 (was 1000) — quick_teach mnemonics now get one card per letter
+    // (e.g. MUDPILES = 8 cards), which can exceed the old cap and truncate
+    // mid-JSON, causing a parse failure and a slow retry.
+    max_tokens: 1500,
   })
 
   // The model occasionally ignores "return ONLY JSON" and prefaces the object

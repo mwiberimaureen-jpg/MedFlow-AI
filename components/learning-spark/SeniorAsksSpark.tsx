@@ -41,12 +41,12 @@ export function SeniorAsksSpark({ content, onInteraction }: SeniorAsksSparkProps
       {revealed && (
         <div className="space-y-3">
           <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-            <p className="text-sm text-gray-800 dark:text-gray-200">{content.answer}</p>
+            <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line">{content.answer}</p>
           </div>
 
           <div className="bg-amber-50 dark:bg-amber-900/15 rounded-lg p-3 border border-amber-200 dark:border-amber-800/50">
             <p className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wide mb-1">Teaching Point</p>
-            <p className="text-sm text-gray-700 dark:text-gray-300">{content.teaching_point}</p>
+            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">{content.teaching_point}</p>
           </div>
 
           <div className="bg-green-50 dark:bg-green-900/15 rounded-lg p-3 border border-green-200 dark:border-green-800/50">

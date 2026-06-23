@@ -5,7 +5,9 @@ import type { SparkFormat, SparkContent } from '@/lib/types/learning-spark'
 
 export const dynamic = 'force-dynamic'
 
-const FORMATS: SparkFormat[] = ['senior_asks', 'quick_teach', 'know_your_drugs', 'clinical_twist']
+// quick_teach (mnemonics/classifications) is weighted 2x — interns specifically
+// asked for more mnemonics and fewer pure-question (senior_asks) days.
+const FORMATS: SparkFormat[] = ['quick_teach', 'senior_asks', 'quick_teach', 'know_your_drugs', 'clinical_twist']
 
 function getDailyFormat(date: Date): SparkFormat {
   const start = new Date(date.getFullYear(), 0, 0)
@@ -225,7 +227,9 @@ async function generateAndStoreWithConditions(
     // a retry can't choose the same repeat twice.
     const hardAvoid = [...(thisWeekTopics || [])]
     let content!: SparkContent
-    const maxAttempts = 3
+    // Capped at 2 (was 3) — each attempt is a full model round trip (~5-8s),
+    // so 3 attempts could push worst-case generation past 20s.
+    const maxAttempts = 2
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       content = await generateLearningSpark(format, conditions, undefined, hardAvoid, earlierTopics)
       const chosenTopic = (content as any)?.topic?.trim() || ''
