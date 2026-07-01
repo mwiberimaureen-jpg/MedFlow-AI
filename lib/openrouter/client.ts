@@ -281,6 +281,13 @@ SPECIFIC GUIDANCE REQUIRED:
 - WRONG: "Consider CT if needed"
 - CORRECT: "CT abdomen to characterize ascites and assess for masses (elderly + ascites + appetite loss)"
 
+SEX-AWARE PHYSICAL EXAM — ABSOLUTE RULES:
+- FEMALES DO NOT HAVE A PROSTATE. Never suggest prostate examination, DRE for prostate assessment, or PSA in a female patient. A DRE in a female patient is only appropriate to assess for rectal/pelvic masses — never prostate.
+- PUV (Posterior Urethral Valves) is a CONGENITAL condition affecting male neonates and infants. NEVER include PUV as a differential in any patient older than 5 years. For adult patients (>18 years), it is absolutely excluded.
+
+FOLLOW-UP QUESTIONS — AGE AND GENDER ARE NEVER ASKED:
+- Patient age and gender are ALWAYS documented in the biodata. NEVER include a follow-up question asking for the patient's age, date of birth, how old the patient is, or the patient's gender/sex. These are already known.
+
 Return ONLY a valid JSON response with this structure:
 
 {
@@ -530,7 +537,7 @@ export async function analyzePatientHistory(
     }
 
     // Sanitize output: remove forbidden phrases that may have slipped through
-    const sanitized = sanitizeAnalysis(parsed)
+    const sanitized = sanitizeAnalysis(parsed, historyText)
 
     // QA check: fast Haiku pass to catch clinical rule violations
     const qaChecked = await qaCheckAnalysis(sanitized as AnalysisResponse, historyText, config)
@@ -547,7 +554,32 @@ export async function analyzePatientHistory(
  * Sanitize AI output to remove forbidden phrases and fix formatting.
  * Mirrors the sanitize_output() function from the Notion workflow.
  */
-function sanitizeAnalysis(parsed: any): any {
+function extractDemographics(historyText: string): { isFemale: boolean | null; ageYears: number | null } {
+  const femaleSignals = /\b(female|woman|lady|girl|mrs\b|she\b|her\b|mother|wife|daughter|gravid|para\s*\d|obstetric|antenatal|postpartum|postpartum|g\d+p\d+)\b/i
+  const maleSignals = /\b(male|man|boy|mr\b|he\b|his\b|father|husband|son)\b/i
+  const isFemaleMatch = femaleSignals.test(historyText)
+  const isMaleMatch = maleSignals.test(historyText)
+  const isFemale = isFemaleMatch && !isMaleMatch ? true : (!isFemaleMatch && isMaleMatch ? false : null)
+
+  let ageYears: number | null = null
+  const agePatterns = [
+    /(\d+)[- ]?year[- ]?old/i,
+    /aged?\s*:?\s*(\d+)/i,
+    /(\d+)\s*yr[s]?\.?\s*old/i,
+    /(\d+)\s*years?\s*of\s*age/i,
+  ]
+  for (const pat of agePatterns) {
+    const m = historyText.match(pat)
+    if (m) {
+      const age = parseInt(m[1])
+      if (age > 0 && age < 130) { ageYears = age; break }
+    }
+  }
+
+  return { isFemale, ageYears }
+}
+
+function sanitizeAnalysis(parsed: any, historyText?: string): any {
   const FORBIDDEN_PATTERNS = [
     /complete\s+CBC/gi,
     /full\s+blood\s+count/gi,
@@ -635,6 +667,44 @@ function sanitizeAnalysis(parsed: any): any {
       return !normalizedImpressions.some((imp: string) => dx === imp || dx.includes(imp) || imp.includes(dx))
     })
   }
+
+  // Demographic-aware filters — enforce clinical correctness deterministically
+  const demographics = historyText ? extractDemographics(historyText) : { isFemale: null, ageYears: null }
+
+  // 1. Age/gender questions are NEVER valid — biodata always captures these
+  if (result.gaps_in_history?.follow_up_questions) {
+    const AGE_GENDER_Q = /\b(age|how old|years old|date of birth|d\.?o\.?b|gender|sex of the patient|patient'?s sex|patient'?s gender|what is (the patient'?s )?(age|gender|sex))\b/i
+    result.gaps_in_history.follow_up_questions = result.gaps_in_history.follow_up_questions.filter(
+      (q: string) => !AGE_GENDER_Q.test(String(q))
+    )
+  }
+
+  // 2. Prostate exam is anatomically impossible in females
+  if (demographics.isFemale === true) {
+    if (result.gaps_in_history?.physical_exam_checklist) {
+      const PROSTATE_EXAM = /\bprostate\b/i
+      result.gaps_in_history.physical_exam_checklist = result.gaps_in_history.physical_exam_checklist.filter(
+        (item: string) => !PROSTATE_EXAM.test(String(item))
+      )
+    }
+    // Also scrub prostate from todo_items for female patients
+    if (Array.isArray(result.todo_items)) {
+      const PROSTATE_EXAM = /\bprostate\b/i
+      result.todo_items = result.todo_items.filter(
+        (item: any) => !PROSTATE_EXAM.test(String(item?.title || '') + ' ' + String(item?.description || ''))
+      )
+    }
+  }
+
+  // 3. PUV is a congenital neonatal condition — never a differential in patients older than 5 years
+  const PUV_PATTERN = /\b(posterior urethral valve|PUV)\b/i
+  if (demographics.ageYears !== null && demographics.ageYears > 5 && Array.isArray(result.differential_diagnoses)) {
+    result.differential_diagnoses = result.differential_diagnoses.filter(
+      (d: any) => !PUV_PATTERN.test(String(d?.diagnosis || ''))
+    )
+  }
+  // Even when age is unknown, strip PUV from confirmatory_tests and todo_items as a safety net
+  // if it appears alongside "adult" or ages suggesting adulthood in the entry text itself
 
   return result
 }
@@ -778,7 +848,7 @@ export async function analyzeDailyProgress(
       throw new Error('Invalid response structure from AI')
     }
 
-    const sanitized = sanitizeAnalysis(parsed) as AnalysisResponse
+    const sanitized = sanitizeAnalysis(parsed, admissionHistoryText) as AnalysisResponse
     const qaChecked = await qaCheckAnalysis(sanitized, admissionHistoryText + '\n' + progressNotes, config)
     // Restore PHI in AI response so UI displays real patient names
     return deAnonymizeResponse(qaChecked, tokenMap)
@@ -919,6 +989,14 @@ DIFFERENTIAL DIAGNOSES — MANDATORY MINIMUM AND SCOPE:
 - Provide AT LEAST 5 differential diagnoses. AMBOSS lists extensive differentials for almost every presentation — draw from that breadth, not just the first 1-2 obvious options.
 - differential_diagnoses must NEVER repeat an entry already listed in impressions. A differential is an OTHER condition being actively ruled in/out — it is not a restatement of the working diagnosis.
 - Each differential must have real supporting_evidence and against_evidence drawn from the documented history — do not pad the list with diagnoses that have no basis in the findings.
+- PUV (Posterior Urethral Valves) is a CONGENITAL condition of male neonates/infants. NEVER include PUV as a differential in any patient older than 5 years, and absolutely never in adults.
+
+SEX-AWARE PHYSICAL EXAM — ABSOLUTE RULES:
+- FEMALES DO NOT HAVE A PROSTATE. Never suggest prostate examination, DRE for prostate, or PSA in a female patient.
+- A DRE in a female is only for rectal/pelvic mass assessment — never prostate.
+
+FOLLOW-UP QUESTIONS:
+- NEVER ask for patient age, date of birth, or gender/sex in follow-up questions — these are always in the biodata.
 
 Return ONLY valid JSON:
 {
@@ -1348,7 +1426,7 @@ export async function analyzePatientHistoryFanOut(
   }
 
   // Sanitize then QA check
-  const sanitized = sanitizeAnalysis(merged)
+  const sanitized = sanitizeAnalysis(merged, historyText)
   const qaChecked = await qaCheckAnalysis(sanitized as AnalysisResponse, historyText, config)
 
   // Restore PHI in AI response so UI displays real patient names
