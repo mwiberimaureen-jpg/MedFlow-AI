@@ -272,7 +272,11 @@ export async function POST(
 
       // Auto-generate ward round note and cache it on the analysis
       try {
-        const roundNote = await generateWardRoundNote(patient.history_text)
+        const roundNote = await generateWardRoundNote(
+          patient.history_text,
+          undefined,
+          { name: patientName, age: patient.patient_age, gender: patient.patient_gender }
+        )
         await supabase
           .from('analyses')
           .update({ user_feedback: roundNote })

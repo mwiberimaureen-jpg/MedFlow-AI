@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, getSupabaseServerClient } from '@/lib/supabase/server'
 import { generateWardRoundNote } from '@/lib/openrouter/client'
+import { decryptField } from '@/lib/crypto/field-encryption'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
     // Fetch all admission analyses for this user, joined with history_text
     const query = admin
       .from('analyses')
-      .select('id, user_feedback, patient_history_id, patient_histories!inner(history_text)')
+      .select('id, user_feedback, patient_history_id, patient_histories!inner(history_text, patient_name, patient_age, patient_gender)')
       .eq('user_id', user.id)
       .eq('analysis_version', 'admission')
       .limit(limit)
@@ -67,13 +68,19 @@ export async function POST(request: NextRequest) {
 
     for (const analysis of toProcess) {
       try {
-        const historyText = (analysis.patient_histories as any)?.history_text
+        const ph = analysis.patient_histories as any
+        const historyText = ph?.history_text
         if (!historyText?.trim()) {
           errors.push(`${analysis.id}: no history_text`)
           continue
         }
 
-        const note = await generateWardRoundNote(historyText)
+        const patientName = ph?.patient_name ? decryptField(ph.patient_name) : undefined
+        const note = await generateWardRoundNote(
+          historyText,
+          undefined,
+          { name: patientName, age: ph?.patient_age, gender: ph?.patient_gender }
+        )
 
         const { error: updateError } = await admin
           .from('analyses')

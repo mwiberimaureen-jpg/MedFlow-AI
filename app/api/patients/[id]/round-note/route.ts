@@ -16,7 +16,7 @@ export async function POST(
 
   const { data: patient } = await supabase
     .from('patient_histories')
-    .select('history_text')
+    .select('history_text, patient_name, patient_age, patient_gender')
     .eq('id', id)
     .eq('user_id', user.id)
     .is('deleted_at', null)
@@ -24,7 +24,14 @@ export async function POST(
 
   if (!patient) return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
 
-  const note = await generateWardRoundNote(patient.history_text)
+  const { decryptField } = await import('@/lib/crypto/field-encryption')
+  const patientName = decryptField(patient.patient_name)
+
+  const note = await generateWardRoundNote(
+    patient.history_text,
+    undefined,
+    { name: patientName, age: patient.patient_age, gender: patient.patient_gender }
+  )
 
   // Cache on the admission analysis so it loads instantly on future page visits
   await supabase

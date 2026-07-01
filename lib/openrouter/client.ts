@@ -399,10 +399,23 @@ RULES:
  */
 export async function generateWardRoundNote(
   historyText: string,
-  config?: OpenRouterConfig
+  config?: OpenRouterConfig,
+  demographics?: { name?: string; age?: number | null; gender?: string | null }
 ): Promise<string> {
   const apiKey = config?.apiKey || process.env.OPENROUTER_API_KEY
   if (!apiKey) throw new Error('OpenRouter API key is required')
+
+  // Prepend verified demographics so the AI never says "age/gender not documented"
+  let userMessage = historyText
+  if (demographics) {
+    const parts: string[] = []
+    if (demographics.name) parts.push(`Name: ${demographics.name}`)
+    if (demographics.age) parts.push(`Age: ${demographics.age} years`)
+    if (demographics.gender) parts.push(`Gender: ${demographics.gender}`)
+    if (parts.length) {
+      userMessage = `PATIENT DEMOGRAPHICS (confirmed — always include on the first line of the note):\n${parts.join('\n')}\n\nPATIENT HISTORY:\n${historyText}`
+    }
+  }
 
   const response = await fetchWithRetry(OPENROUTER_API_URL, {
     method: 'POST',
@@ -416,7 +429,7 @@ export async function generateWardRoundNote(
       model: config?.model || 'anthropic/claude-sonnet-4',
       messages: [
         { role: 'system', content: WARD_ROUND_NOTE_PROMPT },
-        { role: 'user', content: historyText },
+        { role: 'user', content: userMessage },
       ],
       temperature: 0.1,
       max_tokens: 1200,

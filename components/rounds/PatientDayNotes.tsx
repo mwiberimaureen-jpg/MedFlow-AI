@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { extractSectionFromAnalysis } from '@/lib/utils/rounds-parser'
+import { extractSectionFromAnalysis, extractChiefComplaintWithDuration } from '@/lib/utils/rounds-parser'
 import { PrintButton } from './PrintButton'
 
 // ── AI plan extraction ────────────────────────────────────────────────────────
@@ -86,10 +86,21 @@ interface PatientDayNotesProps {
 
 // ── Build day notes ───────────────────────────────────────────────────────────
 
+function buildDemographicsLine(patient: PatientDayNotesProps['patient']): string {
+  const parts: string[] = [patient.patient_name]
+  if (patient.patient_age) parts.push(`${patient.patient_age} yrs`)
+  if (patient.patient_gender) parts.push(patient.patient_gender)
+  return parts.join(', ') + '.'
+}
+
 function buildDayNotes(
-  allAnalyses: PatientDayNotesProps['allAnalyses']
+  allAnalyses: PatientDayNotesProps['allAnalyses'],
+  patient: PatientDayNotesProps['patient']
 ): DayNote[] {
   const notes: DayNote[] = []
+
+  const demographicsLine = buildDemographicsLine(patient)
+  const cc = extractChiefComplaintWithDuration(patient.history_text)
 
   for (const a of allAnalyses) {
     if (a.analysis_version === 'admission' && a.user_feedback?.trim()) {
@@ -102,10 +113,14 @@ function buildDayNotes(
       })
     } else if (a.analysis_version?.startsWith('day_') && a.user_feedback?.trim()) {
       const n = parseInt(a.analysis_version.replace('day_', '') || '0', 10)
+      // Build a rounds-ready presentation note: demographics + CC header, then the user's progress notes
+      const admittedLine = cc ? `Admitted for: ${cc}` : ''
+      const header = [demographicsLine, `Day ${n} of admission.`, admittedLine].filter(Boolean).join('\n')
+      const note = `${header}\n\n${a.user_feedback.trim()}`
       notes.push({
         analysisVersion: a.analysis_version,
         label: `Day ${n} Update`,
-        note: a.user_feedback.trim(),
+        note,
         aiPlan: extractAiPlan(a.raw_analysis_text || ''),
         sortKey: n,
       })
@@ -232,7 +247,7 @@ function DayCard({
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function PatientDayNotes({ patient, latestAnalysis, allAnalyses }: PatientDayNotesProps) {
-  const [dayNotes, setDayNotes] = useState<DayNote[]>(() => buildDayNotes(allAnalyses))
+  const [dayNotes, setDayNotes] = useState<DayNote[]>(() => buildDayNotes(allAnalyses, patient))
   const [generating, setGenerating] = useState(false)
   const [genError, setGenError] = useState<string | null>(null)
   const [editingVersion, setEditingVersion] = useState<string | null>(null)
